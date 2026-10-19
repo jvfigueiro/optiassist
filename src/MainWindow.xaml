@@ -1,0 +1,1720 @@
+<Window x:Class="OptiAssist.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="OptiAssist"
+        Icon="app.ico"
+        Width="1000" Height="620"
+        MinWidth="960" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BrushBgPrimary}"
+        Foreground="{DynamicResource BrushTextPrimary}"
+        FontFamily="Segoe UI, Segoe UI Variable, Arial">
+
+    <!-- GRID PRINCIPAL (Linha 0: Barra Superior CCleaner, Linha 1: Workspace, Linha 2: Barra de Status Inferior) -->
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" MinHeight="52" /> <!-- Linha 0: Barra Superior Estilo CCleaner -->
+            <RowDefinition Height="*" />                   <!-- Linha 1: Workspace (Sidebar + Conteúdo) -->
+            <RowDefinition Height="28" />                  <!-- Linha 2: Barra de Status Inferior -->
+        </Grid.RowDefinitions>
+
+        <!-- ======================================================== -->
+        <!-- LINHA 0: BARRA SUPERIOR ESTILO CCLEANER                  -->
+        <!-- Canto Esquerdo: OptiAssist | Canto Direito: Especificações -->
+        <!-- ======================================================== -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource BrushBgSidebar}"
+                BorderBrush="{DynamicResource BrushBorderCard}"
+                BorderThickness="0,0,0,1"
+                Padding="16,6,16,6"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" /> <!-- Esquerda: Logo & Versão -->
+                    <ColumnDefinition Width="*" />    <!-- Espaço flexível intermediário -->
+                    <ColumnDefinition Width="Auto" /> <!-- Direita: Especificações Rápidas -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Canto Superior Esquerdo: Nome da Aplicação -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="OptiAssist"
+                               FontSize="17"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource BrushTextPrimary}"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <!-- Canto Superior Direito: Informações Rápidas e Limpas -->
+                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Linha 1: Placa-Mãe (marca e modelo) -->
+                    <TextBlock x:Name="lblHeaderDevice"
+                               Text="Detectando..."
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrushTextPrimary}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="450"
+                               HorizontalAlignment="Right"
+                               ToolTip="Modelo da Placa-Mãe"/>
+
+                    <!-- Linha 2: Processador e Memória RAM -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,3,0,0">
+                        <TextBlock x:Name="lblHeaderCpu"
+                                   Text="Processador: ..."
+                                   FontSize="11"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="340"
+                                   ToolTip="Processador"/>
+                        <TextBlock Text=" • "
+                                   FontSize="11"
+                                   Foreground="{DynamicResource BrushTextMuted}"
+                                   Margin="6,0"/>
+                        <TextBlock x:Name="lblHeaderRam"
+                                   Text="RAM: ..."
+                                   FontSize="11"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="180"
+                                   ToolTip="Memória RAM Total"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- LINHA 1: WORKSPACE (Sidebar + Área de Conteúdo) -->
+        <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" /> <!-- Coluna 0: Sidebar fixa -->
+                <ColumnDefinition Width="*" />   <!-- Coluna 1: Área de Conteúdo dinâmica -->
+            </Grid.ColumnDefinitions>
+
+            <!-- ========================================== -->
+            <!-- COLUNA 0: SIDEBAR (Width="200")            -->
+            <!-- ========================================== -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource BrushBgSidebar}"
+                    BorderBrush="{DynamicResource BrushBorderCard}"
+                    BorderThickness="0,0,1,0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <!-- Botões de Navegação -->
+                    <StackPanel VerticalAlignment="Top" Margin="0,8,0,0">
+                        <RadioButton x:Name="rbNavDashboard"
+                                     Content="💻  Visão Geral"
+                                     Style="{StaticResource BtnNav}"
+                                     IsChecked="True"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavPostInstall"
+                                     Content="📦  Gerenciador de Apps"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavOptimization"
+                                     Content="⚡  Otimização"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavShortcuts"
+                                     Content="🛠️  Ferramentas do Windows"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavReport"
+                                     Content="📋  Registrar Manutenção"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavTerminal"
+                                     Content="⬛  Logs"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavSettings"
+                                     Content="⚙️  Configurações"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                        <RadioButton x:Name="rbNavAbout"
+                                     Content="ℹ️  Sobre o aplicativo"
+                                     Style="{StaticResource BtnNav}"
+                                     Click="NavButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ========================================== -->
+            <!-- COLUNA 1: ÁREA DE CONTEÚDO                 -->
+            <!-- ========================================== -->
+            <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <!-- ======================================================== -->
+                <!-- CONTEÚDO PRINCIPAL (ScrollViewer central para as abas)   -->
+                <!-- ======================================================== -->
+                <ScrollViewer x:Name="scrollViewerContent"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Margin="8,4,8,4">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+                    <!-- ================================================ -->
+                    <!-- ABA 0: VISÃO GERAL (DASHBOARD)                   -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelDashboard" Visibility="Visible" Margin="4">
+                        <!-- Cabeçalho da Seção -->
+                        <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtDashboardTitle"
+                                       Text="Bem vindo ao OptiAssist!"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtDashboardSubtitle"
+                                       Text="A ferramenta suprema para manter seu equipamento em ordem"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Grid de 2 Blocos por Linha: Informações do Hardware (Esquerda) e Sistema Operacional (Direita) -->
+                        <Grid Margin="0,0,0,8" HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Bloco Esquerdo: Informações do hardware -->
+                            <Border Grid.Column="0"
+                                    Background="{DynamicResource BrushBgCard}"
+                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12"
+                                    Margin="0,0,4,0"
+                                    HorizontalAlignment="Stretch">
+                                <StackPanel>
+                                    <TextBlock x:Name="txtHwCardTitle"
+                                               Text="🧠 Informações do hardware"
+                                               FontWeight="Bold"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource BrushAccent}"
+                                               Margin="0,0,0,8"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- 1 por linha na ordem estrita: Processador, Memória RAM, Placa de Vídeo, Placa-Mãe, BIOS, Armazenamento, Número de Série -->
+                                    <TextBlock x:Name="lblCpuDetails"
+                                               Text="Processador: Detectando..."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="lblRamDetails"
+                                               Text="Memória RAM: Detectando..."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="lblGpuDetails"
+                                               Text="Placa de Vídeo: Detectando..."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="lblMotherboard"
+                                               Text="Placa-Mãe: Detectando..."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="lblBiosInfo"
+                                               Text="BIOS: Detectando..."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="lblDiskDetails"
+                                               Text="Armazenamento: Detectando..."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- Número de Série do Equipamento com Botão Copiar -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0" Height="22">
+                                        <TextBlock x:Name="lblSerialTag"
+                                                   Text="Número de Série: "
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="lblSerialNumber"
+                                                   Text="Não informado"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrushAccent}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <Button x:Name="btnCopySerial"
+                                                Content="📋 Copiar"
+                                                Style="{StaticResource BtnDefault}"
+                                                Height="22"
+                                                FontSize="10"
+                                                Padding="8,0"
+                                                Click="BtnCopySerial_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Bloco Direito: Sistema Operacional (Alinhado verticalmente com o bloco ao lado) -->
+                            <Border Grid.Column="1"
+                                    Background="{DynamicResource BrushBgCard}"
+                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12"
+                                    Margin="4,0,0,0"
+                                    HorizontalAlignment="Stretch">
+                                <Grid VerticalAlignment="Stretch">
+                                    <StackPanel VerticalAlignment="Top">
+                                        <TextBlock x:Name="txtOsCardTitle"
+                                                   Text="🪟 Sistema Operacional"
+                                                   FontWeight="Bold"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource BrushAccent}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="lblOsTitle"
+                                                   Text="Detectando Windows..."
+                                                   FontWeight="SemiBold"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,4"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="lblOsDetails"
+                                                   Text="Versão e compilação do sistema..."
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="0,0,0,4"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <!-- Nome do Dispositivo posicionado na mesma altura exata de Número de Série -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,2,0,0" Height="22">
+                                        <TextBlock x:Name="lblMachineNameTag"
+                                                   Text="Nome do Dispositivo: "
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="lblMachineName"
+                                                   Text="Detectando..."
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrushAccent}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Bloco Abaixo: Acesso a Tarefas Comuns -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtCommonTasksTitle"
+                                           Text="⚡ Tarefas Comuns"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,8"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <UniformGrid Columns="4" Rows="2" HorizontalAlignment="Stretch">
+                                    <Button x:Name="btnTaskPostInstall"
+                                            Content="📦 Gerenciador de Apps"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Ir para o gerenciador de aplicativos e instalações"
+                                            Click="BtnTaskPostInstall_Click"/>
+                                    <Button x:Name="btnTaskMaintenanceFolder"
+                                            Content="📁 Pasta Manutenção"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Abrir pasta de ferramentas portáteis de manutenção"
+                                            Click="BtnOpenMaintenanceFolder_Click"/>
+                                    <Button x:Name="btnTaskChrisTitus"
+                                            Content="🚀 Chris Titus WinUtil"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Executar utilitário de otimização Chris Titus Tech (PowerShell)"
+                                            Click="BtnChrisTitus_Click"/>
+                                    <Button x:Name="btnTaskMassgrave"
+                                            Content="🔑 Massgrave (MAS)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Executar ativador Microsoft MAS via PowerShell"
+                                            Click="BtnMassgrave_Click"/>
+                                    <Button x:Name="btnTaskMemoryDiag"
+                                            Content="🧠 Diagnóstico Memória"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Executar Diagnóstico de Memória do Windows (mdsched.exe)"
+                                            Click="BtnMemoryDiag_Click"/>
+                                    <Button x:Name="btnTaskDevMgmt"
+                                            Content="🖥️ Gerenc. Dispositivos"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Abrir Gerenciador de Dispositivos (devmgmt.msc)"
+                                            Click="BtnDevMgmt_Click"/>
+                                    <Button x:Name="btnTaskSysDm"
+                                            Content="⚙️ Propriedades Sistema"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Abrir Propriedades do Sistema (sysdm.cpl)"
+                                            Click="BtnSysDm_Click"/>
+                                    <Button x:Name="btnRebootBios"
+                                            Content="⚡ Reiniciar p/ UEFI"
+                                            Style="{StaticResource BtnDanger}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Reiniciar o computador diretamente na BIOS / UEFI"
+                                            Click="BtnRebootBios_Click"/>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ================================================ -->
+                    <!-- ABA 1: PÓS-INSTALAÇÃO                            -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelPostInstall" Visibility="Collapsed" Margin="4">
+                        <!-- Cabeçalho Principal -->
+                        <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtPostInstallTitle"
+                                       Text="Gerenciador de Apps"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtPostInstallSubtitle"
+                                       Text="Instalação automatizada de softwares essenciais e atualização de programas instalados"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- SEÇÃO 1: ATUALIZAÇÃO DE APLICATIVOS (Sempre Visível) -->
+                        <Border x:Name="cardWingetUpgrades"
+                                Visibility="Visible"
+                                Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,10">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="txtWingetCardTitle"
+                                                   Text="🔄 Atualização de Aplicativos"
+                                                   FontWeight="Bold"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource BrushAccent}" />
+                                        <TextBlock x:Name="lblWingetUpgradeStatus"
+                                                   Text="Clique em 'Verificar Atualizações' ou aguarde a consulta do winget..."
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <Button x:Name="btnCheckWingetUpgrades"
+                                            Grid.Column="1"
+                                            Content="🔄 Verificar Atualizações"
+                                            Style="{StaticResource BtnDefault}"
+                                            Padding="10,3"
+                                            Click="BtnCheckWingetUpgrades_Click" />
+                                </Grid>
+
+                                <!-- Barra de Progresso / Carregamento -->
+                                <ProgressBar x:Name="pbWingetScan"
+                                             IsIndeterminate="True"
+                                             Height="6"
+                                             Margin="0,0,0,6"
+                                             Foreground="{DynamicResource BrushAccent}"
+                                             Background="{DynamicResource BrushBgPrimary}"
+                                             BorderThickness="0"
+                                             Visibility="Collapsed" />
+
+                                <!-- Botão Visualizar Logs centralizado durante execução -->
+                                <StackPanel x:Name="pnlWingetLogsAction"
+                                            HorizontalAlignment="Center"
+                                            Margin="0,0,0,8"
+                                            Visibility="Collapsed">
+                                    <Button x:Name="btnViewLogsFromUpgrade"
+                                            Content="⬛ Visualizar Logs"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="28"
+                                            Padding="14,0"
+                                            ToolTip="Acompanhar o log de execução em tempo real na tela de Logs"
+                                            Click="BtnViewLogs_Click" />
+                                </StackPanel>
+
+                                <!-- Lista de Aplicativos Atualizáveis -->
+                                <Border x:Name="borderUpgradesList"
+                                        Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="4"
+                                        MaxHeight="220"
+                                        Margin="0,0,0,8"
+                                        Visibility="Collapsed">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="icWingetUpgradesList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="4,5">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="220" />
+                                                                <ColumnDefinition Width="200" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <CheckBox Grid.Column="0" IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding VersionDisplay}" Foreground="{DynamicResource BrushAccent}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+
+                                <!-- Botões de Ação do Painel de Upgrades -->
+                                <Grid x:Name="gridUpgradeActions" Visibility="Collapsed" Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <Button x:Name="btnSelectAllUpgrades"
+                                                Content="Selecionar Todos"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnSelectAllUpgrades_Click"/>
+                                        <Button x:Name="btnDeselectAllUpgrades"
+                                                Content="Desmarcar Todos"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnDeselectAllUpgrades_Click"/>
+                                        <Button x:Name="btnRecheckWingetUpgrades"
+                                                Content="🔄 Verificar Novamente"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnRecheckWingetUpgrades_Click"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Button x:Name="btnUpgradeAll"
+                                                Content="🚀 Atualizar Tudo"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnUpgradeAll_Click" />
+                                        <Button x:Name="btnUpgradeSelected"
+                                                Content="🔄 Atualizar Selecionados"
+                                                Style="{StaticResource BtnAccent}"
+                                                Click="BtnUpgradeSelected_Click" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Painel Expansível de Personalização (Config\PostInstall.json) -->
+                        <Border x:Name="cardCustomizePostInstall"
+                                Visibility="Collapsed"
+                                Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushAccent}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,10">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock x:Name="txtCustomizeHeaderTitle"
+                                                   Text="⚙️ Personalizar instalação automatizada de aplicativos"
+                                                   FontWeight="Bold"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource BrushAccent}" />
+                                        <TextBlock x:Name="txtCustomizeHeaderSub"
+                                                   Text="Adicione novos programas, defina se serão automatizados por padrão e escolha entre instalador Local ou Winget."
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <Button x:Name="btnCloseCustomize"
+                                            Grid.Column="1"
+                                            Content="✕ Fechar"
+                                            Style="{StaticResource BtnDefault}"
+                                            Padding="8,2"
+                                            Click="BtnCloseCustomize_Click" />
+                                </Grid>
+
+                                <!-- Formulário de Adição/Edição de Programa -->
+                                <Border Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="10"
+                                        Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.8*" />
+                                            <ColumnDefinition Width="1.5*" />
+                                            <ColumnDefinition Width="2.2*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Nome do Programa -->
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,6">
+                                            <TextBlock x:Name="txtNewAppNameLabel" Text="Nome do Programa:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <TextBox x:Name="txtNewAppName" Height="26" />
+                                        </StackPanel>
+
+                                        <!-- Tipo de Instalação -->
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,6">
+                                            <TextBlock x:Name="txtNewAppTypeLabel" Text="Tipo de Instalação:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <ComboBox x:Name="cmbNewAppType" Height="26" SelectedIndex="0" SelectionChanged="CmbNewAppType_SelectionChanged">
+                                                <ComboBoxItem x:Name="cmbItemLocal" Content="📁 Local (PostInstall)" Tag="Local" />
+                                                <ComboBoxItem x:Name="cmbItemWinget" Content="🌐 Winget (Repositório)" Tag="Winget" />
+                                            </ComboBox>
+                                        </StackPanel>
+
+                                        <!-- Local: Selecionar Arquivo na Pasta PostInstall -->
+                                        <StackPanel x:Name="panelNewAppLocal" Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Visibility="Visible">
+                                            <TextBlock x:Name="txtNewAppLocalLabel" Text="Executável na pasta PostInstall:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="txtNewAppLocalFile" Height="26" Margin="0,0,4,0" ToolTip="Nome do executável na pasta PostInstall (ex: OfficeSetup.exe)" />
+                                                <Button x:Name="btnSelectLocalInstaller"
+                                                        Grid.Column="1"
+                                                        Content="📁 Selecionar..."
+                                                        Style="{StaticResource BtnDefault}"
+                                                        Height="26"
+                                                        Padding="8,0"
+                                                        ToolTip="Selecionar arquivo executável na pasta PostInstall"
+                                                        Click="BtnSelectLocalInstaller_Click" />
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Winget: Informar ID do App -->
+                                        <StackPanel x:Name="panelNewAppWinget" Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Visibility="Collapsed">
+                                            <TextBlock x:Name="txtNewAppWingetLabel" Text="ID do App no Winget (ex: Google.Chrome):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <TextBox x:Name="txtNewAppWingetId" Height="26" ToolTip="Identificador do pacote no repositório Winget" />
+                                        </StackPanel>
+
+                                        <!-- Botão Adicionar / Salvar e Cancelar -->
+                                        <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,6">
+                                            <Button x:Name="btnAddCustomApp"
+                                                    Content="➕ Adicionar"
+                                                    Style="{StaticResource BtnAccent}"
+                                                    Height="26"
+                                                    Padding="12,0"
+                                                    Margin="0,0,4,0"
+                                                    Click="BtnAddCustomApp_Click" />
+                                            <Button x:Name="btnCancelEditApp"
+                                                    Content="✕"
+                                                    Style="{StaticResource BtnDefault}"
+                                                    Height="26"
+                                                    Width="26"
+                                                    Visibility="Collapsed"
+                                                    ToolTip="Cancelar edição"
+                                                    Click="BtnCancelEditApp_Click" />
+                                        </StackPanel>
+
+                                        <!-- Linha 2: Automatizar e Argumentos Silenciosos -->
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
+                                            <CheckBox x:Name="chkNewAppPreSelected"
+                                                      Content="Automatizar por padrão"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,16,0" />
+                                            <TextBlock x:Name="txtNewAppSilentLabel" Text="Argumentos silenciosos (opcional):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBox x:Name="txtNewAppSilentArgs" Width="180" Height="24" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Lista de Programas do PostInstall.json para Edição -->
+                                <TextBlock x:Name="txtCurrentListTitle"
+                                           Text="Programas na lista atual:"
+                                           FontWeight="SemiBold"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           Margin="0,0,0,4" />
+
+                                <Border Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="4"
+                                        MaxHeight="190">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="icCustomAppsEditorList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="4,4">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="180" />
+                                                                <ColumnDefinition Width="150" />
+                                                                <ColumnDefinition Width="120" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding Name}"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding DisplayTypeInfo}"
+                                                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                                                       FontSize="11"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+
+                                                            <CheckBox Grid.Column="2"
+                                                                      Content="Automatizar"
+                                                                      IsChecked="{Binding PreSelected, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center" />
+
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{Binding DetailInfo}"
+                                                                       Foreground="{DynamicResource BrushTextMuted}"
+                                                                       FontSize="10"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+
+                                                            <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <Button Content="▲"
+                                                                        Width="22" Height="20"
+                                                                        Margin="0,0,2,0"
+                                                                        Style="{StaticResource BtnDefault}"
+                                                                        Click="BtnMoveAppUp_Click"
+                                                                        Tag="{Binding}"
+                                                                        ToolTip="Mover para cima" />
+                                                                <Button Content="▼"
+                                                                        Width="22" Height="20"
+                                                                        Margin="0,0,2,0"
+                                                                        Style="{StaticResource BtnDefault}"
+                                                                        Click="BtnMoveAppDown_Click"
+                                                                        Tag="{Binding}"
+                                                                        ToolTip="Mover para baixo" />
+                                                                <Button Content="✏️"
+                                                                        Width="24" Height="20"
+                                                                        Margin="0,0,2,0"
+                                                                        Style="{StaticResource BtnDefault}"
+                                                                        Click="BtnEditCustomApp_Click"
+                                                                        Tag="{Binding}"
+                                                                        ToolTip="Editar preferência deste aplicativo" />
+                                                                <Button Content="🗑️"
+                                                                        Width="24" Height="20"
+                                                                        Style="{StaticResource BtnDefault}"
+                                                                        Click="BtnRemoveCustomApp_Click"
+                                                                        Tag="{Binding}"
+                                                                        ToolTip="Remover da lista" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+
+                                <!-- Ações no Rodapé do Editor -->
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <Button x:Name="btnSaveCustomApps"
+                                                Content="💾 Salvar Alterações"
+                                                Style="{StaticResource BtnAccent}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnSaveCustomApps_Click" />
+                                        <Button x:Name="btnResetDefaultApps"
+                                                Content="🔄 Restaurar Lista Padrão"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnResetDefaultApps_Click" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Button x:Name="btnOpenPostInstallJson"
+                                                Content="📂 Abrir PostInstall.json"
+                                                Style="{StaticResource BtnDefault}"
+                                                Click="BtnOpenPostInstallJson_Click" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- SEÇÃO 3: LISTA DE PROGRAMAS PARA INSTALAÇÃO AUTOMATIZADA (Organizada dentro de uma seção) -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <!-- Cabeçalho da Seção de Instalação -->
+                                <TextBlock x:Name="txtAppsInstallCardTitle"
+                                           Text="📦 Instalação Automatizada de Aplicativos"
+                                           FontWeight="Bold"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,2"/>
+                                <TextBlock x:Name="txtAppsInstallCardSub"
+                                           Text="Selecione os programas que deseja instalar automaticamente em lote no computador:"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,0,0,10"/>
+
+                                <!-- Lista com ScrollViewer -->
+                                <Border Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="4"
+                                        MaxHeight="260"
+                                        Margin="0,0,0,10">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="icAppsList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="6,7">
+                                                        <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontWeight="SemiBold"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="8,0,0,0"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </CheckBox>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+
+                                <!-- Barra de Progresso de Instalação -->
+                                <ProgressBar x:Name="pbInstallProgress"
+                                             Height="6"
+                                             Margin="0,0,0,10"
+                                             HorizontalAlignment="Stretch"
+                                             Foreground="{DynamicResource BrushAccent}"
+                                             Background="{DynamicResource BrushBgPrimary}"
+                                             BorderThickness="0"/>
+
+                                <!-- Botões de Ação na Parte Inferior da Tela -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button x:Name="btnSelectEssentials"
+                                                Content="Selecionar Essenciais"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnSelectEssentials_Click"/>
+                                        <Button x:Name="btnDeselectAll"
+                                                Content="Desmarcar Todos"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnDeselectAll_Click"/>
+                                        <Button x:Name="btnToggleCustomizePostInstall"
+                                                Content="⚙️ Personalizar Instalação Automatizada"
+                                                Style="{StaticResource BtnDefault}"
+                                                Margin="0,0,6,0"
+                                                Click="BtnToggleCustomizePostInstall_Click"/>
+                                        <Button x:Name="btnOpenPostInstallFolder"
+                                                Content="📂 Pasta de Instaladores"
+                                                Style="{StaticResource BtnDefault}"
+                                                Click="BtnOpenPostInstallFolder_Click"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button x:Name="btnRunInstallSelected"
+                                                Content="🚀 Instalar Selecionados"
+                                                Style="{StaticResource BtnAccent}"
+                                                Padding="16,0"
+                                                Height="30"
+                                                Click="BtnInstallSelected_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ================================================ -->
+                    <!-- ABA 2: OTIMIZAÇÃO                                -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelOptimization" Visibility="Collapsed" Margin="4">
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock x:Name="txtOptTitle"
+                                       Text="Otimização do Sistema"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtOptSubtitle"
+                                       Text="Ferramentas avançadas de limpeza, integridade do Windows, scripts comunitários e benchmark"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Card de Ferramentas Comunitárias (Chris Titus e MAS) -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtCommSectionTitle"
+                                           Text="🚀 Ferramentas da Comunidade"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,8"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <UniformGrid Columns="2" Margin="0,0,0,0">
+                                    <Button x:Name="btnChrisTitusOpt"
+                                            Content="🚀 Chris Titus Tool (WinUtil)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnChrisTitus_Click"/>
+                                    <Button x:Name="btnMassgraveOpt"
+                                            Content="🔑 Ativação Massgrave (MAS)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnMassgrave_Click"/>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Grid de 2 Colunas para Ferramentas (Invertido: Integridade na Esquerda, Limpeza na Direita) -->
+                        <Grid HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Coluna Esquerda (Invertida): Integridade do Sistema e Correções -->
+                            <Border Grid.Column="0"
+                                    Background="{DynamicResource BrushBgCard}"
+                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10"
+                                    Margin="0,0,4,8"
+                                    HorizontalAlignment="Stretch">
+                                <StackPanel>
+                                    <TextBlock x:Name="txtIntegrityTitle"
+                                               Text="🛡️ Integridade do Sistema e Correções"
+                                               FontWeight="Bold"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource BrushAccent}"
+                                               Margin="0,0,0,8"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Button x:Name="btnSfc"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnSfcRepair_Click"
+                                            ToolTip="Verificar e Reparar Integridade do Windows via SFC (sfc /scannow)">
+                                        <TextBlock x:Name="txtBtnSfcText"
+                                                   Text="🛡️ Verificar e Reparar Integridade do Windows via SFC"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Button>
+                                    <Button x:Name="btnDism"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnDismRepair_Click"
+                                            ToolTip="Verificar e Reparar Integridade do Windows via DISM (Dism /Online /Cleanup-Image /RestoreHealth)">
+                                        <TextBlock x:Name="txtBtnDismText"
+                                                   Text="🔧 Verificar e Reparar Integridade do Windows via DISM"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Button>
+                                    <Button x:Name="btnChkdsk"
+                                            Content="🔍 Verificar Integridade do Disco (CHKDSK C:)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnChkdsk_Click"/>
+                                    <Button x:Name="btnPrinterFix"
+                                            Content="🖨️ Correção de problema de impressoras em rede"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnFixPrinter_Click"/>
+                                    <Button x:Name="btnDualBoot"
+                                            Content="🕒 Correção de hora do sistema para instalação dual boot"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnDualBootClock_Click"/>
+                                    <Button x:Name="btnStoreFix"
+                                            Content="🏪 Instalar ou Reparar a Microsoft Store"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnWsReset_Click"/>
+                                    <Button x:Name="btnNetReset"
+                                            Content="🌐 Redefinição da Rede"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnResetNetwork_Click"/>
+                                    <Button x:Name="btnWinSat"
+                                            Content="📊 Benchmark WinSAT"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,2"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnWinSatBenchmark_Click"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Coluna Direita (Invertida): Limpeza & Desempenho -->
+                            <Border Grid.Column="1"
+                                    Background="{DynamicResource BrushBgCard}"
+                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10"
+                                    Margin="4,0,0,8"
+                                    HorizontalAlignment="Stretch">
+                                <StackPanel>
+                                    <TextBlock x:Name="txtCleanupTitle"
+                                               Text="🧹 Limpeza &amp; Desempenho"
+                                               FontWeight="Bold"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource BrushAccent}"
+                                               Margin="0,0,0,8"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Button x:Name="btnTempClean"
+                                            Content="🧹 Limpar Arquivos Temporários"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnCleanTemp_Click"/>
+                                    <Button x:Name="btnUpdateClean"
+                                            Content="🧼 Limpar Cache do Windows Update"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnCleanUpdate_Click"/>
+                                    <Button x:Name="btnVisualEffects"
+                                            Content="⚡ Otimizar Efeitos Visuais"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnVisualFX_Click"/>
+                                    <Button x:Name="btnTelemetry"
+                                            Content="🔇 Desativar Telemetria e Otimizar Serviços do Sistema"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnTelemetry_Click"/>
+                                    <Button x:Name="btnCompactOs"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,6"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnCompactOs_Click"
+                                            ToolTip="Compactar Instalação do Windows (compact.exe /CompactOS:always) - Reduz o espaço ocupado pelo Windows em disco">
+                                        <TextBlock x:Name="txtBtnCompactOsText"
+                                                   Text="🗜️ Compactar Instalação do Windows"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Button>
+                                    <Button x:Name="btnOpenScriptsFolder"
+                                            Content="📂 Abrir Pasta Scripts"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,0,2"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BtnOpenScriptsFolder_Click"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- ================================================ -->
+                    <!-- ABA 3: FERRAMENTAS DO WINDOWS                    -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelShortcuts" Visibility="Collapsed" Margin="4">
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock x:Name="txtToolsTitle"
+                                       Text="Ferramentas do Windows"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtToolsSubtitle"
+                                       Text="Acesso imediato às ferramentas administrativas nativas do Windows e utilitários portáteis"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Grid de Ferramentas Administrativas -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtAdminToolsTitle"
+                                           Text="🪟 Ferramentas Administrativas"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,8"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <UniformGrid Columns="3" Margin="0,0,0,0">
+                                    <Button x:Name="btnDevMgmtTool" Content="🔌 Gerenciador de Dispositivos" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDevMgmt_Click"/>
+                                    <Button x:Name="btnNetplwiz" Content="👤 Contas de Usuário Legado" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNetplwiz_Click"/>
+                                    <Button x:Name="btnDiskMgmt" Content="💾 Gerenciamento de Disco" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDiskMgmt_Click"/>
+                                    <Button x:Name="btnControl" Content="⚙️ Painel de Controle Clássico" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnControlPanel_Click"/>
+                                    <Button x:Name="btnMsinfo" Content="ℹ️ Informações do Sistema" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsInfo_Click"/>
+                                    <Button x:Name="btnWinver" Content="📋 Sobre o Windows" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnWinver_Click"/>
+                                    <Button x:Name="btnMsconfig" Content="🔧 Ferramenta MSCONFIG" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsConfig_Click"/>
+                                    <Button x:Name="btnSysDmTool" Content="💻 Propriedades do Sistema" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnSysDm_Click"/>
+                                    <Button x:Name="btnNcpa" Content="🌐 Conexões de Rede" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNcpa_Click"/>
+                                    <Button x:Name="btnOptionalFeatures" Content="📦 Recursos do Windows" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnOptionalFeatures_Click"/>
+                                    <Button x:Name="btnRegedit" Content="🔑 Editor de Registro" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnRegedit_Click"/>
+                                    <Button x:Name="btnTaskmgr" Content="📊 Gerenciador de Tarefas" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnTaskMgr_Click"/>
+                                    <Button x:Name="btnResmon" Content="⚡ Monitor de Recursos" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnResmon_Click"/>
+                                    <Button x:Name="btnMemoryDiagTool" Content="🧠 Diagnóstico de Memória" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMemoryDiag_Click"/>
+                                    <Button x:Name="btnRelMon" Content="📈 Monitor de Confiabilidade" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnReliability_Click"/>
+                                    <Button x:Name="btnEventVwr" Content="📑 Visualizador de Eventos" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnEventVwr_Click"/>
+                                    <Button x:Name="btnGpedit" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnGpedit_Click"
+                                            ToolTip="Editor de Política de Grupo (gpedit.msc) - Disponível apenas nas edições Windows Pro e Enterprise">
+                                        <TextBlock x:Name="txtBtnGpeditText"
+                                                   Text="📜 Ferramenta GPEDIT (Pro/Enterprise)"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Button>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Botão Pasta de Ferramentas de Manutenção posicionado diretamente abaixo de Ferramentas Administrativas -->
+                        <Button x:Name="btnOpenMaintenanceFolderTool"
+                                Content="📂 Pasta de Ferramentas de Manutenção"
+                                Style="{StaticResource BtnDefault}"
+                                Height="36"
+                                Margin="0,0,0,4"
+                                HorizontalAlignment="Stretch"
+                                Click="BtnOpenMaintenanceFolder_Click"
+                                ToolTip="Acessar a pasta local Maintenance com as ferramentas portáteis"/>
+                    </StackPanel>
+
+                    <!-- ================================================ -->
+                    <!-- ABA 4: REGISTRAR MANUTENÇÃO                     -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelReport" Visibility="Collapsed" Margin="4">
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock x:Name="txtReportTitle"
+                                       Text="Registrar Ordem de Manutenção"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtReportSub"
+                                       Text="Gera um laudo com especificações da máquina, placa-mãe, número de série e procedimentos"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Formulário do Relatório -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <!-- Dados do Atendimento e Equipamento -->
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="160" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="220" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock x:Name="txtReportOrderLabel" Text="Nº da Ordem de Serviço:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBox x:Name="txtReportOrder" Height="26"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,6,0">
+                                        <TextBlock x:Name="txtReportClientLabel" Text="Nome do Cliente:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBox x:Name="txtReportClient" Height="26"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock x:Name="txtReportSerialLabel" Text="Nº de Série / Service Tag:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBox x:Name="txtReportSerial" Height="26"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Checklist de Serviços (TODOS DESMARCADOS POR PADRÃO) -->
+                                <TextBlock x:Name="txtChecklistLabel" Text="Checklist de Procedimentos Realizados:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <UniformGrid Columns="2" Margin="0,0,0,8">
+                                    <CheckBox x:Name="chkActSmart" Content="Diagnóstico e saúde de disco (SMART)" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActClean" Content="Limpeza interna preventiva e pasta térmica" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActFormat" Content="Formatação e instalação limpa do Windows" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActDrivers" Content="Atualização completa de drivers e BIOS" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActApps" Content="Instalação de programas essenciais" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActTemp" Content="Limpeza profunda de arquivos temporários" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActDism" Content="Reparo de integridade (DISM / SFC)" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActNet" Content="Configuração de rede e impressoras" IsChecked="False"/>
+                                </UniformGrid>
+
+                                <!-- Laudo Técnico com Texto Sugestivo -->
+                                <TextBlock x:Name="txtReportNotesLabel" Text="Laudo Técnico e Observações:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                <TextBox x:Name="txtReportNotes"
+                                         Height="50"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Text="Você pode informar maiores detalhes acerca do que foi realizado neste equipamento aqui..."
+                                         Foreground="{DynamicResource BrushTextSecondary}"
+                                         GotFocus="TxtReportNotes_GotFocus"
+                                         Margin="0,0,0,8"/>
+
+                                <!-- Ações do Laudo -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="btnSaveReport"
+                                            Content="📄 Gerar Registro de Manutenção"
+                                            Style="{StaticResource BtnAccent}"
+                                            Margin="0,0,8,0"
+                                            Click="BtnSaveReport_Click"/>
+                                    <Button x:Name="btnCopyReport"
+                                            Content="📋 Copiar Laudo Técnico"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="0,0,8,0"
+                                            Click="BtnCopyReport_Click"/>
+                                    <Button x:Name="btnOpenReportFolder"
+                                            Content="📂 Abrir Pasta Reports"
+                                            Style="{StaticResource BtnDefault}"
+                                            Click="BtnOpenReportFolder_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ================================================ -->
+                    <!-- ABA 5: CONFIGURAÇÕES                            -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelSettings" Visibility="Collapsed" Margin="4">
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock x:Name="txtSettingsTitle"
+                                       Text="Configurações do OptiAssist"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtSettingsSub"
+                                       Text="Dados salvos em Config\settings.json no pen drive"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <!-- Modo Prestador de Serviço -->
+                                <Border Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="10"
+                                        Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <CheckBox x:Name="chkServiceProviderMode"
+                                                  Content="Modo prestador de serviço"
+                                                  FontWeight="SemiBold"
+                                                  FontSize="12"
+                                                  Checked="ChkServiceProviderMode_Changed"
+                                                  Unchecked="ChkServiceProviderMode_Changed"/>
+                                        <TextBlock x:Name="txtServiceProviderDesc"
+                                                   Text="Habilita personalização da marca e opções para atendimento e laudo técnico"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="24,2,0,0"/>
+
+                                        <!-- Seção com Nome Personalizado, Informações de Contato e Habilitar Registro de Manutenção -->
+                                        <StackPanel x:Name="pnlServiceProviderFields" Margin="0,10,0,0" Visibility="Collapsed">
+                                            <TextBlock x:Name="txtStoreNameLabel" Text="Nome personalizado do aplicativo:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                            <TextBox x:Name="txtSettingStore" Height="26" ToolTip="Customize a aplicação de acordo com o nome que você preferir."/>
+                                            <TextBlock x:Name="txtStoreNameHint" Text="💡 Customize a aplicação de acordo com o nome que você preferir." FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
+
+                                            <TextBlock x:Name="txtPhoneLabel" Text="Informações de Contato:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                            <TextBox x:Name="txtSettingPhone" Height="26" ToolTip="Informe um e-mail, número de contato ou rede social que preferir"/>
+                                            <TextBlock x:Name="txtPhoneHint" Text="💡 Informe um e-mail, número de contato ou rede social que preferir" FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
+
+                                            <CheckBox x:Name="chkEnableMaintenanceReport"
+                                                      Content="Habilitar Registro de Manutenção"
+                                                      FontWeight="SemiBold"
+                                                      Margin="0,4,0,2"
+                                                      Checked="ChkEnableMaintenanceReport_Changed"
+                                                      Unchecked="ChkEnableMaintenanceReport_Changed"/>
+                                            <TextBlock x:Name="txtEnableReportDesc"
+                                                       Text="Exibe ou oculta a tela de Registrar Manutenção no menu lateral da aplicação"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                                       Margin="24,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock x:Name="txtReportPathLabel" Text="Caminho Padrão do Arquivo de Relatório:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                <TextBox x:Name="txtSettingReportPath" Height="26" Margin="0,0,0,8"/>
+
+                                <!-- Seleção de Idioma com Botões -->
+                                <TextBlock x:Name="txtLangLabel" Text="Idioma da Aplicação (Language):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button x:Name="btnLangPt"
+                                            Content="🇧🇷 Português (Brasil)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="28"
+                                            Margin="0,0,8,0"
+                                            Click="BtnLangPt_Click"/>
+                                    <Button x:Name="btnLangEn"
+                                            Content="🇺🇸 English (US)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="28"
+                                            Margin="0,0,8,0"
+                                            Click="BtnLangEn_Click"/>
+                                    <TextBlock x:Name="lblCurrentLanguage"
+                                               Text="Atual: Português (pt-BR)"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource BrushAccent}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <CheckBox x:Name="chkSettingWinget"
+                                          Content="Habilitar download via Winget quando o programa não existir na pasta PostInstall"
+                                          Margin="0,2,0,4"/>
+                                <CheckBox x:Name="chkSettingAutoRefresh"
+                                          Content="Atualizar especificações de hardware automaticamente na inicialização"
+                                          Margin="0,2,0,12"/>
+
+                                <Button x:Name="btnSaveSettings"
+                                        Content="💾 Salvar Configurações"
+                                        Style="{StaticResource BtnAccent}"
+                                        Width="160"
+                                        HorizontalAlignment="Left"
+                                        Click="BtnSaveSettings_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Seção: Personalização da Aplicação (Cores e Acentos) -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,8,0,0"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtPersonalizeTitle"
+                                           Text="🎨 Personalizar o Aplicativo"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock x:Name="txtPersonalizeSub"
+                                           Text="Personalize o tema visual, as cores dos botões principais e acentos do OptiAssist:"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,0,0,10"
+                                           TextWrapping="Wrap"/>
+
+                                <!-- Alternância de Modo Claro / Modo Escuro -->
+                                <StackPanel Margin="0,0,0,12">
+                                    <TextBlock x:Name="txtThemeLabel" Text="Tema Visual:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <Button x:Name="btnToggleTheme"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="30"
+                                            Padding="14,0"
+                                            HorizontalAlignment="Left"
+                                            ToolTip="Alternar entre modo escuro e modo claro"
+                                            Click="BtnToggleTheme_Click">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock x:Name="txtThemeIcon" Text="☀️" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="txtThemeText" Text="Modo Claro" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Linha: Código Hexadecimal + Seletor de Cores + Botão Aplicar + Preview -->
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Campo de Entrada Hexadecimal -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock x:Name="txtAccentLabel" Text="Código de cor hexadecimal:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBox x:Name="txtSettingAccentColor" Text="#0EA5E9" Height="28" TextChanged="TxtSettingAccentColor_TextChanged"/>
+                                    </StackPanel>
+
+                                    <!-- Botão Seletor de Cores -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,8,0">
+                                        <Button x:Name="btnOpenColorDialog"
+                                                Content="🎨 Seletor de Cores..."
+                                                Style="{StaticResource BtnDefault}"
+                                                Height="28"
+                                                Padding="10,0"
+                                                ToolTip="Abrir o seletor visual de cores do Windows"
+                                                Click="BtnOpenColorDialog_Click"/>
+                                    </StackPanel>
+
+                                    <!-- Botão Aplicar Cor -->
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,12,0">
+                                        <Button x:Name="btnApplyCustomColor"
+                                                Content="✔️ Aplicar Cor"
+                                                Style="{StaticResource BtnAccent}"
+                                                Height="28"
+                                                Padding="12,0"
+                                                ToolTip="Aplicar a cor informada imediatamente ao OptiAssist"
+                                                Click="BtnApplyCustomColor_Click"/>
+                                    </StackPanel>
+
+                                    <!-- Caixa de Pré-visualização -->
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                                        <TextBlock x:Name="txtPreviewLabel"
+                                                   Text="Pré-visualização: "
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <Border x:Name="borderPreviewColor"
+                                                Width="28"
+                                                Height="28"
+                                                CornerRadius="4"
+                                                Background="{DynamicResource BrushAccent}"
+                                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                                BorderThickness="1"
+                                                ToolTip="Cor de destaque atual"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Paleta de Cores Pré-definidas -->
+                                <TextBlock x:Name="txtPresetLabel" Text="Cores Sugeridas:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <WrapPanel Margin="0,0,0,4">
+                                    <Button x:Name="btnPresetBlue" Content="🔵 Azul (Padrão)" Tag="#0EA5E9" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetGreen" Content="🟢 Verde claro" Tag="#10B981" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetPurple" Content="🟣 Roxo" Tag="#8B5CF6" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetOrange" Content="🟠 Laranja" Tag="#F97316" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetRed" Content="🔴 Vermelho" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetYellow" Content="🟡 Amarelo" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetPink" Content="🌸 Rosa" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ================================================ -->
+                    <!-- ABA 6: SOBRE O APLICATIVO                        -->
+                    <!-- ================================================ -->
+                    <StackPanel x:Name="panelAbout" Visibility="Collapsed" Margin="4">
+                        <!-- Cabeçalho -->
+                        <StackPanel Margin="0,0,0,12" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtAboutTitle"
+                                       Text="ℹ️ Sobre o OptiAssist"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtAboutSub"
+                                       Text="Informações de versão, termos de licença de código aberto e canais oficiais"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Cartão Principal de Licença e Informações -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="16"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Text="OptiAssist v1.0.0"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,2"/>
+                                <TextBlock Text="Copyright (C) 2026 João Figueiró"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           Margin="0,0,0,12"/>
+
+                                <Border Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="14"
+                                        Margin="0,0,0,14">
+                                    <TextBlock TextWrapping="Wrap"
+                                               FontFamily="Consolas, Lucida Console, Segoe UI"
+                                               FontSize="11"
+                                               LineHeight="18"
+                                               Foreground="{DynamicResource BrushTextSecondary}">
+This program is free software: you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, 
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License 
+along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
+                                    </TextBlock>
+                                </Border>
+
+                                <!-- Links / Botões Oficiais -->
+                                <WrapPanel>
+                                    <Button x:Name="btnAboutGithub"
+                                            Content="🐙 Repositório GitHub"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            Click="BtnAboutGithub_Click"/>
+                                    <Button x:Name="btnAboutWebsite"
+                                            Content="🌐 Site Oficial"
+                                            Style="{StaticResource BtnAccent}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            Click="BtnAboutWebsite_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+                <!-- ======================================================== -->
+                <!-- ABA DEDICADA: TERMINAL DE SAÍDA E EXECUÇÃO DE COMANDOS   -->
+                <!-- ======================================================== -->
+                <Grid x:Name="panelTerminal"
+                      Visibility="Collapsed"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Margin="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /> <!-- Topo: Cabeçalho com Título e Ações -->
+                        <RowDefinition Height="*" />    <!-- Centro: Console Monospace -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Topo: Título & Botões de Ação -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtLogsTitle"
+                                       Text="⬛ Logs"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="txtLogsSub"
+                                       Text="Histórico em tempo real de diagnósticos, scripts e execuções do sistema"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="btnExportLog"
+                                    Content="💾 Exportar Log"
+                                    Style="{StaticResource BtnDefault}"
+                                    Height="28"
+                                    Padding="10,0"
+                                    Margin="0,0,6,0"
+                                    Click="BtnSaveLog_Click"/>
+                            <Button x:Name="btnCopyAllLog"
+                                    Content="📋 Copiar Tudo"
+                                    Style="{StaticResource BtnDefault}"
+                                    Height="28"
+                                    Padding="10,0"
+                                    Margin="0,0,6,0"
+                                    Click="BtnCopyLog_Click"/>
+                            <Button x:Name="btnClearLog"
+                                    Content="🗑️ Limpar Console"
+                                    Style="{StaticResource BtnDefault}"
+                                    Height="28"
+                                    Padding="10,0"
+                                    Click="BtnClearLog_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Centro: Janela de Terminal / Console Monospace -->
+                    <Border Grid.Row="1"
+                            Background="{DynamicResource BrushConsoleBg}"
+                            BorderBrush="{DynamicResource BrushBorderCard}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch">
+                        <TextBox x:Name="txtConsoleLog"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas, Lucida Console, Courier New"
+                                 FontSize="12"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource BrushConsoleText}"
+                                 BorderThickness="0"
+                                 Padding="12,10"/>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ======================================================== -->
+        <!-- LINHA 2: BARRA DE STATUS INFERIOR                        -->
+        <!-- BitLocker | TPM | Secure Boot                            -->
+        <!-- ======================================================== -->
+        <Border Grid.Row="2"
+            Background="{DynamicResource BrushBgSidebar}"
+            BorderBrush="{DynamicResource BrushBorderCard}"
+            BorderThickness="0,1,0,0"
+            Padding="14,0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- 1. BitLocker -->
+                <TextBlock x:Name="txtBitLockerLabel"
+                           Text="🔒 BitLocker: "
+                           FontSize="11"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="txtBitLockerStatus"
+                           Text="Consultando..."
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource BrushWarning}"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Text="|" Foreground="{DynamicResource BrushBorderCard}" Margin="10,0" VerticalAlignment="Center"/>
+
+                <!-- 2. TPM -->
+                <TextBlock x:Name="txtTpmLabel"
+                           Text="🛡️ TPM: "
+                           FontSize="11"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="txtTpmStatus"
+                           Text="Consultando..."
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource BrushWarning}"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Text="|" Foreground="{DynamicResource BrushBorderCard}" Margin="10,0" VerticalAlignment="Center"/>
+
+                <!-- 3. Secure Boot -->
+                <TextBlock x:Name="txtSecureBootLabel"
+                           Text="⚡ Secure Boot: "
+                           FontSize="11"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="txtSecureBootStatus"
+                           Text="Consultando..."
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource BrushWarning}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Lado Direito: Nome Personalizado do Aplicativo -->
+            <TextBlock x:Name="lblFooterStoreName"
+                       Grid.Column="1"
+                       Text="N/A"
+                       FontSize="11"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextSecondary}"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"/>
+        </Grid>
+    </Border>
+</Grid>
+</Window>

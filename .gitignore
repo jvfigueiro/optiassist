@@ -1,0 +1,23 @@
+# Visual Studio / MSBuild intermediate build files
+[Oo]bj/
+[Bb]in/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE folders
+.vs/
+.vscode/
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Generated reports during application usage
+Reports/*.txt
+!Reports/LEIAME.txt
+
+# Execution and terminal logs
+*.log

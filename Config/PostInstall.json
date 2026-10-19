@@ -1,0 +1,73 @@
+[
+  {
+    "Name": "Google Chrome",
+    "PreSelected": true,
+    "InstallType": "Local",
+    "WingetId": "Google.Chrome",
+    "SilentArgs": "/silent /install"
+  },
+  {
+    "Name": "7-Zip",
+    "PreSelected": true,
+    "InstallType": "Local",
+    "WingetId": "7zip.7zip",
+    "SilentArgs": "/S"
+  },
+  {
+    "Name": "Microsoft Office",
+    "PreSelected": true,
+    "InstallType": "Local",
+    "WingetId": "Microsoft.Office",
+    "SilentArgs": "/configure configuration.xml"
+  },
+  {
+    "Name": "WinRAR",
+    "PreSelected": false,
+    "InstallType": "Local",
+    "WingetId": "RARLab.WinRAR",
+    "SilentArgs": "/s"
+  },
+  {
+    "Name": "NanaZip",
+    "PreSelected": false,
+    "InstallType": "Winget",
+    "WingetId": "M2Team.NanaZip",
+    "SilentArgs": ""
+  },
+  {
+    "Name": "VLC Media Player",
+    "PreSelected": false,
+    "InstallType": "Local",
+    "WingetId": "VideoLAN.VLC",
+    "SilentArgs": "/S"
+  },
+  {
+    "Name": "Adobe Acrobat Reader",
+    "PreSelected": false,
+    "InstallType": "Local",
+    "WingetId": "Adobe.Acrobat.Reader.64-bit",
+    "SilentArgs": "/sAll /rs /msi EULA_ACCEPT=YES"
+  },
+  {
+    "Name": "AnyDesk",
+    "PreSelected": false,
+    "InstallType": "Local",
+    "WingetId": "AnyDeskSoftwareGmbH.AnyDesk",
+    "SilentArgs": "--install \"C:\\Program Files (x86)\\AnyDesk\" --silent"
+  },
+  {
+    "Name": "Mozilla Firefox",
+    "PreSelected": false,
+    "InstallType": "Local",
+    "WingetId": "Mozilla.Firefox",
+    "SilentArgs": "-ms"
+  },
+  {
+    "Name": "Notepad++",
+    "PreSelected": false,
+    "InstallType": "Local",
+    "WingetId": "Notepad++.Notepad++",
+    "SilentArgs": "/S"
+  }
+]
+

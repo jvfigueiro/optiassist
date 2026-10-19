@@ -1,0 +1,293 @@
+using System;
+using System.IO;
+using System.Diagnostics;
+using System.Windows;
+
+namespace OptiAssist
+{
+    public static class ShortcutsHelper
+    {
+        public static string GetMaintenanceDirectory()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string maintDir = Path.Combine(baseDir, "Maintenance");
+            if (!Directory.Exists(maintDir))
+            {
+                try { Directory.CreateDirectory(maintDir); } catch { }
+            }
+            return maintDir;
+        }
+
+        public static void OpenWindowsTool(string command, string args = "")
+        {
+            try
+            {
+                string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
+                {
+                    string sysnative = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "sysnative");
+                    if (Directory.Exists(sysnative)) sysDir = sysnative;
+                }
+
+                string candidate = Path.Combine(sysDir, command);
+                string targetFile = File.Exists(candidate) ? candidate : command;
+
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = targetFile;
+                psi.Arguments = args;
+                psi.UseShellExecute = true;
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                // Fallback via cmd /c start
+                try
+                {
+                    ProcessStartInfo psiFallback = new ProcessStartInfo();
+                    psiFallback.FileName = "cmd.exe";
+                    psiFallback.Arguments = string.Format("/c start {0} {1}", command, args);
+                    psiFallback.UseShellExecute = true;
+                    psiFallback.CreateNoWindow = true;
+                    Process.Start(psiFallback);
+                }
+                catch
+                {
+                    MessageBox.Show("Não foi possível iniciar o comando '" + command + "': " + ex.Message,
+                        "OptiAssist - Erro ao Abrir Ferramenta", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        public static void OpenMsConfig()
+        {
+            try
+            {
+                // msconfig precisa abrir com UseShellExecute ou via cmd /c start
+                string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
+                {
+                    string sysnative = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "sysnative");
+                    if (Directory.Exists(sysnative)) sysDir = sysnative;
+                }
+
+                string msconfigPath = Path.Combine(sysDir, "msconfig.exe");
+                if (File.Exists(msconfigPath))
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo();
+                    psi.FileName = msconfigPath;
+                    psi.UseShellExecute = true;
+                    Process.Start(psi);
+                }
+                else
+                {
+                    Process.Start("cmd.exe", "/c start msconfig.exe");
+                }
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Process.Start("cmd.exe", "/c start msconfig.exe");
+                }
+                catch
+                {
+                    MessageBox.Show("Não foi possível abrir o msconfig: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        public static void OpenNetplwiz()
+        {
+            OpenWindowsTool("netplwiz.exe");
+        }
+
+        public static void OpenMemoryDiagnostic()
+        {
+            OpenWindowsTool("mdsched.exe");
+        }
+
+        public static void OpenReliabilityMonitor()
+        {
+            OpenWindowsTool("perfmon.exe", "/rel");
+        }
+
+        public static void OpenEventViewer()
+        {
+            OpenWindowsTool("eventvwr.msc");
+        }
+
+        public static void OpenGpedit()
+        {
+            string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
+            {
+                string sysnative = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "sysnative");
+                if (Directory.Exists(sysnative)) sysDir = sysnative;
+            }
+
+            string gpedit = Path.Combine(sysDir, "gpedit.msc");
+            if (File.Exists(gpedit))
+            {
+                OpenWindowsTool("gpedit.msc");
+            }
+            else
+            {
+                MessageBox.Show(
+                    "O Editor de Política de Grupo Local (gpedit.msc) não foi encontrado nesta máquina.\n\n" +
+                    "Essa ferramenta é nativa exclusivamente das edições Windows Pro, Enterprise e Education.\n" +
+                    "Em edições Windows Home / Single Language, o gpedit não vem pré-instalado pelo Windows.",
+                    "OptiAssist - gpedit.msc Indisponível", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        public static void OpenDevicesAndPrinters()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "explorer.exe";
+                psi.Arguments = "shell:::{A8A91A42-3A74-401B-987E-758B4F24E6DA}";
+                psi.UseShellExecute = true;
+                Process.Start(psi);
+            }
+            catch
+            {
+                OpenWindowsTool("control.exe", "printers");
+            }
+        }
+
+        public static void OpenChrisTitusTool()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "powershell.exe";
+                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"irm https://christitus.com/win | iex\"";
+                psi.UseShellExecute = true;
+                psi.Verb = "runas";
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao iniciar Chris Titus Tool: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public static void OpenMassgrave()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "powershell.exe";
+                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"irm https://get.activated.win | iex\"";
+                psi.UseShellExecute = true;
+                psi.Verb = "runas";
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao iniciar Massgrave (MAS): " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public static void OpenCrystalDiskInfo()
+        {
+            string maintDir = GetMaintenanceDirectory();
+            string[] possiblePaths = new string[]
+            {
+                Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo64.exe"),
+                Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo32.exe"),
+                Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo.exe"),
+                Path.Combine(maintDir, "DiskInfo64.exe")
+            };
+
+            foreach (string p in possiblePaths)
+            {
+                if (File.Exists(p))
+                {
+                    OpenWindowsTool(p);
+                    return;
+                }
+            }
+
+            MessageBoxResult res = MessageBox.Show(
+                "O CrystalDiskInfo portátil não foi encontrado em:\n" +
+                Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo64.exe") + "\n\n" +
+                "Deseja abrir a pasta 'Maintenance' para colocar os arquivos portáteis?",
+                "CrystalDiskInfo Não Encontrado", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                OpenMaintenanceFolder();
+            }
+        }
+
+        public static void OpenCpuZ()
+        {
+            string maintDir = GetMaintenanceDirectory();
+            string[] possiblePaths = new string[]
+            {
+                Path.Combine(maintDir, @"CPU-Z\cpuz_x64.exe"),
+                Path.Combine(maintDir, @"CPU-Z\cpuz.exe"),
+                Path.Combine(maintDir, "cpuz_x64.exe")
+            };
+
+            foreach (string p in possiblePaths)
+            {
+                if (File.Exists(p))
+                {
+                    OpenWindowsTool(p);
+                    return;
+                }
+            }
+
+            MessageBoxResult res = MessageBox.Show(
+                "O CPU-Z portátil não foi encontrado em:\n" +
+                Path.Combine(maintDir, @"CPU-Z\cpuz_x64.exe") + "\n\n" +
+                "Deseja abrir a pasta 'Maintenance' para colocar os arquivos portáteis?",
+                "CPU-Z Não Encontrado", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                OpenMaintenanceFolder();
+            }
+        }
+
+        public static void OpenMaintenanceFolder()
+        {
+            string dir = GetMaintenanceDirectory();
+            try
+            {
+                Process.Start("explorer.exe", dir);
+            }
+            catch { }
+        }
+
+        public static void OpenAdminCmd()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "cmd.exe";
+                psi.UseShellExecute = true;
+                psi.Verb = "runas";
+                Process.Start(psi);
+            }
+            catch { }
+        }
+
+        public static void OpenAdminPowerShell()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "powershell.exe";
+                psi.Arguments = "-NoExit";
+                psi.UseShellExecute = true;
+                psi.Verb = "runas";
+                Process.Start(psi);
+            }
+            catch { }
+        }
+    }
+}

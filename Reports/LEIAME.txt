@@ -1,0 +1,15 @@
+========================================================================
+OptiAssist - Pasta de Relatorios de Manutencao (Reports)
+========================================================================
+
+Esta pasta pode ser utilizada para armazenar copias de ordens de servico
+e registros de manutencoes realizadas nos equipamentos dos clientes.
+
+Cada relatorio gerado contem:
+- Dados da Assistencia e do Tecnico
+- Dados do Cliente e Numero de OS
+- Data e Hora exatas da intervencao
+- Especificacoes completas do Computador (SO, CPU, RAM, GPU, Discos, TPM, Secure Boot)
+- Checklist completo de procedimentos realizados
+- Laudo e Observacoes do Tecnico
+========================================================================

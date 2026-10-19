@@ -1,0 +1,13 @@
+﻿{
+  "StoreName": "OptiAssist",
+  "TechnicianName": "N/A",
+  "Phone": "",
+  "Language": "pt-BR",
+  "ReportSavePath": "C:\\MaintenanceReport.txt",
+  "AutoRefreshHardware": true,
+  "EnableWingetFallback": true,
+  "Theme": "Dark",
+  "AccentColor": "#0EA5E9",
+  "ServiceProviderMode": false,
+  "EnableMaintenanceReport": true
+}
