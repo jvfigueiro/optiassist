@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <!-- Modern Dark Theme Palette (Windows 11 Fluent style) -->
+        <!-- Modern Dark Theme Palette (Fluent style) -->
         <Color x:Key="ColorBgPrimary">#18181B</Color>
         <Color x:Key="ColorBgSidebar">#121214</Color>
         <Color x:Key="ColorBgCard">#222228</Color>

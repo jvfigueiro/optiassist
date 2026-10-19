@@ -13,13 +13,13 @@
     <!-- MAIN GRID (Row 0: Top Header Bar, Row 1: Workspace, Row 2: Bottom Status Bar) -->
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" MinHeight="52" /> <!-- Row 0: Top Header Bar (CCleaner Style) -->
+            <RowDefinition Height="Auto" MinHeight="52" /> <!-- Row 0: Top Header Bar -->
             <RowDefinition Height="*" />                   <!-- Row 1: Workspace (Sidebar + Content Area) -->
             <RowDefinition Height="28" />                  <!-- Row 2: Bottom Status Bar -->
         </Grid.RowDefinitions>
 
         <!-- ======================================================== -->
-        <!-- ROW 0: TOP HEADER BAR (CCLEANER STYLE)                  -->
+        <!-- ROW 0: TOP HEADER BAR                                    -->
         <!-- Left: OptiAssist Branding | Right: Hardware Specs       -->
         <!-- ======================================================== -->
         <Border Grid.Row="0"
@@ -905,7 +905,7 @@
                                        TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
 
-                        <!-- Community Tools Card (Chris Titus Tech and MAS) -->
+                        <!-- Community Tools Card -->
                         <Border Background="{DynamicResource BrushBgCard}"
                                 BorderBrush="{DynamicResource BrushBorderCard}"
                                 BorderThickness="1"

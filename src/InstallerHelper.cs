@@ -187,34 +187,16 @@ namespace OptiAssist
         {
             List<InstallAppItem> list = new List<InstallAppItem>();
 
-            // 1. Google Chrome (Pre-selected - Strict local search: ChromeSetup.exe / Winget: Google.Chrome)
+            // Default application catalog entries
             list.Add(new InstallAppItem("Google Chrome", true, "Local", "Google.Chrome", "/silent /install"));
-
-            // 2. 7-Zip (Pre-selected - Strict local search: 7ZipSetup.exe / Winget: 7zip.7zip)
             list.Add(new InstallAppItem("7-Zip", true, "Local", "7zip.7zip", "/S"));
-
-            // 3. Microsoft Office (Pre-selected - Strict local search: OfficeSetup.exe / Winget: Microsoft.Office)
             list.Add(new InstallAppItem("Microsoft Office", true, "Local", "Microsoft.Office", "/configure configuration.xml"));
-
-            // 4. WinRAR (Unchecked - Local: WinRARSetup.exe / Winget: RARLab.WinRAR)
             list.Add(new InstallAppItem("WinRAR", false, "Local", "RARLab.WinRAR", "/s"));
-
-            // 5. NanaZip (UWP App - Winget priority: M2Team.NanaZip)
             list.Add(new InstallAppItem("NanaZip", false, "Winget", "M2Team.NanaZip", ""));
-
-            // 6. VLC Media Player (Unchecked - Local: VLCSetup.exe / Winget: VideoLAN.VLC)
             list.Add(new InstallAppItem("VLC Media Player", false, "Local", "VideoLAN.VLC", "/S"));
-
-            // 7. Adobe Acrobat Reader (Unchecked - Local: AcrobatReaderSetup.exe / Winget: Adobe.Acrobat.Reader.64-bit)
             list.Add(new InstallAppItem("Adobe Acrobat Reader", false, "Local", "Adobe.Acrobat.Reader.64-bit", "/sAll /rs /msi EULA_ACCEPT=YES"));
-
-            // 8. AnyDesk (Unchecked - Local: AnyDeskSetup.exe / Winget: AnyDeskSoftwareGmbH.AnyDesk)
             list.Add(new InstallAppItem("AnyDesk", false, "Local", "AnyDeskSoftwareGmbH.AnyDesk", "--install \"C:\\Program Files (x86)\\AnyDesk\" --silent"));
-
-            // 9. Mozilla Firefox (Unchecked - Local: FirefoxSetup.exe / Winget: Mozilla.Firefox)
             list.Add(new InstallAppItem("Mozilla Firefox", false, "Local", "Mozilla.Firefox", "-ms"));
-
-            // 10. Notepad++ (Unchecked - Local: Notepad++Setup.exe / Winget: Notepad++.Notepad++)
             list.Add(new InstallAppItem("Notepad++", false, "Local", "Notepad++.Notepad++", "/S"));
 
             return list;

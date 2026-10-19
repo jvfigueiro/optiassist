@@ -17,7 +17,7 @@ A interface foi desenhada seguindo uma arquitetura moderna, responsiva e alinhad
    - Textos com `TextTrimming="CharacterEllipsis"` para prevenir transbordamentos visuais.
 
 2. **Grid Principal da Janela (3 Linhas)**:
-   - **Linha 0 (Barra Superior Estilo CCleaner)**: `Height="Auto" MinHeight="52"`:
+   - **Linha 0 (Barra Superior)**: `Height="Auto" MinHeight="52"`:
      - **Canto Superior Esquerdo**: Nome **`OptiAssist`** em destaque.
      - **Canto Superior Direito**: Informações essenciais e despoluídas de hardware:
        - **Linha 1**: `[Marca e Modelo da Placa-Mãe]`
