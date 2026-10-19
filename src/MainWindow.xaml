@@ -49,24 +49,24 @@
                 <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <!-- Line 1: Motherboard (Manufacturer and Model) -->
                     <TextBlock x:Name="lblHeaderDevice"
-                               Text="Detectando..."
+                               Text="Detecting..."
                                FontSize="11"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource BrushTextPrimary}"
                                TextTrimming="CharacterEllipsis"
                                MaxWidth="450"
                                HorizontalAlignment="Right"
-                               ToolTip="Modelo da Placa-Mãe"/>
+                               ToolTip="Motherboard Model"/>
 
                     <!-- Line 2: Processor and RAM -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,3,0,0">
                         <TextBlock x:Name="lblHeaderCpu"
-                                   Text="Processador: ..."
+                                   Text="Processor: ..."
                                    FontSize="11"
                                    Foreground="{DynamicResource BrushTextSecondary}"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="340"
-                                   ToolTip="Processador"/>
+                                   ToolTip="Processor"/>
                         <TextBlock Text=" • "
                                    FontSize="11"
                                    Foreground="{DynamicResource BrushTextMuted}"
@@ -77,7 +77,7 @@
                                    Foreground="{DynamicResource BrushTextSecondary}"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="180"
-                                   ToolTip="Memória RAM Total"/>
+                                   ToolTip="Total RAM Memory"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
@@ -103,24 +103,24 @@
                     <!-- Navigation Buttons -->
                     <StackPanel VerticalAlignment="Top" Margin="0,8,0,0">
                         <RadioButton x:Name="rbNavDashboard"
-                                     Content="💻  Visão Geral"
+                                     Content="💻  Dashboard"
                                      Style="{StaticResource BtnNav}"
                                      IsChecked="True"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavPostInstall"
-                                     Content="📦  Gerenciador de Apps"
+                                     Content="📦  App Manager"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavOptimization"
-                                     Content="⚡  Otimização"
+                                     Content="⚡  Optimization"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavShortcuts"
-                                     Content="🛠️  Ferramentas do Windows"
+                                     Content="🛠️  Windows Tools"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavReport"
-                                     Content="📋  Registrar Manutenção"
+                                     Content="📋  Maintenance Report"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavTerminal"
@@ -128,11 +128,11 @@
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavSettings"
-                                     Content="⚙️  Configurações"
+                                     Content="⚙️  Settings"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavAbout"
-                                     Content="ℹ️  Sobre o aplicativo"
+                                     Content="ℹ️  About"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                     </StackPanel>
@@ -161,13 +161,13 @@
                         <!-- Section Header -->
                         <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
                             <TextBlock x:Name="txtDashboardTitle"
-                                       Text="Bem vindo ao OptiAssist!"
+                                       Text="Welcome to OptiAssist!"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtDashboardSubtitle"
-                                       Text="A ferramenta suprema para manter seu equipamento em ordem"
+                                       Text="The ultimate tool to keep your system in shape"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -192,7 +192,7 @@
                                     HorizontalAlignment="Stretch">
                                 <StackPanel>
                                     <TextBlock x:Name="txtHwCardTitle"
-                                               Text="🧠 Informações do hardware"
+                                               Text="🧠 Hardware Information"
                                                FontWeight="Bold"
                                                FontSize="12"
                                                Foreground="{DynamicResource BrushAccent}"
@@ -201,37 +201,37 @@
 
                                     <!-- 1 per row in strict order: Processor, RAM, GPU, Motherboard, BIOS, Storage, Serial Number -->
                                     <TextBlock x:Name="lblCpuDetails"
-                                               Text="Processador: Detectando..."
+                                               Text="Processor: Detecting..."
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="0,0,0,4"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="lblRamDetails"
-                                               Text="Memória RAM: Detectando..."
+                                               Text="RAM Memory: Detecting..."
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="0,0,0,4"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="lblGpuDetails"
-                                               Text="Placa de Vídeo: Detectando..."
+                                               Text="Graphics Card: Detecting..."
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="0,0,0,4"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="lblMotherboard"
-                                               Text="Placa-Mãe: Detectando..."
+                                               Text="Motherboard: Detecting..."
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="0,0,0,4"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="lblBiosInfo"
-                                               Text="BIOS: Detectando..."
+                                               Text="BIOS: Detecting..."
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="0,0,0,4"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="lblDiskDetails"
-                                               Text="Armazenamento: Detectando..."
+                                               Text="Storage: Detecting..."
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="0,0,0,4"
@@ -240,12 +240,12 @@
                                     <!-- Device Serial Number with Copy Button -->
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0" Height="22">
                                         <TextBlock x:Name="lblSerialTag"
-                                                   Text="Número de Série: "
+                                                   Text="Serial Number: "
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    VerticalAlignment="Center"/>
                                         <TextBlock x:Name="lblSerialNumber"
-                                                   Text="Não informado"
+                                                   Text="Not available"
                                                    FontSize="11"
                                                    FontWeight="Bold"
                                                    Foreground="{DynamicResource BrushAccent}"
@@ -253,7 +253,7 @@
                                                    Margin="0,0,8,0"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <Button x:Name="btnCopySerial"
-                                                Content="📋 Copiar"
+                                                Content="📋 Copy"
                                                 Style="{StaticResource BtnDefault}"
                                                 Height="22"
                                                 FontSize="10"
@@ -275,21 +275,21 @@
                                 <Grid VerticalAlignment="Stretch">
                                     <StackPanel VerticalAlignment="Top">
                                         <TextBlock x:Name="txtOsCardTitle"
-                                                   Text="🪟 Sistema Operacional"
+                                                   Text="🪟 Operating System"
                                                    FontWeight="Bold"
                                                    FontSize="12"
                                                    Foreground="{DynamicResource BrushAccent}"
                                                    TextTrimming="CharacterEllipsis"
                                                    Margin="0,0,0,8"/>
                                         <TextBlock x:Name="lblOsTitle"
-                                                   Text="Detectando Windows..."
+                                                   Text="Detecting Windows..."
                                                    FontWeight="SemiBold"
                                                    FontSize="12"
                                                    Foreground="{DynamicResource BrushTextPrimary}"
                                                    Margin="0,0,0,4"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <TextBlock x:Name="lblOsDetails"
-                                                   Text="Versão e compilação do sistema..."
+                                                   Text="OS build and version..."
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    FontSize="11"
                                                    Margin="0,0,0,4"
@@ -299,12 +299,12 @@
                                     <!-- Device Name positioned at same exact height as Serial Number -->
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,2,0,0" Height="22">
                                         <TextBlock x:Name="lblMachineNameTag"
-                                                   Text="Nome do Dispositivo: "
+                                                   Text="Device Name: "
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    VerticalAlignment="Center"/>
                                         <TextBlock x:Name="lblMachineName"
-                                                   Text="Detectando..."
+                                                   Text="Detecting..."
                                                    FontSize="11"
                                                    FontWeight="Bold"
                                                    Foreground="{DynamicResource BrushAccent}"
@@ -325,7 +325,7 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
                                 <TextBlock x:Name="txtCommonTasksTitle"
-                                           Text="⚡ Tarefas Comuns"
+                                           Text="⚡ Common Tasks"
                                            FontWeight="Bold"
                                            FontSize="12"
                                            Foreground="{DynamicResource BrushAccent}"
@@ -333,52 +333,52 @@
                                            TextTrimming="CharacterEllipsis"/>
                                 <UniformGrid Columns="4" Rows="2" HorizontalAlignment="Stretch">
                                     <Button x:Name="btnTaskPostInstall"
-                                            Content="📦 Gerenciador de Apps"
+                                            Content="📦 App Manager"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Ir para o gerenciador de aplicativos e instalações"
+                                            ToolTip="Go to application and installer manager"
                                             Click="BtnTaskPostInstall_Click"/>
                                     <Button x:Name="btnTaskMaintenanceFolder"
-                                            Content="📁 Pasta Manutenção"
+                                            Content="📁 Maintenance Folder"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Abrir pasta de ferramentas portáteis de manutenção"
+                                            ToolTip="Open portable maintenance tools folder"
                                             Click="BtnOpenMaintenanceFolder_Click"/>
                                     <Button x:Name="btnTaskChrisTitus"
                                             Content="🚀 Chris Titus WinUtil"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Executar utilitário de otimização Chris Titus Tech (PowerShell)"
+                                            ToolTip="Run Chris Titus Tech utility (PowerShell)"
                                             Click="BtnChrisTitus_Click"/>
                                     <Button x:Name="btnTaskMassgrave"
                                             Content="🔑 Massgrave (MAS)"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Executar ativador Microsoft MAS via PowerShell"
+                                            ToolTip="Run Microsoft MAS activator via PowerShell"
                                             Click="BtnMassgrave_Click"/>
                                     <Button x:Name="btnTaskMemoryDiag"
-                                            Content="🧠 Diagnóstico Memória"
+                                            Content="🧠 Memory Diagnostic"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Executar Diagnóstico de Memória do Windows (mdsched.exe)"
+                                            ToolTip="Run Windows Memory Diagnostic (mdsched.exe)"
                                             Click="BtnMemoryDiag_Click"/>
                                     <Button x:Name="btnTaskDevMgmt"
-                                            Content="🖥️ Gerenc. Dispositivos"
+                                            Content="🖥️ Device Manager"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Abrir Gerenciador de Dispositivos (devmgmt.msc)"
+                                            ToolTip="Open Device Manager (devmgmt.msc)"
                                             Click="BtnDevMgmt_Click"/>
                                     <Button x:Name="btnTaskSysDm"
-                                            Content="⚙️ Propriedades Sistema"
+                                            Content="⚙️ System Properties"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Abrir Propriedades do Sistema (sysdm.cpl)"
+                                            ToolTip="Open System Properties (sysdm.cpl)"
                                             Click="BtnSysDm_Click"/>
                                     <Button x:Name="btnRebootBios"
-                                            Content="⚡ Reiniciar p/ UEFI"
+                                            Content="⚡ Reboot to UEFI"
                                             Style="{StaticResource BtnDanger}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Reiniciar o computador diretamente na BIOS / UEFI"
+                                            ToolTip="Restart computer directly into BIOS / UEFI"
                                             Click="BtnRebootBios_Click"/>
                                 </UniformGrid>
                             </StackPanel>
@@ -392,13 +392,13 @@
                         <!-- Main Header -->
                         <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
                             <TextBlock x:Name="txtPostInstallTitle"
-                                       Text="Gerenciador de Apps"
+                                       Text="App Manager"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtPostInstallSubtitle"
-                                       Text="Instalação automatizada de softwares essenciais e atualização de programas instalados"
+                                       Text="Automated installation of essential software and update of installed applications"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -422,22 +422,22 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                         <TextBlock x:Name="txtWingetCardTitle"
-                                                   Text="🔄 Atualização de Aplicativos"
+                                                   Text="🔄 Application Updates"
                                                    FontWeight="Bold"
                                                    FontSize="13"
                                                    Foreground="{DynamicResource BrushAccent}" />
                                         <TextBlock x:Name="lblWingetUpgradeStatus"
-                                                   Text="Clique em 'Verificar Atualizações' ou aguarde a consulta do winget..."
+                                                   Text="Click 'Check Updates' or wait for the winget query..."
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    Margin="0,2,0,0" />
                                     </StackPanel>
                                     <Button x:Name="btnCheckWingetUpgrades"
-                                            Grid.Column="1"
-                                            Content="🔄 Verificar Atualizações"
-                                            Style="{StaticResource BtnDefault}"
-                                            Padding="10,3"
-                                            Click="BtnCheckWingetUpgrades_Click" />
+                                             Grid.Column="1"
+                                             Content="🔄 Check Updates"
+                                             Style="{StaticResource BtnDefault}"
+                                             Padding="10,3"
+                                             Click="BtnCheckWingetUpgrades_Click" />
                                 </Grid>
 
                                 <!-- Progress Bar / Loading Indicator -->
@@ -456,11 +456,11 @@
                                             Margin="0,0,0,8"
                                             Visibility="Collapsed">
                                     <Button x:Name="btnViewLogsFromUpgrade"
-                                            Content="⬛ Visualizar Logs"
+                                            Content="⬛ View Logs"
                                             Style="{StaticResource BtnDefault}"
                                             Height="28"
                                             Padding="14,0"
-                                            ToolTip="Acompanhar o log de execução em tempo real na tela de Logs"
+                                            ToolTip="Monitor execution log in real time on the Logs screen"
                                             Click="BtnViewLogs_Click" />
                                 </StackPanel>
 
@@ -476,24 +476,24 @@
                                         Visibility="Collapsed">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl x:Name="icWingetUpgradesList">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="4,5">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="220" />
-                                                                <ColumnDefinition Width="200" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <CheckBox Grid.Column="0" IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding VersionDisplay}" Foreground="{DynamicResource BrushAccent}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
+                                             <ItemsControl.ItemTemplate>
+                                                 <DataTemplate>
+                                                     <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="4,5">
+                                                         <Grid>
+                                                             <Grid.ColumnDefinitions>
+                                                                 <ColumnDefinition Width="Auto" />
+                                                                 <ColumnDefinition Width="220" />
+                                                                 <ColumnDefinition Width="200" />
+                                                                 <ColumnDefinition Width="*" />
+                                                             </Grid.ColumnDefinitions>
+                                                             <CheckBox Grid.Column="0" IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                             <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                             <TextBlock Grid.Column="2" Text="{Binding VersionDisplay}" Foreground="{DynamicResource BrushAccent}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                             <TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                         </Grid>
+                                                     </Border>
+                                                 </DataTemplate>
+                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </ScrollViewer>
                                 </Border>
@@ -507,29 +507,29 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                                         <Button x:Name="btnSelectAllUpgrades"
-                                                Content="Selecionar Todos"
+                                                Content="Select All"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnSelectAllUpgrades_Click"/>
                                         <Button x:Name="btnDeselectAllUpgrades"
-                                                Content="Desmarcar Todos"
+                                                Content="Deselect All"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnDeselectAllUpgrades_Click"/>
                                         <Button x:Name="btnRecheckWingetUpgrades"
-                                                Content="🔄 Verificar Novamente"
+                                                Content="🔄 Check Again"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnRecheckWingetUpgrades_Click"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                                         <Button x:Name="btnUpgradeAll"
-                                                Content="🚀 Atualizar Tudo"
+                                                Content="🚀 Update All"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnUpgradeAll_Click" />
                                         <Button x:Name="btnUpgradeSelected"
-                                                Content="🔄 Atualizar Selecionados"
+                                                Content="🔄 Update Selected"
                                                 Style="{StaticResource BtnAccent}"
                                                 Click="BtnUpgradeSelected_Click" />
                                     </StackPanel>
@@ -554,19 +554,19 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
                                         <TextBlock x:Name="txtCustomizeHeaderTitle"
-                                                   Text="⚙️ Personalizar instalação automatizada de aplicativos"
+                                                   Text="⚙️ Customize Automated Application Installation"
                                                    FontWeight="Bold"
                                                    FontSize="13"
                                                    Foreground="{DynamicResource BrushAccent}" />
                                         <TextBlock x:Name="txtCustomizeHeaderSub"
-                                                   Text="Adicione novos programas, defina se serão automatizados por padrão e escolha entre instalador Local ou Winget."
+                                                   Text="Add new programs, set whether they are automated by default, and choose between Local installer or Winget."
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    Margin="0,2,0,0" />
                                     </StackPanel>
                                     <Button x:Name="btnCloseCustomize"
                                             Grid.Column="1"
-                                            Content="✕ Fechar"
+                                            Content="✕ Close"
                                             Style="{StaticResource BtnDefault}"
                                             Padding="8,2"
                                             Click="BtnCloseCustomize_Click" />
@@ -593,49 +593,49 @@
 
                                         <!-- Program Name -->
                                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,6">
-                                            <TextBlock x:Name="txtNewAppNameLabel" Text="Nome do Programa:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <TextBlock x:Name="txtNewAppNameLabel" Text="Program Name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
                                             <TextBox x:Name="txtNewAppName" Height="26" />
                                         </StackPanel>
 
                                         <!-- Installation Type -->
                                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,6">
-                                            <TextBlock x:Name="txtNewAppTypeLabel" Text="Tipo de Instalação:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <TextBlock x:Name="txtNewAppTypeLabel" Text="Installation Type:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
                                             <ComboBox x:Name="cmbNewAppType" Height="26" SelectedIndex="0" SelectionChanged="CmbNewAppType_SelectionChanged">
                                                 <ComboBoxItem x:Name="cmbItemLocal" Content="📁 Local (PostInstall)" Tag="Local" />
-                                                <ComboBoxItem x:Name="cmbItemWinget" Content="🌐 Winget (Repositório)" Tag="Winget" />
+                                                <ComboBoxItem x:Name="cmbItemWinget" Content="🌐 Winget (Repository)" Tag="Winget" />
                                             </ComboBox>
                                         </StackPanel>
 
                                         <!-- Local: Select File in PostInstall Folder -->
                                         <StackPanel x:Name="panelNewAppLocal" Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Visibility="Visible">
-                                            <TextBlock x:Name="txtNewAppLocalLabel" Text="Executável na pasta PostInstall:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <TextBlock x:Name="txtNewAppLocalLabel" Text="Executable in PostInstall folder:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBox x:Name="txtNewAppLocalFile" Height="26" Margin="0,0,4,0" ToolTip="Nome do executável na pasta PostInstall (ex: OfficeSetup.exe)" />
+                                                <TextBox x:Name="txtNewAppLocalFile" Height="26" Margin="0,0,4,0" ToolTip="Name of the executable in PostInstall folder (e.g. OfficeSetup.exe)" />
                                                 <Button x:Name="btnSelectLocalInstaller"
                                                         Grid.Column="1"
-                                                        Content="📁 Selecionar..."
+                                                        Content="📁 Select..."
                                                         Style="{StaticResource BtnDefault}"
                                                         Height="26"
                                                         Padding="8,0"
-                                                        ToolTip="Selecionar arquivo executável na pasta PostInstall"
+                                                        ToolTip="Select executable file from PostInstall folder"
                                                         Click="BtnSelectLocalInstaller_Click" />
                                             </Grid>
                                         </StackPanel>
 
                                         <!-- Winget: Enter App ID -->
                                         <StackPanel x:Name="panelNewAppWinget" Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Visibility="Collapsed">
-                                            <TextBlock x:Name="txtNewAppWingetLabel" Text="ID do App no Winget (ex: Google.Chrome):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
-                                            <TextBox x:Name="txtNewAppWingetId" Height="26" ToolTip="Identificador do pacote no repositório Winget" />
+                                            <TextBlock x:Name="txtNewAppWingetLabel" Text="Winget App ID (e.g. Google.Chrome):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
+                                            <TextBox x:Name="txtNewAppWingetId" Height="26" ToolTip="Package identifier in Winget repository" />
                                         </StackPanel>
 
                                         <!-- Add / Save and Cancel Buttons -->
                                         <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,6">
                                             <Button x:Name="btnAddCustomApp"
-                                                    Content="➕ Adicionar"
+                                                    Content="➕ Add"
                                                     Style="{StaticResource BtnAccent}"
                                                     Height="26"
                                                     Padding="12,0"
@@ -647,17 +647,17 @@
                                                     Height="26"
                                                     Width="26"
                                                     Visibility="Collapsed"
-                                                    ToolTip="Cancelar edição"
+                                                    ToolTip="Cancel edit"
                                                     Click="BtnCancelEditApp_Click" />
                                         </StackPanel>
 
                                         <!-- Row 2: Automate and Silent Arguments -->
                                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
                                             <CheckBox x:Name="chkNewAppPreSelected"
-                                                      Content="Automatizar por padrão"
+                                                      Content="Automate by default"
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,16,0" />
-                                            <TextBlock x:Name="txtNewAppSilentLabel" Text="Argumentos silenciosos (opcional):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock x:Name="txtNewAppSilentLabel" Text="Silent arguments (optional):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" />
                                             <TextBox x:Name="txtNewAppSilentArgs" Width="180" Height="24" />
                                         </StackPanel>
                                     </Grid>
@@ -665,7 +665,7 @@
 
                                 <!-- autoinstall.json Programs List for Editing -->
                                 <TextBlock x:Name="txtCurrentListTitle"
-                                           Text="Programas na lista atual:"
+                                           Text="Programs in current list:"
                                            FontWeight="SemiBold"
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextPrimary}"
@@ -706,7 +706,7 @@
                                                                        TextTrimming="CharacterEllipsis" />
 
                                                             <CheckBox Grid.Column="2"
-                                                                      Content="Automatizar"
+                                                                      Content="Automate"
                                                                       IsChecked="{Binding PreSelected, Mode=TwoWay}"
                                                                       VerticalAlignment="Center" />
 
@@ -724,28 +724,28 @@
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnMoveAppUp_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Mover para cima / Move up" />
+                                                                        ToolTip="Move up" />
                                                                 <Button Content="▼"
                                                                         Width="28" Height="24"
                                                                         Margin="0,0,3,0"
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnMoveAppDown_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Mover para baixo / Move down" />
+                                                                        ToolTip="Move down" />
                                                                 <Button Content="✏"
                                                                         Width="28" Height="24"
                                                                         Margin="0,0,3,0"
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnEditCustomApp_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Editar / Edit" />
+                                                                        ToolTip="Edit" />
                                                                 <Button Content="🗑"
                                                                         Width="28" Height="24"
                                                                         Margin="0,0,0,0"
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnRemoveCustomApp_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Remover / Remove" />
+                                                                        ToolTip="Remove" />
                                                             </StackPanel>
                                                         </Grid>
                                                     </Border>
@@ -764,19 +764,19 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                                         <Button x:Name="btnSaveCustomApps"
-                                                Content="💾 Salvar Alterações"
+                                                Content="💾 Save Changes"
                                                 Style="{StaticResource BtnAccent}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnSaveCustomApps_Click" />
                                         <Button x:Name="btnResetDefaultApps"
-                                                Content="🔄 Restaurar Lista Padrão"
+                                                Content="🔄 Restore Default List"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnResetDefaultApps_Click" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                                         <Button x:Name="btnOpenPostInstallJson"
-                                                Content="📂 Abrir autoinstall.json"
+                                                Content="📂 Open autoinstall.json"
                                                 Style="{StaticResource BtnDefault}"
                                                 Click="BtnOpenPostInstallJson_Click" />
                                     </StackPanel>
@@ -795,13 +795,13 @@
                             <StackPanel>
                                 <!-- Installation Section Header -->
                                 <TextBlock x:Name="txtAppsInstallCardTitle"
-                                           Text="📦 Instalação Automatizada de Aplicativos"
+                                           Text="📦 Automated Application Installation"
                                            FontWeight="Bold"
                                            FontSize="13"
                                            Foreground="{DynamicResource BrushAccent}"
                                            Margin="0,0,0,2"/>
                                 <TextBlock x:Name="txtAppsInstallCardSub"
-                                           Text="Selecione os programas que deseja instalar automaticamente em lote no computador:"
+                                           Text="Select the programs you want to automatically batch-install on the computer:"
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextSecondary}"
                                            Margin="0,0,0,10"/>
@@ -853,29 +853,29 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button x:Name="btnSelectEssentials"
-                                                Content="Selecionar Essenciais"
+                                                Content="Select Essentials"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnSelectEssentials_Click"/>
                                         <Button x:Name="btnDeselectAll"
-                                                Content="Desmarcar Todos"
+                                                Content="Deselect All"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnDeselectAll_Click"/>
                                         <Button x:Name="btnToggleCustomizePostInstall"
-                                                Content="⚙️ Personalizar Instalação Automatizada"
+                                                Content="⚙️ Customize Automated Installation"
                                                 Style="{StaticResource BtnDefault}"
                                                 Margin="0,0,6,0"
                                                 Click="BtnToggleCustomizePostInstall_Click"/>
                                         <Button x:Name="btnOpenPostInstallFolder"
-                                                Content="📂 Pasta de Instaladores"
+                                                Content="📂 Installers Folder"
                                                 Style="{StaticResource BtnDefault}"
                                                 Click="BtnOpenPostInstallFolder_Click"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button x:Name="btnRunInstallSelected"
-                                                Content="🚀 Instalar Selecionados"
+                                                Content="🚀 Install Selected"
                                                 Style="{StaticResource BtnAccent}"
                                                 Padding="16,0"
                                                 Height="30"
@@ -892,13 +892,13 @@
                     <StackPanel x:Name="panelOptimization" Visibility="Collapsed" Margin="4">
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock x:Name="txtOptTitle"
-                                       Text="Otimização do Sistema"
+                                       Text="System Optimization"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtOptSubtitle"
-                                       Text="Ferramentas avançadas de limpeza, integridade do Windows, scripts comunitários e benchmark"
+                                       Text="Advanced cleanup tools, Windows integrity, community scripts, and benchmark"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -915,7 +915,7 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
                                 <TextBlock x:Name="txtCommSectionTitle"
-                                           Text="🚀 Ferramentas da Comunidade"
+                                           Text="🚀 Community Tools"
                                            FontWeight="Bold"
                                            FontSize="12"
                                            Foreground="{DynamicResource BrushAccent}"
@@ -928,7 +928,7 @@
                                             Margin="3"
                                             Click="BtnChrisTitus_Click"/>
                                     <Button x:Name="btnMassgraveOpt"
-                                            Content="🔑 Ativação Massgrave (MAS)"
+                                            Content="🔑 Massgrave Activation (MAS)"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="3"
                                             Click="BtnMassgrave_Click"/>
@@ -954,7 +954,7 @@
                                     HorizontalAlignment="Stretch">
                                 <StackPanel>
                                     <TextBlock x:Name="txtIntegrityTitle"
-                                               Text="🛡️ Integridade do Sistema e Correções"
+                                               Text="🛡️ System Integrity &amp; Repairs"
                                                FontWeight="Bold"
                                                FontSize="12"
                                                Foreground="{DynamicResource BrushAccent}"
@@ -965,9 +965,9 @@
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnSfcRepair_Click"
-                                            ToolTip="Verificar e Reparar Integridade do Windows via SFC (sfc /scannow)">
+                                            ToolTip="Check and Repair Windows Integrity via SFC (sfc /scannow)">
                                         <TextBlock x:Name="txtBtnSfcText"
-                                                   Text="🛡️ Verificar e Reparar Integridade do Windows via SFC"
+                                                   Text="🛡️ Check and Repair Windows Integrity via SFC"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Button>
                                     <Button x:Name="btnDism"
@@ -975,43 +975,43 @@
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnDismRepair_Click"
-                                            ToolTip="Verificar e Reparar Integridade do Windows via DISM (Dism /Online /Cleanup-Image /RestoreHealth)">
+                                            ToolTip="Check and Repair Windows Integrity via DISM (Dism /Online /Cleanup-Image /RestoreHealth)">
                                         <TextBlock x:Name="txtBtnDismText"
-                                                   Text="🔧 Verificar e Reparar Integridade do Windows via DISM"
+                                                   Text="🔧 Check and Repair Windows Integrity via DISM"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Button>
                                     <Button x:Name="btnChkdsk"
-                                            Content="🔍 Verificar Integridade do Disco (CHKDSK C:)"
+                                            Content="🔍 Check Disk Integrity (CHKDSK C:)"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnChkdsk_Click"/>
                                     <Button x:Name="btnPrinterFix"
-                                            Content="🖨️ Correção de problema de impressoras em rede"
+                                            Content="🖨️ Fix Network Printer Issue"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnFixPrinter_Click"/>
                                     <Button x:Name="btnDualBoot"
-                                            Content="🕒 Correção de hora do sistema para instalação dual boot"
+                                            Content="🕒 Fix System Time for Dual Boot"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnDualBootClock_Click"/>
                                     <Button x:Name="btnStoreFix"
-                                            Content="🏪 Instalar ou Reparar a Microsoft Store"
+                                            Content="🏪 Install or Repair Microsoft Store"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnWsReset_Click"/>
                                     <Button x:Name="btnNetReset"
-                                            Content="🌐 Redefinição da Rede"
+                                            Content="🌐 Network Reset"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnResetNetwork_Click"/>
                                     <Button x:Name="btnWinSat"
-                                            Content="📊 Benchmark WinSAT"
+                                            Content="📊 WinSAT Benchmark"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,2"
                                             HorizontalAlignment="Stretch"
@@ -1030,32 +1030,32 @@
                                     HorizontalAlignment="Stretch">
                                 <StackPanel>
                                     <TextBlock x:Name="txtCleanupTitle"
-                                               Text="🧹 Limpeza &amp; Desempenho"
+                                               Text="🧹 Cleanup &amp; Performance"
                                                FontWeight="Bold"
                                                FontSize="12"
                                                Foreground="{DynamicResource BrushAccent}"
                                                Margin="0,0,0,8"
                                                TextTrimming="CharacterEllipsis"/>
                                     <Button x:Name="btnTempClean"
-                                            Content="🧹 Limpar Arquivos Temporários"
+                                            Content="🧹 Clean Temporary Files"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnCleanTemp_Click"/>
                                     <Button x:Name="btnUpdateClean"
-                                            Content="🧼 Limpar Cache do Windows Update"
+                                            Content="🧼 Clean Windows Update Cache"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnCleanUpdate_Click"/>
                                     <Button x:Name="btnVisualEffects"
-                                            Content="⚡ Otimizar Efeitos Visuais"
+                                            Content="⚡ Optimize Visual Effects"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnVisualFX_Click"/>
                                     <Button x:Name="btnTelemetry"
-                                            Content="🔇 Desativar Telemetria e Otimizar Serviços do Sistema"
+                                            Content="🔇 Disable Telemetry and Optimize System Services"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
@@ -1065,13 +1065,13 @@
                                             Margin="0,0,0,6"
                                             HorizontalAlignment="Stretch"
                                             Click="BtnCompactOs_Click"
-                                            ToolTip="Compactar Instalação do Windows (compact.exe /CompactOS:always) - Reduz o espaço ocupado pelo Windows em disco">
+                                            ToolTip="Compact Windows OS (compact.exe /CompactOS:always) - Reduces disk footprint">
                                         <TextBlock x:Name="txtBtnCompactOsText"
-                                                   Text="🗜️ Compactar Instalação do Windows"
+                                                   Text="🗜️ Compact Windows OS"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Button>
                                     <Button x:Name="btnOpenScriptsFolder"
-                                            Content="📂 Abrir Pasta Scripts"
+                                            Content="📂 Open Scripts Folder"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,0,2"
                                             HorizontalAlignment="Stretch"
@@ -1087,13 +1087,13 @@
                     <StackPanel x:Name="panelShortcuts" Visibility="Collapsed" Margin="4">
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock x:Name="txtToolsTitle"
-                                       Text="Ferramentas do Windows"
+                                       Text="Windows Tools"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtToolsSubtitle"
-                                       Text="Acesso imediato às ferramentas administrativas nativas do Windows e utilitários portáteis"
+                                       Text="Instant access to native Windows administrative tools and portable utilities"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -1110,33 +1110,33 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
                                 <TextBlock x:Name="txtAdminToolsTitle"
-                                           Text="🪟 Ferramentas Administrativas"
+                                           Text="🪟 Administrative Tools"
                                            FontWeight="Bold"
                                            FontSize="12"
                                            Foreground="{DynamicResource BrushAccent}"
                                            Margin="0,0,0,8"
                                            TextTrimming="CharacterEllipsis"/>
                                 <UniformGrid Columns="3" Margin="0,0,0,0">
-                                    <Button x:Name="btnDevMgmtTool" Content="🔌 Gerenciador de Dispositivos" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDevMgmt_Click"/>
-                                    <Button x:Name="btnNetplwiz" Content="👤 Contas de Usuário Legado" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNetplwiz_Click"/>
-                                    <Button x:Name="btnDiskMgmt" Content="💾 Gerenciamento de Disco" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDiskMgmt_Click"/>
-                                    <Button x:Name="btnControl" Content="⚙️ Painel de Controle Clássico" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnControlPanel_Click"/>
-                                    <Button x:Name="btnMsinfo" Content="ℹ️ Informações do Sistema" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsInfo_Click"/>
-                                    <Button x:Name="btnWinver" Content="📋 Sobre o Windows" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnWinver_Click"/>
-                                    <Button x:Name="btnMsconfig" Content="🔧 Ferramenta MSCONFIG" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsConfig_Click"/>
-                                    <Button x:Name="btnSysDmTool" Content="💻 Propriedades do Sistema" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnSysDm_Click"/>
-                                    <Button x:Name="btnNcpa" Content="🌐 Conexões de Rede" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNcpa_Click"/>
-                                    <Button x:Name="btnOptionalFeatures" Content="📦 Recursos do Windows" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnOptionalFeatures_Click"/>
-                                    <Button x:Name="btnRegedit" Content="🔑 Editor de Registro" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnRegedit_Click"/>
-                                    <Button x:Name="btnTaskmgr" Content="📊 Gerenciador de Tarefas" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnTaskMgr_Click"/>
-                                    <Button x:Name="btnResmon" Content="⚡ Monitor de Recursos" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnResmon_Click"/>
-                                    <Button x:Name="btnMemoryDiagTool" Content="🧠 Diagnóstico de Memória" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMemoryDiag_Click"/>
-                                    <Button x:Name="btnRelMon" Content="📈 Monitor de Confiabilidade" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnReliability_Click"/>
-                                    <Button x:Name="btnEventVwr" Content="📑 Visualizador de Eventos" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnEventVwr_Click"/>
+                                    <Button x:Name="btnDevMgmtTool" Content="🔌 Device Manager" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDevMgmt_Click"/>
+                                    <Button x:Name="btnNetplwiz" Content="👤 User Accounts (Netplwiz)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNetplwiz_Click"/>
+                                    <Button x:Name="btnDiskMgmt" Content="💾 Disk Management" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDiskMgmt_Click"/>
+                                    <Button x:Name="btnControl" Content="⚙️ Classic Control Panel" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnControlPanel_Click"/>
+                                    <Button x:Name="btnMsinfo" Content="ℹ️ System Information (msinfo32)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsInfo_Click"/>
+                                    <Button x:Name="btnWinver" Content="📋 About Windows (winver)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnWinver_Click"/>
+                                    <Button x:Name="btnMsconfig" Content="🔧 MSCONFIG Tool" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsConfig_Click"/>
+                                    <Button x:Name="btnSysDmTool" Content="💻 System Properties" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnSysDm_Click"/>
+                                    <Button x:Name="btnNcpa" Content="🌐 Network Connections (ncpa.cpl)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNcpa_Click"/>
+                                    <Button x:Name="btnOptionalFeatures" Content="📦 Windows Features" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnOptionalFeatures_Click"/>
+                                    <Button x:Name="btnRegedit" Content="🔑 Registry Editor (regedit)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnRegedit_Click"/>
+                                    <Button x:Name="btnTaskmgr" Content="📊 Task Manager" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnTaskMgr_Click"/>
+                                    <Button x:Name="btnResmon" Content="⚡ Resource Monitor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnResmon_Click"/>
+                                    <Button x:Name="btnMemoryDiagTool" Content="🧠 Memory Diagnostic" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMemoryDiag_Click"/>
+                                    <Button x:Name="btnRelMon" Content="📈 Reliability Monitor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnReliability_Click"/>
+                                    <Button x:Name="btnEventVwr" Content="📑 Event Viewer" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnEventVwr_Click"/>
                                     <Button x:Name="btnGpedit" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnGpedit_Click"
-                                            ToolTip="Editor de Política de Grupo (gpedit.msc) - Disponível apenas nas edições Windows Pro e Enterprise">
+                                            ToolTip="Group Policy Editor (gpedit.msc) - Available in Windows Pro &amp; Enterprise editions">
                                         <TextBlock x:Name="txtBtnGpeditText"
-                                                   Text="📜 Ferramenta GPEDIT (Pro/Enterprise)"
+                                                   Text="📜 GPEDIT Tool (Pro/Enterprise)"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Button>
                                 </UniformGrid>
@@ -1145,13 +1145,13 @@
 
                         <!-- Maintenance Tools Folder button positioned directly below Administrative Tools -->
                         <Button x:Name="btnOpenMaintenanceFolderTool"
-                                Content="📂 Pasta de Ferramentas de Manutenção"
+                                Content="📂 Maintenance Tools Folder (Portable)"
                                 Style="{StaticResource BtnDefault}"
                                 Height="36"
                                 Margin="0,0,0,4"
                                 HorizontalAlignment="Stretch"
                                 Click="BtnOpenMaintenanceFolder_Click"
-                                ToolTip="Acessar a pasta local Maintenance com as ferramentas portáteis"/>
+                                ToolTip="Access local Maintenance folder containing portable tools"/>
                     </StackPanel>
 
                     <!-- ================================================ -->
@@ -1160,13 +1160,13 @@
                     <StackPanel x:Name="panelReport" Visibility="Collapsed" Margin="4">
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock x:Name="txtReportTitle"
-                                       Text="Registrar Ordem de Manutenção"
+                                       Text="Maintenance Report"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtReportSub"
-                                       Text="Gera um laudo com especificações da máquina, placa-mãe, número de série e procedimentos"
+                                       Text="Generates a report with machine specs, motherboard, serial number, and services"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -1190,40 +1190,40 @@
                                         <ColumnDefinition Width="220" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                        <TextBlock x:Name="txtReportOrderLabel" Text="Nº da Ordem de Serviço:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBlock x:Name="txtReportOrderLabel" Text="Order No.:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                         <TextBox x:Name="txtReportOrder" Height="26"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="0,0,6,0">
-                                        <TextBlock x:Name="txtReportClientLabel" Text="Nome do Cliente:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBlock x:Name="txtReportClientLabel" Text="Client Name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                         <TextBox x:Name="txtReportClient" Height="26"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock x:Name="txtReportSerialLabel" Text="Nº de Série / Service Tag:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBlock x:Name="txtReportSerialLabel" Text="Serial No. / Service Tag:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                         <TextBox x:Name="txtReportSerial" Height="26"/>
                                     </StackPanel>
                                 </Grid>
 
                                 <!-- Services Checklist (ALL UNCHECKED BY DEFAULT) -->
-                                <TextBlock x:Name="txtChecklistLabel" Text="Checklist de Procedimentos Realizados:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="txtChecklistLabel" Text="Services and Procedures Checklist:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <UniformGrid Columns="2" Margin="0,0,0,8">
-                                    <CheckBox x:Name="chkActSmart" Content="Diagnóstico e saúde de disco (SMART)" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActClean" Content="Limpeza interna preventiva e pasta térmica" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActFormat" Content="Formatação e instalação limpa do Windows" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActDrivers" Content="Atualização completa de drivers e BIOS" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActApps" Content="Instalação de programas essenciais" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActTemp" Content="Limpeza profunda de arquivos temporários" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActDism" Content="Reparo de integridade (DISM / SFC)" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActNet" Content="Configuração de rede e impressoras" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActSmart" Content="Disk diagnostics and SMART health" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActClean" Content="Preventive internal cleaning and thermal paste" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActFormat" Content="Clean Windows installation" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActDrivers" Content="Full driver and BIOS update" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActApps" Content="Essential application setup" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActTemp" Content="Deep temporary files cleanup" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActDism" Content="System integrity repair (DISM / SFC)" IsChecked="False"/>
+                                    <CheckBox x:Name="chkActNet" Content="Network and printer setup" IsChecked="False"/>
                                 </UniformGrid>
 
                                 <!-- Technical Assessment with Suggestive Placeholder -->
-                                <TextBlock x:Name="txtReportNotesLabel" Text="Laudo Técnico e Observações:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                <TextBlock x:Name="txtReportNotesLabel" Text="Technical Assessment &amp; Observations:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                 <TextBox x:Name="txtReportNotes"
                                          Height="50"
                                          TextWrapping="Wrap"
                                          AcceptsReturn="True"
                                          VerticalScrollBarVisibility="Auto"
-                                         Text="Você pode informar maiores detalhes acerca do que foi realizado neste equipamento aqui..."
+                                         Text="Enter technical observations, hardware replaced, or recommendations..."
                                          Foreground="{DynamicResource BrushTextSecondary}"
                                          GotFocus="TxtReportNotes_GotFocus"
                                          Margin="0,0,0,8"/>
@@ -1231,17 +1231,17 @@
                                 <!-- Report Actions -->
                                 <StackPanel Orientation="Horizontal">
                                     <Button x:Name="btnSaveReport"
-                                            Content="📄 Gerar Registro de Manutenção"
+                                            Content="📄 Generate Maintenance Report"
                                             Style="{StaticResource BtnAccent}"
                                             Margin="0,0,8,0"
                                             Click="BtnSaveReport_Click"/>
                                     <Button x:Name="btnCopyReport"
-                                            Content="📋 Copiar Laudo Técnico"
+                                            Content="📋 Copy Technical Report"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="0,0,8,0"
                                             Click="BtnCopyReport_Click"/>
                                     <Button x:Name="btnOpenReportFolder"
-                                            Content="📂 Abrir Pasta Reports"
+                                            Content="📂 Open Reports Folder"
                                             Style="{StaticResource BtnDefault}"
                                             Click="BtnOpenReportFolder_Click"/>
                                 </StackPanel>
@@ -1250,18 +1250,19 @@
                     </StackPanel>
 
                     <!-- ================================================ -->
+                    <!-- ================================================ -->
                     <!-- TAB 5: SETTINGS                                -->
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelSettings" Visibility="Collapsed" Margin="4">
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock x:Name="txtSettingsTitle"
-                                       Text="Configurações do OptiAssist"
+                                       Text="OptiAssist Settings"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtSettingsSub"
-                                       Text="Dados salvos em Config\settings.json no pen drive"
+                                       Text="Settings saved in Config\settings.json on the portable drive"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -1284,35 +1285,35 @@
                                         Margin="0,0,0,10">
                                     <StackPanel>
                                         <CheckBox x:Name="chkServiceProviderMode"
-                                                  Content="Modo prestador de serviço"
+                                                  Content="Service provider mode"
                                                   FontWeight="SemiBold"
                                                   FontSize="12"
                                                   Checked="ChkServiceProviderMode_Changed"
                                                   Unchecked="ChkServiceProviderMode_Changed"/>
                                         <TextBlock x:Name="txtServiceProviderDesc"
-                                                   Text="Habilita personalização da marca e opções para atendimento e laudo técnico"
+                                                   Text="Enables branding customization and options for service orders and technical reports"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    Margin="24,2,0,0"/>
 
                                         <!-- Section with Custom App Name, Contact Info and Enable Maintenance Report -->
                                         <StackPanel x:Name="pnlServiceProviderFields" Margin="0,10,0,0" Visibility="Collapsed">
-                                            <TextBlock x:Name="txtStoreNameLabel" Text="Nome personalizado do aplicativo:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox x:Name="txtSettingStore" Height="26" ToolTip="Customize a aplicação de acordo com o nome que você preferir."/>
-                                            <TextBlock x:Name="txtStoreNameHint" Text="💡 Customize a aplicação de acordo com o nome que você preferir." FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
+                                            <TextBlock x:Name="txtStoreNameLabel" Text="Custom application name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                            <TextBox x:Name="txtSettingStore" Height="26" ToolTip="Customize the application according to the name you prefer."/>
+                                            <TextBlock x:Name="txtStoreNameHint" Text="💡 Customize the application according to the name you prefer." FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
 
-                                            <TextBlock x:Name="txtPhoneLabel" Text="Informações de Contato:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox x:Name="txtSettingPhone" Height="26" ToolTip="Informe um e-mail, número de contato ou rede social que preferir"/>
-                                            <TextBlock x:Name="txtPhoneHint" Text="💡 Informe um e-mail, número de contato ou rede social que preferir" FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
+                                            <TextBlock x:Name="txtPhoneLabel" Text="Contact Information:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                            <TextBox x:Name="txtSettingPhone" Height="26" ToolTip="Provide an email, phone number, or social media link of your choice"/>
+                                            <TextBlock x:Name="txtPhoneHint" Text="💡 Provide an email, phone number, or social media link of your choice" FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
 
                                             <CheckBox x:Name="chkEnableMaintenanceReport"
-                                                      Content="Habilitar Registro de Manutenção"
+                                                      Content="Enable Maintenance Report"
                                                       FontWeight="SemiBold"
                                                       Margin="0,4,0,2"
                                                       Checked="ChkEnableMaintenanceReport_Changed"
                                                       Unchecked="ChkEnableMaintenanceReport_Changed"/>
                                             <TextBlock x:Name="txtEnableReportDesc"
-                                                       Text="Exibe ou oculta a tela de Registrar Manutenção no menu lateral da aplicação"
+                                                       Text="Shows or hides the Maintenance Report screen in the sidebar menu"
                                                        FontSize="11"
                                                        Foreground="{DynamicResource BrushTextSecondary}"
                                                        Margin="24,0,0,0"/>
@@ -1320,11 +1321,11 @@
                                     </StackPanel>
                                 </Border>
 
-                                <TextBlock x:Name="txtReportPathLabel" Text="Caminho Padrão do Arquivo de Relatório:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                <TextBlock x:Name="txtReportPathLabel" Text="Default Report File Path:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                 <TextBox x:Name="txtSettingReportPath" Height="26" Margin="0,0,0,8"/>
 
                                 <!-- Language Selection Buttons -->
-                                <TextBlock x:Name="txtLangLabel" Text="Idioma da Aplicação (Language):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="txtLangLabel" Text="Application Language:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <Button x:Name="btnLangPt"
                                             Content="🇧🇷 Português (Brasil)"
@@ -1339,29 +1340,29 @@
                                             Margin="0,0,8,0"
                                             Click="BtnLangEn_Click"/>
                                     <TextBlock x:Name="lblCurrentLanguage"
-                                               Text="Atual: Português (pt-BR)"
+                                               Text="Current: English (en-US)"
                                                FontSize="11"
                                                Foreground="{DynamicResource BrushAccent}"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <CheckBox x:Name="chkSettingWinget"
-                                          Content="Habilitar download via Winget quando o programa não existir na pasta PostInstall"
+                                          Content="Enable Winget download fallback when program is not in PostInstall folder"
                                           Margin="0,2,0,4"/>
                                 <CheckBox x:Name="chkSettingAutoRefresh"
-                                          Content="Atualizar especificações de hardware automaticamente na inicialização"
+                                          Content="Automatically refresh hardware specs on startup"
                                           Margin="0,2,0,12"/>
 
                                 <StackPanel Orientation="Horizontal">
                                     <Button x:Name="btnSaveSettings"
-                                            Content="💾 Salvar Configurações"
+                                            Content="💾 Save Settings"
                                             Style="{StaticResource BtnAccent}"
                                             Width="160"
                                             HorizontalAlignment="Left"
                                             Margin="0,0,8,0"
                                             Click="BtnSaveSettings_Click"/>
                                     <Button x:Name="btnResetSettings"
-                                            Content="🔄 Restaurar Padrões"
+                                            Content="🔄 Restore Defaults"
                                             Style="{StaticResource BtnDefault}"
                                             Padding="14,0"
                                             HorizontalAlignment="Left"
@@ -1380,13 +1381,13 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
                                 <TextBlock x:Name="txtPersonalizeTitle"
-                                           Text="🎨 Personalizar o Aplicativo"
+                                           Text="🎨 Customize Application"
                                            FontWeight="Bold"
                                            FontSize="12"
                                            Foreground="{DynamicResource BrushAccent}"
                                            Margin="0,0,0,4"/>
                                 <TextBlock x:Name="txtPersonalizeSub"
-                                           Text="Personalize o tema visual, as cores dos botões principais e acentos do OptiAssist:"
+                                           Text="Customize the visual theme, button accent colors, and styling of OptiAssist:"
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextSecondary}"
                                            Margin="0,0,0,10"
@@ -1394,17 +1395,17 @@
 
                                 <!-- Light Mode / Dark Mode Toggle -->
                                 <StackPanel Margin="0,0,0,12">
-                                    <TextBlock x:Name="txtThemeLabel" Text="Tema Visual:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="txtThemeLabel" Text="Visual Theme:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                     <Button x:Name="btnToggleTheme"
                                             Style="{StaticResource BtnDefault}"
                                             Height="30"
                                             Padding="14,0"
                                             HorizontalAlignment="Left"
-                                            ToolTip="Alternar entre modo escuro e modo claro"
+                                            ToolTip="Toggle between dark mode and light mode"
                                             Click="BtnToggleTheme_Click">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock x:Name="txtThemeIcon" Text="☀️" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock x:Name="txtThemeText" Text="Modo Claro" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="txtThemeText" Text="Light Mode" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
@@ -1420,36 +1421,36 @@
 
                                     <!-- Hexadecimal Input Field -->
                                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                        <TextBlock x:Name="txtAccentLabel" Text="Código de cor hexadecimal:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBlock x:Name="txtAccentLabel" Text="Accent &amp; Button Color (Hexadecimal):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                         <TextBox x:Name="txtSettingAccentColor" Text="#0EA5E9" Height="28" TextChanged="TxtSettingAccentColor_TextChanged"/>
                                     </StackPanel>
 
                                     <!-- Color Picker Dialog Button -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,8,0">
                                         <Button x:Name="btnOpenColorDialog"
-                                                Content="🎨 Seletor de Cores..."
+                                                Content="🎨 Pick Color..."
                                                 Style="{StaticResource BtnDefault}"
                                                 Height="28"
                                                 Padding="10,0"
-                                                ToolTip="Abrir o seletor visual de cores do Windows"
+                                                ToolTip="Open Windows color picker dialog"
                                                 Click="BtnOpenColorDialog_Click"/>
                                     </StackPanel>
 
                                     <!-- Apply Color Button -->
                                     <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,12,0">
                                         <Button x:Name="btnApplyCustomColor"
-                                                Content="✔️ Aplicar Cor"
+                                                Content="✔️ Apply Color"
                                                 Style="{StaticResource BtnAccent}"
                                                 Height="28"
                                                 Padding="12,0"
-                                                ToolTip="Aplicar a cor informada imediatamente ao OptiAssist"
+                                                ToolTip="Apply the specified accent color immediately to OptiAssist"
                                                 Click="BtnApplyCustomColor_Click"/>
                                     </StackPanel>
 
                                     <!-- Preview Box -->
                                     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                                         <TextBlock x:Name="txtPreviewLabel"
-                                                   Text="Pré-visualização: "
+                                                   Text="Preview: "
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    VerticalAlignment="Center"
@@ -1461,20 +1462,20 @@
                                                 Background="{DynamicResource BrushAccent}"
                                                 BorderBrush="{DynamicResource BrushBorderCard}"
                                                 BorderThickness="1"
-                                                ToolTip="Cor de destaque atual"/>
+                                                ToolTip="Current accent color"/>
                                     </StackPanel>
                                 </Grid>
 
                                 <!-- Preset Color Palette -->
-                                <TextBlock x:Name="txtPresetLabel" Text="Cores Sugeridas:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="txtPresetLabel" Text="Suggested Colors:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <WrapPanel Margin="0,0,0,4">
-                                    <Button x:Name="btnPresetBlue" Content="🔵 Azul (Padrão)" Tag="#0EA5E9" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetGreen" Content="🟢 Verde claro" Tag="#10B981" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetPurple" Content="🟣 Roxo" Tag="#8B5CF6" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetOrange" Content="🟠 Laranja" Tag="#F97316" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetRed" Content="🔴 Vermelho" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetYellow" Content="🟡 Amarelo" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetPink" Content="🌸 Rosa" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetBlue" Content="🔵 Blue (Default)" Tag="#0EA5E9" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetGreen" Content="🟢 Light Green" Tag="#10B981" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetPurple" Content="🟣 Purple" Tag="#8B5CF6" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetOrange" Content="🟠 Orange" Tag="#F97316" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetRed" Content="🔴 Red" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetYellow" Content="🟡 Yellow" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetPink" Content="🌸 Pink" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                 </WrapPanel>
                             </StackPanel>
                         </Border>
@@ -1487,13 +1488,13 @@
                         <!-- Header -->
                         <StackPanel Margin="0,0,0,12" VerticalAlignment="Center">
                             <TextBlock x:Name="txtAboutTitle"
-                                       Text="ℹ️ Sobre o OptiAssist"
+                                       Text="ℹ️ About OptiAssist"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtAboutSub"
-                                       Text="Informações de versão, termos de licença de código aberto e canais oficiais"
+                                       Text="Version information, open-source license terms, and official channels"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -1549,14 +1550,14 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                                 <!-- Official Links / Buttons -->
                                 <WrapPanel>
                                     <Button x:Name="btnAboutGithub"
-                                            Content="🐙 Repositório GitHub"
+                                            Content="🐙 GitHub Repository"
                                             Style="{StaticResource BtnDefault}"
                                             Height="32"
                                             Padding="14,0"
                                             Margin="0,0,8,8"
                                             Click="BtnAboutGithub_Click"/>
                                     <Button x:Name="btnAboutWebsite"
-                                            Content="🌐 Site Oficial"
+                                            Content="🌐 Official Website"
                                             Style="{StaticResource BtnAccent}"
                                             Height="32"
                                             Padding="14,0"
@@ -1597,7 +1598,7 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                                        Foreground="{DynamicResource BrushTextPrimary}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="txtLogsSub"
-                                       Text="Histórico em tempo real de diagnósticos, scripts e execuções do sistema"
+                                       Text="Real-time log of diagnostics, scripts, and system executions"
                                        FontSize="11"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0"
@@ -1606,21 +1607,21 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button x:Name="btnExportLog"
-                                    Content="💾 Exportar Log"
+                                    Content="💾 Export Log"
                                     Style="{StaticResource BtnDefault}"
                                     Height="28"
                                     Padding="10,0"
                                     Margin="0,0,6,0"
                                     Click="BtnSaveLog_Click"/>
                             <Button x:Name="btnCopyAllLog"
-                                    Content="📋 Copiar Tudo"
+                                    Content="📋 Copy All"
                                     Style="{StaticResource BtnDefault}"
                                     Height="28"
                                     Padding="10,0"
                                     Margin="0,0,6,0"
                                     Click="BtnCopyLog_Click"/>
                             <Button x:Name="btnClearLog"
-                                    Content="🗑️ Limpar Console"
+                                    Content="🗑️ Clear Console"
                                     Style="{StaticResource BtnDefault}"
                                     Height="28"
                                     Padding="10,0"
@@ -1678,7 +1679,7 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                            Foreground="{DynamicResource BrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <TextBlock x:Name="txtBitLockerStatus"
-                           Text="Consultando..."
+                           Text="Querying..."
                            FontSize="11"
                            FontWeight="Bold"
                            Foreground="{DynamicResource BrushWarning}"
@@ -1693,7 +1694,7 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                            Foreground="{DynamicResource BrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <TextBlock x:Name="txtTpmStatus"
-                           Text="Consultando..."
+                           Text="Querying..."
                            FontSize="11"
                            FontWeight="Bold"
                            Foreground="{DynamicResource BrushWarning}"
@@ -1708,7 +1709,7 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                            Foreground="{DynamicResource BrushTextSecondary}"
                            VerticalAlignment="Center"/>
                 <TextBlock x:Name="txtSecureBootStatus"
-                           Text="Consultando..."
+                           Text="Querying..."
                            FontSize="11"
                            FontWeight="Bold"
                            Foreground="{DynamicResource BrushWarning}"

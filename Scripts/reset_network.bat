@@ -1,29 +1,29 @@
 @echo off
-title OptiAssist - Redefinicao de Rede e Conectividade
+title OptiAssist - Network & Connectivity Reset
 echo ===================================================
-echo      OptiAssist - Redefinicao de Rede e DNS
+echo      OptiAssist - Network & DNS Reset
 echo ===================================================
 echo.
 
-echo [1/5] Liberando concessao DHCP atual...
+echo [1/5] Releasing current DHCP lease...
 ipconfig /release >nul 2>&1
 
-echo [2/5] Limpando cache do resolvedor DNS...
+echo [2/5] Flushing DNS resolver cache...
 ipconfig /flushdns
 
-echo [3/5] Redefinindo catalogo Winsock...
+echo [3/5] Resetting Winsock catalog...
 netsh winsock reset
 
-echo [4/5] Redefinindo pilha TCP/IP (v4 e v6)...
+echo [4/5] Resetting TCP/IP stack (v4 and v6)...
 netsh int ip reset >nul 2>&1
 
-echo [5/5] Renovando concessao DHCP...
+echo [5/5] Renewing DHCP lease...
 ipconfig /renew >nul 2>&1
 
 echo.
 echo ===================================================
-echo   Rede redefinida com sucesso!
-echo   (Se necessario, reinicie o computador).
+echo   Network reset completed successfully!
+echo   (If necessary, restart your computer).
 echo ===================================================
 echo.
 pause

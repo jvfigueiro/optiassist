@@ -17,7 +17,7 @@ $RECYCLE.BIN/
 
 # Generated reports during application usage
 Reports/*.txt
-!Reports/LEIAME.txt
+!Reports/README.txt
 
 # Execution and terminal logs
 *.log

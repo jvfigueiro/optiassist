@@ -1,7 +1,7 @@
 @echo off
-title Compilando OptiAssist (WPF)...
+title Building OptiAssist (WPF)...
 echo ===============================================================
-echo            OptiAssist - Script de Compilacao WPF (.NET)
+echo            OptiAssist - WPF (.NET) Build Script
 echo ===============================================================
 echo.
 
@@ -9,14 +9,14 @@ set MSBUILD=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe
 if not exist "%MSBUILD%" set MSBUILD=C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe
 
 if not exist "%MSBUILD%" (
-    echo [ERRO] O MSBuild.exe do .NET Framework 4.x nao foi encontrado no Windows.
-    echo Certifique-se de que o .NET Framework 4.8 esteja instalado.
+    echo [ERROR] .NET Framework 4.x MSBuild.exe was not found on Windows.
+    echo Make sure .NET Framework 4.8 or later is installed.
     pause
     exit /b 1
 )
 
-echo Usando compilador: %MSBUILD%
-echo Compilando projeto WPF OptiAssist.csproj...
+echo Using compiler: %MSBUILD%
+echo Compiling WPF project OptiAssist.csproj...
 echo.
 
 "%MSBUILD%" OptiAssist.csproj /p:Configuration=Release /v:minimal
@@ -24,12 +24,12 @@ echo.
 if %ERRORLEVEL% equ 0 (
     echo.
     echo ===============================================================
-    echo      OptiAssist.exe compilado com SUCESSO! - Pronto para Uso
+    echo      OptiAssist.exe compiled SUCCESSFULLY! - Ready for Use
     echo ===============================================================
     echo.
 ) else (
     echo.
-    echo [ERRO] Houve falhas durante a compilacao. Verifique as mensagens acima.
+    echo [ERROR] Compilation failed. Please check the error messages above.
     echo.
 )
 

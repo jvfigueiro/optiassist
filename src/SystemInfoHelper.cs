@@ -299,31 +299,31 @@ namespace OptiAssist
                             int sb = Convert.ToInt32(val);
                             if (sb == 1)
                             {
-                                summary.SecureBootStatus = "Ativo";
+                                summary.SecureBootStatus = "Active";
                                 summary.SecureBootActive = true;
                             }
                             else
                             {
-                                summary.SecureBootStatus = "Inativo";
+                                summary.SecureBootStatus = "Inactive";
                                 summary.SecureBootActive = false;
                             }
                         }
                         else
                         {
-                            summary.SecureBootStatus = "Indisponível/não suportado";
+                            summary.SecureBootStatus = "Unavailable / Not supported";
                             summary.SecureBootActive = false;
                         }
                     }
                     else
                     {
-                        summary.SecureBootStatus = "Indisponível/não suportado";
+                        summary.SecureBootStatus = "Unavailable / Not supported";
                         summary.SecureBootActive = false;
                     }
                 }
             }
             catch
             {
-                summary.SecureBootStatus = "Indisponível/não suportado";
+                summary.SecureBootStatus = "Unavailable / Not supported";
                 summary.SecureBootActive = false;
             }
 
@@ -344,12 +344,12 @@ namespace OptiAssist
                         bool enabled = mo["IsEnabled_InitialValue"] != null && Convert.ToBoolean(mo["IsEnabled_InitialValue"]);
                         if (activated || enabled)
                         {
-                            summary.TpmStatus = string.Format("Disponível ({0})", spec);
+                            summary.TpmStatus = string.Format("Available ({0})", spec);
                             summary.TpmActive = true;
                         }
                         else
                         {
-                            summary.TpmStatus = "Inativo";
+                            summary.TpmStatus = "Inactive";
                             summary.TpmActive = false;
                         }
                         tpmFound = true;
@@ -359,7 +359,7 @@ namespace OptiAssist
 
                 if (!tpmFound)
                 {
-                    summary.TpmStatus = "Indisponível/não suportado";
+                    summary.TpmStatus = "Unavailable / Not supported";
                     summary.TpmActive = false;
                 }
             }
@@ -377,7 +377,7 @@ namespace OptiAssist
                                 name.IndexOf("Trusted Platform", StringComparison.OrdinalIgnoreCase) >= 0)
                             {
                                 string ver = name.Contains("2.0") ? "2.0" : (name.Contains("1.2") ? "1.2" : "2.0");
-                                summary.TpmStatus = string.Format("Disponível ({0})", ver);
+                                summary.TpmStatus = string.Format("Available ({0})", ver);
                                 summary.TpmActive = true;
                                 found = true;
                                 break;
@@ -385,14 +385,14 @@ namespace OptiAssist
                         }
                         if (!found)
                         {
-                            summary.TpmStatus = "Indisponível/não suportado";
+                            summary.TpmStatus = "Unavailable / Not supported";
                             summary.TpmActive = false;
                         }
                     }
                 }
                 catch
                 {
-                    summary.TpmStatus = "Indisponível/não suportado";
+                    summary.TpmStatus = "Unavailable / Not supported";
                     summary.TpmActive = false;
                 }
             }
@@ -411,12 +411,12 @@ namespace OptiAssist
                         int prot = mo["ProtectionStatus"] != null ? Convert.ToInt32(mo["ProtectionStatus"]) : 0;
                         if (prot == 1)
                         {
-                            summary.BitLockerStatus = "Ativo";
+                            summary.BitLockerStatus = "Active";
                             summary.BitLockerActive = true;
                         }
                         else
                         {
-                            summary.BitLockerStatus = "Inativo";
+                            summary.BitLockerStatus = "Inactive";
                             summary.BitLockerActive = false;
                         }
                         found = true;
@@ -424,14 +424,14 @@ namespace OptiAssist
                     }
                     if (!found)
                     {
-                        summary.BitLockerStatus = "Inativo";
+                        summary.BitLockerStatus = "Inactive";
                         summary.BitLockerActive = false;
                     }
                 }
             }
             catch
             {
-                summary.BitLockerStatus = "Indisponível/não suportado";
+                summary.BitLockerStatus = "Unavailable / Not supported";
                 summary.BitLockerActive = false;
             }
 

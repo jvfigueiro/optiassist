@@ -133,10 +133,10 @@ namespace OptiAssist
             else
             {
                 MessageBox.Show(
-                    "O Editor de Política de Grupo Local (gpedit.msc) não foi encontrado nesta máquina.\n\n" +
-                    "Essa ferramenta é nativa exclusivamente das edições Windows Pro, Enterprise e Education.\n" +
-                    "Em edições Windows Home / Single Language, o gpedit não vem pré-instalado pelo Windows.",
-                    "OptiAssist - gpedit.msc Indisponível", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "The Local Group Policy Editor (gpedit.msc) was not found on this machine.\n\n" +
+                    "This tool is native exclusively to Windows Pro, Enterprise, and Education editions.\n" +
+                    "On Windows Home / Single Language editions, gpedit is not pre-installed by Windows.",
+                    "OptiAssist - gpedit.msc Unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 

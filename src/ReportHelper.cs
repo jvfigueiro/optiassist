@@ -127,7 +127,8 @@ namespace OptiAssist
             if (!string.IsNullOrEmpty(notes) &&
                 !notes.StartsWith("Você pode informar", StringComparison.OrdinalIgnoreCase) &&
                 !notes.StartsWith("You can enter", StringComparison.OrdinalIgnoreCase) &&
-                !notes.StartsWith("You can provide", StringComparison.OrdinalIgnoreCase))
+                !notes.StartsWith("You can provide", StringComparison.OrdinalIgnoreCase) &&
+                !notes.StartsWith("Enter technical observations", StringComparison.OrdinalIgnoreCase))
             {
                 sb.AppendLine(notes);
             }
@@ -269,6 +270,7 @@ namespace OptiAssist
             if (rec != null && !string.IsNullOrWhiteSpace(rec.SerialNumber) &&
                 !rec.SerialNumber.Equals("Não informado", StringComparison.OrdinalIgnoreCase) &&
                 !rec.SerialNumber.Equals("Not informed", StringComparison.OrdinalIgnoreCase) &&
+                !rec.SerialNumber.Equals("Not available", StringComparison.OrdinalIgnoreCase) &&
                 !rec.SerialNumber.Equals("N/A", StringComparison.OrdinalIgnoreCase))
             {
                 return rec.SerialNumber.Trim();
@@ -276,6 +278,7 @@ namespace OptiAssist
             if (rec != null && rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.SerialNumber) &&
                 !rec.Hardware.SerialNumber.Equals("Não informado", StringComparison.OrdinalIgnoreCase) &&
                 !rec.Hardware.SerialNumber.Equals("Not informed", StringComparison.OrdinalIgnoreCase) &&
+                !rec.Hardware.SerialNumber.Equals("Not available", StringComparison.OrdinalIgnoreCase) &&
                 !rec.Hardware.SerialNumber.Equals("N/A", StringComparison.OrdinalIgnoreCase))
             {
                 return rec.Hardware.SerialNumber.Trim();

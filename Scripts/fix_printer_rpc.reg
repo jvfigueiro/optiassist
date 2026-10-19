@@ -1,8 +1,8 @@
 Windows Registry Editor Version 5.00
 
-; OptiAssist - Correcao do erro de impressora em rede (0x0000011b / 0x00000709)
-; O erro ocorre apos atualizacoes de seguranca do Windows devido ao endurecimento de RPC.
-; Esta chave reabilita a comunicacao autenticada padrao para compartilhamento de impressoras em rede local.
+; OptiAssist - Network Printer RPC Error Fix (0x0000011b / 0x00000709)
+; This issue occurs after Windows security updates due to RPC hardening.
+; This key restores standard authenticated communication for shared network printers.
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Print]
 "RpcAuthnLevelPrivacyEnabled"=dword:00000000
