@@ -7,8 +7,21 @@ namespace OptiAssist
 {
     public class MaintenanceRecord
     {
-        public string StoreName { get; set; }
-        public string Phone { get; set; }
+        public string CustomerName { get; set; }
+        public string ContactInfo { get; set; }
+
+        // Backward compatibility properties
+        public string StoreName
+        {
+            get { return CustomerName; }
+            set { CustomerName = value; }
+        }
+        public string Phone
+        {
+            get { return ContactInfo; }
+            set { ContactInfo = value; }
+        }
+
         public string ClientName { get; set; }
         public string ClientPhone { get; set; }
         public string OrderNumber { get; set; }
@@ -22,76 +35,78 @@ namespace OptiAssist
         {
             ExecutionDate = DateTime.Now;
             ActionsDone = new List<string>();
-            SerialNumber = "Não informado";
-            Phone = "N/A";
+            SerialNumber = "N/A";
+            ContactInfo = "";
             OrderNumber = "";
             ClientName = "";
             ClientPhone = "";
             Notes = "";
-            StoreName = "OptiAssist";
+            CustomerName = "OptiAssist";
         }
     }
 
     public static class ReportHelper
     {
+        private const string DividerMajor = "=============================================================";
+        private const string DividerMinor = "-------------------------------------------------------------";
+
         public static string GenerateReportText(MaintenanceRecord rec)
         {
             StringBuilder sb = new StringBuilder();
 
-            // Header: {StoreName} - {Phone}
-            string storeName = !string.IsNullOrWhiteSpace(rec.StoreName) && rec.StoreName != "N/A" 
-                ? rec.StoreName.Trim() 
+            // Header
+            sb.AppendLine(DividerMajor);
+
+            string customer = !string.IsNullOrWhiteSpace(rec.CustomerName) && rec.CustomerName != "N/A"
+                ? rec.CustomerName.Trim()
                 : "OptiAssist";
-            string phone = !string.IsNullOrWhiteSpace(rec.Phone) && rec.Phone != "N/A" 
-                ? rec.Phone.Trim() 
+            string contact = !string.IsNullOrWhiteSpace(rec.ContactInfo) && rec.ContactInfo != "N/A"
+                ? rec.ContactInfo.Trim()
                 : "";
 
-            if (!string.IsNullOrEmpty(phone))
+            sb.AppendLine(string.Format("\t\t    {0}", customer));
+            if (!string.IsNullOrEmpty(contact))
             {
-                sb.AppendLine(string.Format("{0} - {1}", storeName, phone));
+                sb.AppendLine(string.Format("\t\t    {0}", contact));
             }
-            else
-            {
-                sb.AppendLine(storeName);
-            }
-            sb.AppendLine("REGISTRO DE MANUTENÇÃO");
-            sb.AppendLine("--------------------------------------------------------------------------------");
+            sb.AppendLine("\t\t   Maintenance Report");
+            sb.AppendLine(DividerMajor);
             sb.AppendLine();
 
             // Service Details
-            sb.AppendLine("DADOS DO ATENDIMENTO");
-            sb.AppendLine("--------------------------------------------------------------------------------");
-            string clientDisplay = !string.IsNullOrWhiteSpace(rec.ClientName) ? rec.ClientName.Trim() : "Não informado";
-            if (!string.IsNullOrWhiteSpace(rec.ClientPhone) && clientDisplay != "Não informado")
+            sb.AppendLine("SERVICE DETAILS");
+            sb.AppendLine(DividerMinor);
+            string clientDisplay = !string.IsNullOrWhiteSpace(rec.ClientName) ? rec.ClientName.Trim() : "N/A";
+            if (!string.IsNullOrWhiteSpace(rec.ClientPhone) && clientDisplay != "N/A")
             {
                 clientDisplay += string.Format(" ({0})", rec.ClientPhone.Trim());
             }
-            sb.AppendLine(string.Format("Cliente:                {0}", clientDisplay));
-            sb.AppendLine(string.Format("Ordem de Serviço (OS):  {0}", string.IsNullOrWhiteSpace(rec.OrderNumber) ? "Não informado" : rec.OrderNumber.Trim()));
-            sb.AppendLine(string.Format("Data e Hora:            {0}", rec.ExecutionDate.ToString("dd/MM/yyyy HH:mm:ss")));
+            sb.AppendLine(string.Format("Client:\t\t{0}", clientDisplay));
+            sb.AppendLine(string.Format("Order No.:\t{0}", string.IsNullOrWhiteSpace(rec.OrderNumber) ? "N/A" : rec.OrderNumber.Trim()));
+            sb.AppendLine(string.Format("Date:\t\t{0}", rec.ExecutionDate.ToString("dd/MM/yyyy HH:mm:ss")));
             sb.AppendLine();
             sb.AppendLine();
 
-            // Computer Specifications
-            sb.AppendLine("ESPECIFICAÇÕES DO COMPUTADOR");
-            sb.AppendLine("--------------------------------------------------------------------------------");
-            sb.AppendLine(string.Format("Nome do Dispositivo:    {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.ComputerName) ? rec.Hardware.ComputerName : Environment.MachineName));
-            sb.AppendLine(string.Format("BIOS:                   {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.BiosInfo) ? rec.Hardware.BiosInfo : "Não detectada"));
-            sb.AppendLine(string.Format("Sistema Operacional:    {0}", GetFormattedOs(rec.Hardware)));
-            sb.AppendLine(string.Format("Placa-Mãe:              {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.Motherboard) ? rec.Hardware.Motherboard : "Não detectada"));
-            sb.AppendLine(string.Format("Processador (CPU):      {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.CpuName) ? rec.Hardware.CpuName : "Não detectado"));
-            sb.AppendLine(string.Format("Memória RAM:            {0}", GetFormattedRam(rec.Hardware)));
-            sb.AppendLine(string.Format("Placa de Vídeo (GPU):   {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.GpuName) ? rec.Hardware.GpuName : "Não detectada"));
-            sb.AppendLine(string.Format("Armazenamento Primário: {0}", GetFormattedDisk(rec.Hardware)));
-            sb.AppendLine(string.Format("Secure Boot:            {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.SecureBootStatus) ? rec.Hardware.SecureBootStatus : "Indisponível/não suportado"));
-            sb.AppendLine(string.Format("TPM:                    {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.TpmStatus) ? rec.Hardware.TpmStatus : "Indisponível/não suportado"));
-            sb.AppendLine(string.Format("BitLocker:              {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.BitLockerStatus) ? rec.Hardware.BitLockerStatus : "Indisponível/não suportado"));
-            sb.AppendLine(string.Format("Número de Série / Tag:  {0}", !string.IsNullOrWhiteSpace(rec.SerialNumber) && rec.SerialNumber != "Não informado" ? rec.SerialNumber : (rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.SerialNumber) ? rec.Hardware.SerialNumber : "Não informado")));
+            // Device Specs
+            sb.AppendLine("DEVICE SPECS");
+            sb.AppendLine(DividerMinor);
+            sb.AppendLine(string.Format("Device Name:\t{0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.ComputerName) ? rec.Hardware.ComputerName : Environment.MachineName));
+            sb.AppendLine(string.Format("BIOS:\t\t{0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.BiosInfo) && !rec.Hardware.BiosInfo.StartsWith("Detect", StringComparison.OrdinalIgnoreCase) ? rec.Hardware.BiosInfo : "Not detected"));
+            sb.AppendLine(string.Format("OS:\t\t{0}", GetFormattedOs(rec.Hardware)));
+            sb.AppendLine(string.Format("MB:\t\t{0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.Motherboard) && !rec.Hardware.Motherboard.StartsWith("Detect", StringComparison.OrdinalIgnoreCase) ? rec.Hardware.Motherboard : "Not detected"));
+            sb.AppendLine(string.Format("CPU:     \t{0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.CpuName) && !rec.Hardware.CpuName.StartsWith("Detect", StringComparison.OrdinalIgnoreCase) ? rec.Hardware.CpuName : "Not detected"));
+            sb.AppendLine(string.Format("RAM:\t\t{0}", GetFormattedRam(rec.Hardware)));
+            sb.AppendLine(string.Format("GPU:\t\t{0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.GpuName) && !rec.Hardware.GpuName.StartsWith("Detect", StringComparison.OrdinalIgnoreCase) ? rec.Hardware.GpuName : "Not detected"));
+            sb.AppendLine(string.Format("Main Storage:\t{0}", GetFormattedDisk(rec.Hardware)));
+            sb.AppendLine(string.Format("Secure Boot:\t{0}", GetFormattedSecureBoot(rec.Hardware)));
+            sb.AppendLine(string.Format("TPM:\t\t{0}", GetFormattedTpm(rec.Hardware)));
+            sb.AppendLine(string.Format("BitLocker:\t{0}", GetFormattedBitLocker(rec.Hardware)));
+            sb.AppendLine(string.Format("Serial Number:\t{0}", GetFormattedSerialNumber(rec)));
             sb.AppendLine();
 
             // Services and Procedures Performed
-            sb.AppendLine("SERVIÇOS E PROCEDIMENTOS EXECUTADOS");
-            sb.AppendLine("--------------------------------------------------------------------------------");
+            sb.AppendLine("SERVICES AND PROCEDURES PERFORMED");
+            sb.AppendLine(DividerMinor);
             if (rec.ActionsDone != null && rec.ActionsDone.Count > 0)
             {
                 foreach (string action in rec.ActionsDone)
@@ -101,35 +116,38 @@ namespace OptiAssist
             }
             else
             {
-                sb.AppendLine(" Nenhum procedimento marcado no checklist.");
+                sb.AppendLine(" No procedure checked.");
             }
             sb.AppendLine();
 
-            // Technical Assessment and Observations
-            sb.AppendLine("LAUDO TÉCNICO E OBSERVAÇÕES");
-            sb.AppendLine("--------------------------------------------------------------------------------");
+            // Observations
+            sb.AppendLine("OBSERVATIONS");
+            sb.AppendLine(DividerMinor);
             string notes = rec.Notes != null ? rec.Notes.Trim() : "";
-            if (!string.IsNullOrEmpty(notes) && !notes.StartsWith("Você pode informar", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(notes) &&
+                !notes.StartsWith("Você pode informar", StringComparison.OrdinalIgnoreCase) &&
+                !notes.StartsWith("You can enter", StringComparison.OrdinalIgnoreCase) &&
+                !notes.StartsWith("You can provide", StringComparison.OrdinalIgnoreCase))
             {
                 sb.AppendLine(notes);
             }
             else
             {
-                sb.AppendLine("Não informado");
+                sb.AppendLine("Nothing Reported");
             }
             sb.AppendLine();
 
             // Footer
-            sb.AppendLine("================================================================================");
-            sb.AppendLine("Relatório gerado via OptiAssist");
-            sb.AppendLine("================================================================================");
+            sb.AppendLine(DividerMajor);
+            sb.AppendLine("\t\tReport generated via OptiAssist");
+            sb.AppendLine(DividerMajor);
 
             return sb.ToString();
         }
 
         private static string GetFormattedOs(HardwareSummary hw)
         {
-            if (hw == null) return "Windows";
+            if (hw == null || string.IsNullOrWhiteSpace(hw.OsName)) return "Windows";
             StringBuilder sb = new StringBuilder();
             sb.Append(hw.OsName);
             if (!string.IsNullOrWhiteSpace(hw.OsDisplayVersion))
@@ -149,10 +167,10 @@ namespace OptiAssist
 
         private static string GetFormattedRam(HardwareSummary hw)
         {
-            if (hw == null) return "Não detectada";
+            if (hw == null || hw.RamTotalGb <= 0) return "Not detected";
             if (hw.RamFreeGb > 0)
             {
-                return string.Format("{0} GB ({1} GB Livres)", hw.RamTotalGb, hw.RamFreeGb);
+                return string.Format("{0} GB ({1} GB free)", hw.RamTotalGb, hw.RamFreeGb);
             }
             return string.Format("{0} GB Total", hw.RamTotalGb);
         }
@@ -166,16 +184,103 @@ namespace OptiAssist
                 {
                     double totalGb = Math.Round(c.TotalSize / (1024.0 * 1024.0 * 1024.0), 0);
                     double freeGb = Math.Round(c.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0), 0);
-                    return string.Format("C: ({0} GB livres de {1} GB - {2})", freeGb, totalGb, c.DriveFormat);
+                    return string.Format("C: ({0} GB free of {1} GB - {2})", freeGb, totalGb, c.DriveFormat);
                 }
             }
             catch { }
 
-            if (hw != null && !string.IsNullOrWhiteSpace(hw.PrimaryDiskInfo) && hw.PrimaryDiskInfo != "Detectando disco...")
+            if (hw != null && !string.IsNullOrWhiteSpace(hw.PrimaryDiskInfo) &&
+                hw.PrimaryDiskInfo != "Detectando disco..." &&
+                hw.PrimaryDiskInfo != "Detecting storage...")
             {
                 return hw.PrimaryDiskInfo;
             }
-            return "C: (Informações indisponíveis)";
+            return "C: (Information unavailable)";
+        }
+
+        private static string GetFormattedSecureBoot(HardwareSummary hw)
+        {
+            if (hw == null) return "Not detected";
+            if (hw.SecureBootActive ||
+                string.Equals(hw.SecureBootStatus, "Ativo", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.SecureBootStatus, "Enabled", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.SecureBootStatus, "Active", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Enabled";
+            }
+            if (string.Equals(hw.SecureBootStatus, "Inativo", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.SecureBootStatus, "Disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Disabled";
+            }
+            if (string.IsNullOrWhiteSpace(hw.SecureBootStatus) || hw.SecureBootStatus.StartsWith("Detect", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Not detected";
+            }
+            return "Unavailable / Not supported";
+        }
+
+        private static string GetFormattedTpm(HardwareSummary hw)
+        {
+            if (hw == null) return "Not detected";
+            if (hw.TpmActive || (!string.IsNullOrEmpty(hw.TpmStatus) && (hw.TpmStatus.IndexOf("Disponível", StringComparison.OrdinalIgnoreCase) >= 0 || hw.TpmStatus.IndexOf("Available", StringComparison.OrdinalIgnoreCase) >= 0)))
+            {
+                string status = hw.TpmStatus ?? "";
+                status = status.Replace("Disponível", "Available");
+                return status;
+            }
+            if (string.Equals(hw.TpmStatus, "Inativo", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.TpmStatus, "Disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Disabled";
+            }
+            if (string.IsNullOrWhiteSpace(hw.TpmStatus) || hw.TpmStatus.StartsWith("Detect", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Not detected";
+            }
+            return "Unavailable / Not supported";
+        }
+
+        private static string GetFormattedBitLocker(HardwareSummary hw)
+        {
+            if (hw == null) return "Not detected";
+            if (hw.BitLockerActive ||
+                string.Equals(hw.BitLockerStatus, "Ativo", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.BitLockerStatus, "Active", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.BitLockerStatus, "Enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Active";
+            }
+            if (string.Equals(hw.BitLockerStatus, "Inativo", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.BitLockerStatus, "Inactive", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(hw.BitLockerStatus, "Disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Inactive";
+            }
+            if (string.IsNullOrWhiteSpace(hw.BitLockerStatus) || hw.BitLockerStatus.StartsWith("Detect", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Not detected";
+            }
+            return "Unavailable / Not supported";
+        }
+
+        private static string GetFormattedSerialNumber(MaintenanceRecord rec)
+        {
+            if (rec != null && !string.IsNullOrWhiteSpace(rec.SerialNumber) &&
+                !rec.SerialNumber.Equals("Não informado", StringComparison.OrdinalIgnoreCase) &&
+                !rec.SerialNumber.Equals("Not informed", StringComparison.OrdinalIgnoreCase) &&
+                !rec.SerialNumber.Equals("N/A", StringComparison.OrdinalIgnoreCase))
+            {
+                return rec.SerialNumber.Trim();
+            }
+            if (rec != null && rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.SerialNumber) &&
+                !rec.Hardware.SerialNumber.Equals("Não informado", StringComparison.OrdinalIgnoreCase) &&
+                !rec.Hardware.SerialNumber.Equals("Not informed", StringComparison.OrdinalIgnoreCase) &&
+                !rec.Hardware.SerialNumber.Equals("N/A", StringComparison.OrdinalIgnoreCase))
+            {
+                return rec.Hardware.SerialNumber.Trim();
+            }
+            return "N/A";
         }
 
         public static string SaveReportToReportsFolder(MaintenanceRecord rec)
@@ -188,7 +293,7 @@ namespace OptiAssist
             }
 
             string safeOrder = string.IsNullOrEmpty(rec.OrderNumber) ? "OS" : CleanFileName(rec.OrderNumber);
-            string safeFileName = string.Format("Manutencao_{0}_{1}.txt",
+            string safeFileName = string.Format("Maintenance_{0}_{1}.txt",
                 safeOrder,
                 DateTime.Now.ToString("yyyyMMdd_HHmmss"));
             string fullPath = Path.Combine(baseReports, safeFileName);

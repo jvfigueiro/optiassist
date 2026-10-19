@@ -1130,8 +1130,8 @@ namespace OptiAssist
         private MaintenanceRecord BuildRecordFromUI()
         {
             MaintenanceRecord rec = new MaintenanceRecord();
-            rec.StoreName = _settings != null ? _settings.CustomerName : "OptiAssist";
-            rec.Phone = _settings != null ? _settings.ContactInfo : "N/A";
+            rec.CustomerName = _settings != null ? _settings.CustomerName : "OptiAssist";
+            rec.ContactInfo = _settings != null ? _settings.ContactInfo : "";
             rec.OrderNumber = txtReportOrder.Text.Trim();
             rec.ClientName = txtReportClient.Text.Trim();
             rec.ClientPhone = "";
