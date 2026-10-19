@@ -24,7 +24,7 @@ namespace OptiAssist
             StoreName = "N/A";
             TechnicianName = "N/A";
             Phone = "N/A";
-            Language = "pt-BR";
+            Language = "en-US";
             ReportSavePath = @"C:\MaintenanceReport.txt";
             AutoRefreshHardware = true;
             EnableWingetFallback = true;
@@ -102,7 +102,7 @@ namespace OptiAssist
             }
             catch
             {
-                // Em caso de erro, usa os valores padrão
+                // On error, fallback to default values
             }
 
             return settings;

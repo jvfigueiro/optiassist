@@ -1,8 +1,8 @@
-﻿{
+{
   "StoreName": "OptiAssist",
   "TechnicianName": "N/A",
   "Phone": "",
-  "Language": "pt-BR",
+  "Language": "en-US",
   "ReportSavePath": "C:\\MaintenanceReport.txt",
   "AutoRefreshHardware": true,
   "EnableWingetFallback": true,

@@ -52,8 +52,8 @@ namespace OptiAssist
                 }
                 catch
                 {
-                    MessageBox.Show("Não foi possível iniciar o comando '" + command + "': " + ex.Message,
-                        "OptiAssist - Erro ao Abrir Ferramenta", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Unable to start command '" + command + "': " + ex.Message,
+                        "OptiAssist - Error Opening Tool", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -62,7 +62,7 @@ namespace OptiAssist
         {
             try
             {
-                // msconfig precisa abrir com UseShellExecute ou via cmd /c start
+                // msconfig must be opened with UseShellExecute or via cmd /c start
                 string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
                 if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
                 {
@@ -91,7 +91,7 @@ namespace OptiAssist
                 }
                 catch
                 {
-                    MessageBox.Show("Não foi possível abrir o msconfig: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Unable to open msconfig: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -169,7 +169,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro ao iniciar Chris Titus Tool: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Error launching Chris Titus Tool: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -186,7 +186,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro ao iniciar Massgrave (MAS): " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Error launching Massgrave (MAS): " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -211,10 +211,10 @@ namespace OptiAssist
             }
 
             MessageBoxResult res = MessageBox.Show(
-                "O CrystalDiskInfo portátil não foi encontrado em:\n" +
+                "Portable CrystalDiskInfo was not found at:\n" +
                 Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo64.exe") + "\n\n" +
-                "Deseja abrir a pasta 'Maintenance' para colocar os arquivos portáteis?",
-                "CrystalDiskInfo Não Encontrado", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                "Do you want to open the 'Maintenance' folder to place portable tool files?",
+                "CrystalDiskInfo Not Found", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
             if (res == MessageBoxResult.Yes)
             {
@@ -242,10 +242,10 @@ namespace OptiAssist
             }
 
             MessageBoxResult res = MessageBox.Show(
-                "O CPU-Z portátil não foi encontrado em:\n" +
+                "Portable CPU-Z was not found at:\n" +
                 Path.Combine(maintDir, @"CPU-Z\cpuz_x64.exe") + "\n\n" +
-                "Deseja abrir a pasta 'Maintenance' para colocar os arquivos portáteis?",
-                "CPU-Z Não Encontrado", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                "Do you want to open the 'Maintenance' folder to place portable tool files?",
+                "CPU-Z Not Found", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
             if (res == MessageBoxResult.Yes)
             {

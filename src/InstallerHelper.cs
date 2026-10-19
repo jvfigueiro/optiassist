@@ -12,7 +12,7 @@ namespace OptiAssist
     {
         private string _name;
         private bool _preSelected;
-        private string _installType; // "Local" ou "Winget"
+        private string _installType; // "Local" or "Winget"
         private string _wingetId;
         private string _silentArgs;
         private bool _selected;
@@ -119,7 +119,7 @@ namespace OptiAssist
             }
         }
 
-        // Propriedades legadas para compatibilidade
+        // Legacy properties for backwards compatibility
         public string Id
         {
             get { return !string.IsNullOrEmpty(Name) ? Name.ToLowerInvariant().Replace(" ", "") : ""; }
@@ -187,34 +187,34 @@ namespace OptiAssist
         {
             List<InstallAppItem> list = new List<InstallAppItem>();
 
-            // 1. Google Chrome (Pré-marcado - Busca estrita local: ChromeSetup.exe / Winget: Google.Chrome)
+            // 1. Google Chrome (Pre-selected - Strict local search: ChromeSetup.exe / Winget: Google.Chrome)
             list.Add(new InstallAppItem("Google Chrome", true, "Local", "Google.Chrome", "/silent /install"));
 
-            // 2. 7-Zip (Pré-marcado - Busca estrita local: 7ZipSetup.exe / Winget: 7zip.7zip)
+            // 2. 7-Zip (Pre-selected - Strict local search: 7ZipSetup.exe / Winget: 7zip.7zip)
             list.Add(new InstallAppItem("7-Zip", true, "Local", "7zip.7zip", "/S"));
 
-            // 3. Microsoft Office (Pré-marcado - Busca estrita local: OfficeSetup.exe / Winget: Microsoft.Office)
+            // 3. Microsoft Office (Pre-selected - Strict local search: OfficeSetup.exe / Winget: Microsoft.Office)
             list.Add(new InstallAppItem("Microsoft Office", true, "Local", "Microsoft.Office", "/configure configuration.xml"));
 
-            // 4. WinRAR (Desmarcado - Local: WinRARSetup.exe / Winget: RARLab.WinRAR)
+            // 4. WinRAR (Unchecked - Local: WinRARSetup.exe / Winget: RARLab.WinRAR)
             list.Add(new InstallAppItem("WinRAR", false, "Local", "RARLab.WinRAR", "/s"));
 
-            // 5. NanaZip (App UWP - Prioriza Winget: M2Team.NanaZip)
+            // 5. NanaZip (UWP App - Winget priority: M2Team.NanaZip)
             list.Add(new InstallAppItem("NanaZip", false, "Winget", "M2Team.NanaZip", ""));
 
-            // 6. VLC Media Player (Desmarcado - Local: VLCSetup.exe / Winget: VideoLAN.VLC)
+            // 6. VLC Media Player (Unchecked - Local: VLCSetup.exe / Winget: VideoLAN.VLC)
             list.Add(new InstallAppItem("VLC Media Player", false, "Local", "VideoLAN.VLC", "/S"));
 
-            // 7. Adobe Acrobat Reader (Desmarcado - Local: AcrobatReaderSetup.exe / Winget: Adobe.Acrobat.Reader.64-bit)
+            // 7. Adobe Acrobat Reader (Unchecked - Local: AcrobatReaderSetup.exe / Winget: Adobe.Acrobat.Reader.64-bit)
             list.Add(new InstallAppItem("Adobe Acrobat Reader", false, "Local", "Adobe.Acrobat.Reader.64-bit", "/sAll /rs /msi EULA_ACCEPT=YES"));
 
-            // 8. AnyDesk (Desmarcado - Local: AnyDeskSetup.exe / Winget: AnyDeskSoftwareGmbH.AnyDesk)
+            // 8. AnyDesk (Unchecked - Local: AnyDeskSetup.exe / Winget: AnyDeskSoftwareGmbH.AnyDesk)
             list.Add(new InstallAppItem("AnyDesk", false, "Local", "AnyDeskSoftwareGmbH.AnyDesk", "--install \"C:\\Program Files (x86)\\AnyDesk\" --silent"));
 
-            // 9. Mozilla Firefox (Desmarcado - Local: FirefoxSetup.exe / Winget: Mozilla.Firefox)
+            // 9. Mozilla Firefox (Unchecked - Local: FirefoxSetup.exe / Winget: Mozilla.Firefox)
             list.Add(new InstallAppItem("Mozilla Firefox", false, "Local", "Mozilla.Firefox", "-ms"));
 
-            // 10. Notepad++ (Desmarcado - Local: Notepad++Setup.exe / Winget: Notepad++.Notepad++)
+            // 10. Notepad++ (Unchecked - Local: Notepad++Setup.exe / Winget: Notepad++.Notepad++)
             list.Add(new InstallAppItem("Notepad++", false, "Local", "Notepad++.Notepad++", "/S"));
 
             return list;
@@ -237,7 +237,7 @@ namespace OptiAssist
                 catch { }
             }
 
-            // Se não existir ou arquivo estiver vazio/inválido, cria os padrões e salva em PostInstall.json
+            // If missing, empty or invalid, generate defaults and persist to PostInstall.json
             var defaultList = GetDefaultApps();
             SaveApps(defaultList);
             return defaultList;
@@ -279,7 +279,7 @@ namespace OptiAssist
             string postDir = GetPostInstallDirectory();
             if (!Directory.Exists(postDir)) return null;
 
-            // 0. Arquivo executável explicitamente selecionado ou configurado
+            // 0. Explicitly selected or configured executable file
             if (!string.IsNullOrEmpty(app.LocalInstallerFile))
             {
                 string explicitPath = Path.Combine(postDir, app.LocalInstallerFile);
@@ -290,7 +290,7 @@ namespace OptiAssist
             string nameNoSpace = rawName.Replace(" ", "");
             string nameNoHyphen = nameNoSpace.Replace("-", "");
 
-            // 1. Candidatos prioritários estritos baseados na regra: <Nome>Setup.exe
+            // 1. Strict priority candidates based on pattern: <Name>Setup.exe
             List<string> candidateNames = new List<string>
             {
                 rawName + "Setup.exe",
@@ -303,7 +303,7 @@ namespace OptiAssist
                 rawName + ".exe"
             };
 
-            // Nomes especiais e conhecidos solicitados
+            // Known special candidate names
             if (rawName.IndexOf("Office", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 candidateNames.Insert(0, "OfficeSetup.exe");
@@ -323,7 +323,7 @@ namespace OptiAssist
                 if (File.Exists(fullPath)) return fullPath;
             }
 
-            // 2. Busca secundária na pasta PostInstall por arquivos contendo o nome e extensão executável
+            // 2. Secondary search in PostInstall folder for matching executable files
             try
             {
                 string[] allFiles = Directory.GetFiles(postDir, "*.*", SearchOption.TopDirectoryOnly);
@@ -379,7 +379,7 @@ namespace OptiAssist
         {
             if (app == null) return;
 
-            // 1. Tipo configurado como Winget
+            // 1. Configured as Winget installation type
             if (app.IsWingetType)
             {
                 string packageId = !string.IsNullOrEmpty(app.WingetId) ? app.WingetId : app.Name;
@@ -391,7 +391,7 @@ namespace OptiAssist
                     return;
                 }
 
-                // Contingência para instalador local se Winget falhar
+                // Fallback to local installer if Winget fails
                 log(string.Format("[AVISO] Winget falhou para '{0}'. Verificando instalador local de contingência...", app.Name));
                 string fallbackLocal = FindLocalInstaller(app);
                 if (!string.IsNullOrEmpty(fallbackLocal))
@@ -405,7 +405,7 @@ namespace OptiAssist
                 return;
             }
 
-            // 2. Tipo configurado como Local (procura <Nome>Setup.exe)
+            // 2. Configured as Local installation type (searches for <Name>Setup.exe)
             log(string.Format("==> [MÉTODO LOCAL] Verificando instalador de '{0}' na pasta PostInstall\\...", app.Name));
             string localFile = FindLocalInstaller(app);
 
@@ -415,7 +415,7 @@ namespace OptiAssist
                 return;
             }
 
-            // Instalador local não encontrado: tenta Winget como fallback se habilitado
+            // Local installer not found: try Winget fallback if enabled
             if (enableWingetFallback)
             {
                 string packageId = !string.IsNullOrEmpty(app.WingetId) ? app.WingetId : app.Name;
@@ -520,8 +520,8 @@ namespace OptiAssist
 
                     if (proc.ExitCode == 0) return true;
 
-                    // Se falhou com --id, tenta comando alternativo direto com nome
-                    log(string.Format("    [Winget] Tentando busca alternativa por nome: {0}...", wingetIdOrName));
+                    // If --id failed, try fallback command matching directly by name
+                    log(string.Format("    [Winget] Trying fallback search by name: {0}...", wingetIdOrName));
                     ProcessStartInfo psiFallback = new ProcessStartInfo();
                     psiFallback.FileName = "winget.exe";
                     psiFallback.Arguments = string.Format("install \"{0}\" --silent --accept-package-agreements --accept-source-agreements --disable-interactivity", wingetIdOrName);
@@ -562,20 +562,20 @@ namespace OptiAssist
             int i = 0;
             while (i < json.Length)
             {
-                // Encontra início de objeto '{'
+                // Find object opening '{'
                 while (i < json.Length && json[i] != '{') i++;
                 if (i >= json.Length) break;
-                i++; // Pula '{'
+                i++; // Skip '{'
 
                 Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 while (i < json.Length && json[i] != '}')
                 {
-                    // Pula espaços e vírgulas
+                    // Skip whitespace and commas
                     while (i < json.Length && (char.IsWhiteSpace(json[i]) || json[i] == ',')) i++;
                     if (i >= json.Length || json[i] == '}') break;
 
-                    // Lê chave (string entre aspas)
+                    // Read key (quoted string)
                     if (json[i] == '\"')
                     {
                         i++;
@@ -586,16 +586,16 @@ namespace OptiAssist
                             else i++;
                         }
                         string key = json.Substring(keyStart, i - keyStart);
-                        if (i < json.Length) i++; // Pula aspas de fechamento
+                        if (i < json.Length) i++; // Skip closing quote
 
-                        // Encontra ':'
+                        // Find ':'
                         while (i < json.Length && json[i] != ':') i++;
-                        if (i < json.Length) i++; // Pula ':'
+                        if (i < json.Length) i++; // Skip ':'
 
-                        // Pula espaços
+                        // Skip whitespace
                         while (i < json.Length && char.IsWhiteSpace(json[i])) i++;
 
-                        // Lê valor
+                        // Read value
                         string val = "";
                         if (i < json.Length && json[i] == '\"')
                         {
@@ -619,11 +619,11 @@ namespace OptiAssist
                                 }
                             }
                             val = valSb.ToString();
-                            if (i < json.Length) i++; // Pula aspas de fechamento
+                            if (i < json.Length) i++; // Skip closing quote
                         }
                         else
                         {
-                            // Booleano, número ou nulo
+                            // Boolean, number or null
                             int valStart = i;
                             while (i < json.Length && json[i] != ',' && json[i] != '}' && !char.IsWhiteSpace(json[i])) i++;
                             val = json.Substring(valStart, i - valStart).Trim();
@@ -915,7 +915,7 @@ namespace OptiAssist
             InstalledVersion = installed ?? "";
             AvailableVersion = available ?? "";
             Selected = true;
-            Status = "Disponível";
+            Status = "Available";
         }
     }
 }

@@ -9,7 +9,7 @@ namespace OptiAssist
     {
         private static Dictionary<string, string> _strings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        private static string _currentLanguage = "pt-BR";
+        private static string _currentLanguage = "en-US";
         public static string CurrentLanguage
         {
             get { return _currentLanguage; }
@@ -51,8 +51,8 @@ namespace OptiAssist
 
             if (list.Count == 0)
             {
-                list.Add("pt-BR");
                 list.Add("en-US");
+                list.Add("pt-BR");
             }
 
             return list;
@@ -60,15 +60,15 @@ namespace OptiAssist
 
         public static void LoadLanguage(string langCode)
         {
-            if (string.IsNullOrWhiteSpace(langCode)) langCode = "pt-BR";
+            if (string.IsNullOrWhiteSpace(langCode)) langCode = "en-US";
 
             CurrentLanguage = langCode;
             string filePath = GetLanguageFilePath(langCode);
 
             if (!File.Exists(filePath))
             {
-                // Tenta fallback para pt-BR
-                filePath = GetLanguageFilePath("pt-BR");
+                // Fallback to en-US
+                filePath = GetLanguageFilePath("en-US");
             }
 
             if (File.Exists(filePath))
@@ -105,25 +105,25 @@ namespace OptiAssist
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(json)) return dict;
 
-            // Parser robusto para dicionário plano JSON { "key": "value" }
+            // Robust parser for flat JSON dictionary { "key": "value" }
             int i = 0;
             int len = json.Length;
 
             while (i < len)
             {
-                // Procura próxima aspa (chave)
+                // Find next quote (key)
                 while (i < len && json[i] != '\"') i++;
                 if (i >= len) break;
 
                 string key = ReadJsonString(json, ref i);
                 if (key == null) break;
 
-                // Procura dois pontos ':'
+                // Find colon ':'
                 while (i < len && json[i] != ':') i++;
                 if (i >= len) break;
-                i++; // Pula ':'
+                i++; // Skip ':'
 
-                // Procura próxima aspa (valor)
+                // Find next quote (value)
                 while (i < len && json[i] != '\"' && json[i] != '}' && json[i] != ',') i++;
                 if (i >= len || json[i] == '}') break;
 
@@ -143,7 +143,7 @@ namespace OptiAssist
         private static string ReadJsonString(string json, ref int i)
         {
             if (i >= json.Length || json[i] != '\"') return null;
-            i++; // Pula aspa inicial
+            i++; // Skip opening quote
 
             StringBuilder sb = new StringBuilder();
             while (i < json.Length)
@@ -183,7 +183,7 @@ namespace OptiAssist
                 }
                 else if (c == '\"')
                 {
-                    i++; // Pula aspa final
+                    i++; // Skip closing quote
                     return sb.ToString();
                 }
                 else

@@ -38,15 +38,15 @@ namespace OptiAssist
             OsBuild = "";
             OsArchitecture = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
             ComputerName = Environment.MachineName;
-            CpuName = "Detectando processador...";
-            GpuName = "Detectando placa de vídeo...";
-            PrimaryDiskInfo = "Detectando disco...";
-            SerialNumber = "Não informado";
-            Motherboard = "Detectando placa-mãe...";
-            BiosInfo = "Detectando BIOS...";
-            TpmStatus = "Detectando TPM...";
-            SecureBootStatus = "Detectando Secure Boot...";
-            BitLockerStatus = "Detectando BitLocker...";
+            CpuName = "Detecting CPU...";
+            GpuName = "Detecting GPU...";
+            PrimaryDiskInfo = "Detecting storage...";
+            SerialNumber = "Not informed";
+            Motherboard = "Detecting motherboard...";
+            BiosInfo = "Detecting BIOS...";
+            TpmStatus = "Detecting TPM...";
+            SecureBootStatus = "Detecting Secure Boot...";
+            BitLockerStatus = "Detecting BitLocker...";
         }
     }
 
@@ -72,7 +72,7 @@ namespace OptiAssist
         {
             HardwareSummary summary = new HardwareSummary();
 
-            // 1. Informações do Sistema Operacional
+            // 1. Operating System Information
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption, Version, OSArchitecture, FreePhysicalMemory FROM Win32_OperatingSystem"))
@@ -93,7 +93,7 @@ namespace OptiAssist
             }
             catch { }
 
-            // Buscar DisplayVersion e UBR pelo Registro do Windows
+            // Query DisplayVersion and UBR from Windows Registry
             try
             {
                 using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
@@ -113,7 +113,7 @@ namespace OptiAssist
             }
             catch { }
 
-            // 2. Número de Série e BIOS (Win32_BIOS)
+            // 2. Serial Number and BIOS (Win32_BIOS)
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber, Manufacturer, SMBIOSBIOSVersion, ReleaseDate FROM Win32_BIOS"))
@@ -158,8 +158,8 @@ namespace OptiAssist
             }
             catch { }
 
-            // Fallback para Número de Série via Win32_ComputerSystemProduct
-            if (string.IsNullOrEmpty(summary.SerialNumber) || summary.SerialNumber == "Não informado")
+            // Fallback for Serial Number via Win32_ComputerSystemProduct
+            if (string.IsNullOrEmpty(summary.SerialNumber) || summary.SerialNumber == "Not informed" || summary.SerialNumber == "Não informado")
             {
                 try
                 {
@@ -184,7 +184,7 @@ namespace OptiAssist
                 catch { }
             }
 
-            // 3. Placa-Mãe (Win32_BaseBoard)
+            // 3. Motherboard (Win32_BaseBoard)
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Manufacturer, Product FROM Win32_BaseBoard"))
@@ -200,10 +200,10 @@ namespace OptiAssist
             }
             catch
             {
-                summary.Motherboard = "Placa-Mãe não identificada";
+                summary.Motherboard = "Unknown Motherboard";
             }
 
-            // 4. Processador (CPU)
+            // 4. Processor (CPU)
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Name, NumberOfCores, NumberOfLogicalProcessors FROM Win32_Processor"))
@@ -219,10 +219,10 @@ namespace OptiAssist
             }
             catch
             {
-                summary.CpuName = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Processador Desconhecido";
+                summary.CpuName = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown Processor";
             }
 
-            // 5. Memória RAM
+            // 5. RAM Memory
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
@@ -240,7 +240,7 @@ namespace OptiAssist
             }
             catch { }
 
-            // 6. Placa de Vídeo (GPU)
+            // 6. Graphics Card (GPU)
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Name, AdapterRAM FROM Win32_VideoController"))
@@ -262,15 +262,15 @@ namespace OptiAssist
                         break;
                     }
                     if (!string.IsNullOrEmpty(primaryGpu)) summary.GpuName = primaryGpu;
-                    else summary.GpuName = "Adaptador de vídeo genérico";
+                    else summary.GpuName = "Generic Video Adapter";
                 }
             }
             catch
             {
-                summary.GpuName = "Não foi possível detectar GPU";
+                summary.GpuName = "Unable to detect GPU";
             }
 
-            // 7. Disco Primário (C:)
+            // 7. Primary Storage (C:)
             try
             {
                 DriveInfo cDrive = new DriveInfo("C");
@@ -278,15 +278,14 @@ namespace OptiAssist
                 {
                     double totalGb = Math.Round(cDrive.TotalSize / (1024.0 * 1024.0 * 1024.0), 0);
                     double freeGb = Math.Round(cDrive.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0), 0);
-                    summary.PrimaryDiskInfo = string.Format("C: ({0} GB livres de {1} GB - {2})", freeGb, totalGb, cDrive.DriveFormat);
+                    summary.PrimaryDiskInfo = string.Format("C: ({0} GB / {1} GB - {2})", freeGb, totalGb, cDrive.DriveFormat);
                 }
             }
             catch
             {
-                summary.PrimaryDiskInfo = "Unidade C: (Informações indisponíveis)";
+                summary.PrimaryDiskInfo = "Drive C: (Information unavailable)";
             }
 
-            // 8. Secure Boot
             // 8. Secure Boot
             try
             {
@@ -470,10 +469,10 @@ namespace OptiAssist
         public static void RunWinSatBenchmark(Action<string> log)
         {
             log("=================================================");
-            log("      INICIANDO BENCHMARK DO SISTEMA (WINSAT)    ");
+            log("       STARTING SYSTEM BENCHMARK (WINSAT)        ");
             log("=================================================");
-            log("Executando: winsat.exe formal -restart clean");
-            log("Aguarde alguns minutos enquanto o Windows avalia CPU, Memória, GPU e Disco...");
+            log("Executing: winsat.exe formal -restart clean");
+            log("Please wait a few minutes while Windows benchmarks CPU, Memory, GPU and Storage...");
 
             try
             {
@@ -488,17 +487,17 @@ namespace OptiAssist
                 using (Process proc = Process.Start(psi))
                 {
                     proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) log("  " + e.Data); };
-                    proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) log("  [ERRO] " + e.Data); };
+                    proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) log("  [ERROR] " + e.Data); };
                     proc.BeginOutputReadLine();
                     proc.BeginErrorReadLine();
                     proc.WaitForExit();
                 }
 
-                log("\n=== BENCHMARK WINSAT CONCLUÍDO COM SUCESSO! ===");
+                log("\n=== WINSAT BENCHMARK COMPLETED SUCCESSFULLY! ===");
             }
             catch (Exception ex)
             {
-                log("[ERRO WINSAT] Falha ao rodar benchmark: " + ex.Message);
+                log("[WINSAT ERROR] Failed to run benchmark: " + ex.Message);
             }
         }
 
@@ -527,7 +526,7 @@ namespace OptiAssist
                     {
                         string err = proc.StandardError.ReadToEnd();
                         errorMessage = string.IsNullOrEmpty(err)
-                            ? "A placa-mãe ou BIOS não oferece suporte a reinicialização direta para UEFI via software.\nReinicie manualmente e pressione as teclas DEL ou F2 na inicialização."
+                            ? "The motherboard or BIOS does not support direct software reboot to UEFI firmware.\nPlease restart manually and press DEL or F2 during boot."
                             : err.Trim();
                         return false;
                     }

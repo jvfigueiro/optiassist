@@ -39,7 +39,7 @@ namespace OptiAssist
         {
             StringBuilder sb = new StringBuilder();
 
-            // Cabeçalho: {nomepersonalizado} - {informacaocontato}
+            // Header: {StoreName} - {Phone}
             string storeName = !string.IsNullOrWhiteSpace(rec.StoreName) && rec.StoreName != "N/A" 
                 ? rec.StoreName.Trim() 
                 : "OptiAssist";
@@ -59,7 +59,7 @@ namespace OptiAssist
             sb.AppendLine("--------------------------------------------------------------------------------");
             sb.AppendLine();
 
-            // DADOS DO ATENDIMENTO
+            // Service Details
             sb.AppendLine("DADOS DO ATENDIMENTO");
             sb.AppendLine("--------------------------------------------------------------------------------");
             string clientDisplay = !string.IsNullOrWhiteSpace(rec.ClientName) ? rec.ClientName.Trim() : "Não informado";
@@ -73,7 +73,7 @@ namespace OptiAssist
             sb.AppendLine();
             sb.AppendLine();
 
-            // ESPECIFICAÇÕES DO COMPUTADOR
+            // Computer Specifications
             sb.AppendLine("ESPECIFICAÇÕES DO COMPUTADOR");
             sb.AppendLine("--------------------------------------------------------------------------------");
             sb.AppendLine(string.Format("Nome do Dispositivo:    {0}", rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.ComputerName) ? rec.Hardware.ComputerName : Environment.MachineName));
@@ -90,7 +90,7 @@ namespace OptiAssist
             sb.AppendLine(string.Format("Número de Série / Tag:  {0}", !string.IsNullOrWhiteSpace(rec.SerialNumber) && rec.SerialNumber != "Não informado" ? rec.SerialNumber : (rec.Hardware != null && !string.IsNullOrWhiteSpace(rec.Hardware.SerialNumber) ? rec.Hardware.SerialNumber : "Não informado")));
             sb.AppendLine();
 
-            // SERVIÇOS E PROCEDIMENTOS EXECUTADOS
+            // Services and Procedures Performed
             sb.AppendLine("SERVIÇOS E PROCEDIMENTOS EXECUTADOS");
             sb.AppendLine("--------------------------------------------------------------------------------");
             if (rec.ActionsDone != null && rec.ActionsDone.Count > 0)
@@ -106,7 +106,7 @@ namespace OptiAssist
             }
             sb.AppendLine();
 
-            // LAUDO TÉCNICO E OBSERVAÇÕES
+            // Technical Assessment and Observations
             sb.AppendLine("LAUDO TÉCNICO E OBSERVAÇÕES");
             sb.AppendLine("--------------------------------------------------------------------------------");
             string notes = rec.Notes != null ? rec.Notes.Trim() : "";
@@ -120,7 +120,7 @@ namespace OptiAssist
             }
             sb.AppendLine();
 
-            // RODAPÉ
+            // Footer
             sb.AppendLine("================================================================================");
             sb.AppendLine("Relatório gerado via OptiAssist");
             sb.AppendLine("================================================================================");

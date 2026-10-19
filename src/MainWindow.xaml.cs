@@ -37,43 +37,54 @@ namespace OptiAssist
                 RefreshHardwareAsync();
             }
 
-            // Inicia verificação em segundo plano das atualizações do Winget
+            // Start background check for Winget updates
             BtnCheckWingetUpgrades_Click(null, null);
         }
 
         private void UpdateStatusBadge(TextBlock tb, string value)
         {
-            if (string.IsNullOrEmpty(value))
+            if (string.IsNullOrEmpty(value) || value == "Indisponível/não suportado" || value == "Unavailable" || value == "Unavailable/Not supported")
             {
-                tb.Text = "Indisponível/não suportado";
+                tb.Text = LocalizationHelper.Get("Status_NotSupported", "Unavailable/Not supported");
                 tb.Foreground = (SolidColorBrush)FindResource("BrushTextSecondary");
                 return;
             }
 
-            tb.Text = value;
-
             if (value.StartsWith("Ativo", StringComparison.OrdinalIgnoreCase) ||
-                value.StartsWith("Disponível", StringComparison.OrdinalIgnoreCase))
+                value.StartsWith("Active", StringComparison.OrdinalIgnoreCase))
             {
+                tb.Text = LocalizationHelper.Get("Status_Active", "Active");
                 tb.Foreground = (SolidColorBrush)FindResource("BrushSuccess");
             }
-            else if (value.StartsWith("Inativo", StringComparison.OrdinalIgnoreCase))
+            else if (value.StartsWith("Inativo", StringComparison.OrdinalIgnoreCase) ||
+                     value.StartsWith("Inactive", StringComparison.OrdinalIgnoreCase))
             {
+                tb.Text = LocalizationHelper.Get("Status_Inactive", "Inactive");
                 tb.Foreground = (SolidColorBrush)FindResource("BrushDanger");
+            }
+            else if (value.StartsWith("Disponível", StringComparison.OrdinalIgnoreCase) ||
+                     value.StartsWith("Available", StringComparison.OrdinalIgnoreCase))
+            {
+                string extra = "";
+                int parenIdx = value.IndexOf('(');
+                if (parenIdx >= 0) extra = " " + value.Substring(parenIdx);
+                tb.Text = LocalizationHelper.Get("Status_Available", "Available") + extra;
+                tb.Foreground = (SolidColorBrush)FindResource("BrushSuccess");
             }
             else
             {
+                tb.Text = value;
                 tb.Foreground = (SolidColorBrush)FindResource("BrushTextSecondary");
             }
         }
 
-        #region NAVEGAÇÃO ENTRE ABAS
+        #region TAB NAVIGATION
         private void NavButton_Click(object sender, RoutedEventArgs e)
         {
             RadioButton rb = sender as RadioButton;
             if (rb == null) return;
 
-            // Oculta todas as telas
+            // Hide all panels
             scrollViewerContent.Visibility = Visibility.Collapsed;
             panelDashboard.Visibility = Visibility.Collapsed;
             panelPostInstall.Visibility = Visibility.Collapsed;
@@ -84,7 +95,7 @@ namespace OptiAssist
             panelSettings.Visibility = Visibility.Collapsed;
             panelAbout.Visibility = Visibility.Collapsed;
 
-            // Exibe a tela correspondente
+            // Display corresponding panel
             if (rb == rbNavDashboard)
             {
                 scrollViewerContent.Visibility = Visibility.Visible;
@@ -127,7 +138,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region LOGGING NO CONSOLE & TERMINAL
+        #region CONSOLE & TERMINAL LOGGING
         public void Log(string message)
         {
             if (!Dispatcher.CheckAccess())
@@ -182,7 +193,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region CARREGAR CONFIGURAÇÕES & APLICATIVOS
+        #region LOAD CONFIGURATION & APPLICATIONS
         private void LoadApplicationSettings()
         {
             _settings = SettingsHelper.Load();
@@ -198,19 +209,19 @@ namespace OptiAssist
             if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
 
-            string currentLang = string.IsNullOrEmpty(_settings.Language) ? "pt-BR" : _settings.Language;
+            string currentLang = string.IsNullOrEmpty(_settings.Language) ? "en-US" : _settings.Language;
             ApplyLanguage(currentLang);
 
-            txtReportOrder.Text = ""; // Mantém vazia conforme solicitado
+            txtReportOrder.Text = ""; // Kept empty by request
 
             UpdateServiceProviderUI();
 
-            // Carrega e aplica cor personalizada de acento e botões
+            // Load and apply custom accent and button color
             string accent = string.IsNullOrEmpty(_settings.AccentColor) ? "#0EA5E9" : _settings.AccentColor;
             txtSettingAccentColor.Text = accent;
             ApplyThemeAccentColor(accent);
 
-            // Carrega e aplica o tema (Escuro / Claro)
+            // Load and apply theme (Dark / Light)
             if (!string.IsNullOrEmpty(_settings.Theme) && _settings.Theme.Equals("Light", StringComparison.OrdinalIgnoreCase))
             {
                 ApplyTheme(false);
@@ -233,7 +244,7 @@ namespace OptiAssist
                 pnlServiceProviderFields.Visibility = isProvider ? Visibility.Visible : Visibility.Collapsed;
             }
 
-            // Exibe ou oculta opção "Registrar Manutenção" no menu lateral
+            // Show or hide "Maintenance Report" in sidebar menu
             if (rbNavReport != null)
             {
                 bool showReport = isProvider && enableReport;
@@ -246,7 +257,7 @@ namespace OptiAssist
                 }
             }
 
-            // Atualiza rodapé com o Nome da Loja / Assistência
+            // Update footer with Custom App Name
             if (lblFooterStoreName != null)
             {
                 string customName = _settings.StoreName;
@@ -280,7 +291,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region VISÃO GERAL (DASHBOARD)
+        #region OVERVIEW (DASHBOARD)
         private void RefreshHardwareAsync()
         {
             lblHeaderDevice.Text = LocalizationHelper.Get("Status_Detecting", "Detectando...");
@@ -320,12 +331,12 @@ namespace OptiAssist
         {
             if (info == null) return;
 
-            // Atualiza a barra de status inferior
+            // Update bottom status bar badges
             UpdateStatusBadge(txtBitLockerStatus, info.BitLockerStatus);
             UpdateStatusBadge(txtTpmStatus, info.TpmStatus);
             UpdateStatusBadge(txtSecureBootStatus, info.SecureBootStatus);
 
-            // Barra Superior Limpa: Placa-Mãe na linha 1, Processador e RAM na linha 2
+            // Clean Header Bar: Motherboard on line 1, CPU and RAM on line 2
             lblHeaderDevice.Text = info.Motherboard;
             lblHeaderDevice.ToolTip = string.Format("{0}: {1}\n{2}: {3}\n{4}: {5}",
                 LocalizationHelper.Get("Label_Motherboard", "Placa-Mãe: ").TrimEnd(':', ' '), info.Motherboard,
@@ -340,13 +351,13 @@ namespace OptiAssist
             lblHeaderRam.ToolTip = string.Format("{0}: {1} GB ({2} GB)",
                 LocalizationHelper.Get("Label_Ram", "Memória RAM: ").TrimEnd(':', ' '), info.RamTotalGb, info.RamFreeGb);
 
-            // Card Sistema Operacional (Direita)
+            // Operating System Card (Right)
             lblOsTitle.Text = string.Format("{0} {1}", info.OsName, info.OsDisplayVersion);
             lblOsDetails.Text = string.Format("Compilação: Build {0} ({1})",
                 info.OsBuild, info.OsArchitecture);
             lblMachineName.Text = info.ComputerName;
 
-            // Card Informações do hardware (Esquerda - 1 por linha na ordem estrita solicitada)
+            // Hardware Information Card (Left - 1 per line)
             lblSerialNumber.Text = info.SerialNumber;
             lblCpuDetails.Text = string.Format("{0}{1} ({2} Cores / {3} Threads)",
                 LocalizationHelper.Get("Label_Processor", "Processador: "), info.CpuName, info.CpuCores, info.CpuThreads);
@@ -361,7 +372,7 @@ namespace OptiAssist
             lblDiskDetails.Text = string.Format("{0}{1}",
                 LocalizationHelper.Get("Label_Storage", "Armazenamento: "), info.PrimaryDiskInfo);
 
-            // Preenche o número de série no formulário de relatório caso esteja vazio
+            // Auto-fill serial number in maintenance report form if empty
             if (string.IsNullOrEmpty(txtReportSerial.Text) || txtReportSerial.Text == "Não informado" || txtReportSerial.Text == "Not informed")
             {
                 txtReportSerial.Text = info.SerialNumber;
@@ -410,7 +421,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region PÓS-INSTALAÇÃO
+        #region APP MANAGER (POST-INSTALL)
         private void BtnSelectEssentials_Click(object sender, RoutedEventArgs e)
         {
             if (_apps == null) return;
@@ -540,7 +551,7 @@ namespace OptiAssist
 
             if (_editingAppItem != null)
             {
-                // Modo Edição: atualiza item existente
+                // Edit mode: update existing item
                 _editingAppItem.Name = name;
                 _editingAppItem.InstallType = installType;
                 _editingAppItem.LocalInstallerFile = localFile;
@@ -555,12 +566,12 @@ namespace OptiAssist
             }
             else
             {
-                // Modo Adição: adiciona novo item
+                // Add mode: add new item
                 var newItem = new InstallAppItem(name, preSelected, installType, wingetId, silentArgs, localFile);
                 _customEditorApps.Add(newItem);
             }
 
-            // Limpa os campos do formulário
+            // Clear form fields
             ClearCustomAppForm();
         }
 
@@ -731,7 +742,7 @@ namespace OptiAssist
             });
         }
 
-        #region ATUALIZAÇÃO DE APLICATIVOS (WINGET UPGRADE)
+        #region APPLICATION UPDATES (WINGET UPGRADE)
         private void BtnCheckWingetUpgrades_Click(object sender, RoutedEventArgs e)
         {
             cardWingetUpgrades.Visibility = Visibility.Visible;
@@ -847,7 +858,7 @@ namespace OptiAssist
                     MessageBox.Show(string.Format("Atualização de aplicativos concluída!\n{0} de {1} atualizados com sucesso.", successes, selected.Count),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                    // Re-verifica atualizações para atualizar a lista
+                    // Re-scan updates to refresh list
                     BtnCheckWingetUpgrades_Click(null, null);
                 }));
             });
@@ -887,7 +898,7 @@ namespace OptiAssist
                     MessageBox.Show("Comando de atualização geral finalizado! Verifique os detalhes na aba Logs.",
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                    // Re-verifica atualizações para atualizar a lista
+                    // Re-scan updates to refresh list
                     BtnCheckWingetUpgrades_Click(null, null);
                 }));
             });
@@ -901,7 +912,7 @@ namespace OptiAssist
         #endregion
         #endregion
 
-        #region OTIMIZAÇÃO E MANUTENÇÃO
+        #region OPTIMIZATION & MAINTENANCE
         private void RunAsyncTweak(Action action)
         {
             ThreadPool.QueueUserWorkItem(state =>
@@ -931,7 +942,7 @@ namespace OptiAssist
 
         private void BtnWinSatBenchmark_Click(object sender, RoutedEventArgs e)
         {
-            // Verifica se já existem resultados de WinSAT gravados
+            // Check if WinSAT scores already exist
             WinSatScores current = SystemInfoHelper.GetWinSatScores();
             if (current.HasData)
             {
@@ -959,7 +970,7 @@ namespace OptiAssist
             {
                 SystemInfoHelper.RunWinSatBenchmark(Log);
 
-                // Consulta e exibe as novas pontuações
+                // Query and display new benchmark scores
                 WinSatScores updated = SystemInfoHelper.GetWinSatScores();
                 if (updated.HasData)
                 {
@@ -1057,7 +1068,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region FERRAMENTAS DO WINDOWS
+        #region WINDOWS TOOLS
         private void BtnDevMgmt_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenWindowsTool("devmgmt.msc"); }
         private void BtnNetplwiz_Click(object sender, RoutedEventArgs e)
         {
@@ -1106,7 +1117,7 @@ namespace OptiAssist
         private void BtnOpenMaintenanceFolder_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenMaintenanceFolder(); }
         #endregion
 
-        #region REGISTRAR MANUTENÇÃO (LAUDO TÉCNICO)
+        #region MAINTENANCE REPORT (SERVICE ORDER)
         private void TxtReportNotes_GotFocus(object sender, RoutedEventArgs e)
         {
             if (txtReportNotes.Text.StartsWith("Você pode informar"))
@@ -1147,11 +1158,11 @@ namespace OptiAssist
         {
             MaintenanceRecord rec = BuildRecordFromUI();
 
-            // 1. Sempre emite na pasta Reports do aplicativo
+            // 1. Always generate in application Reports folder
             string reportsFilePath = ReportHelper.SaveReportToReportsFolder(rec);
             Log("[RELATÓRIO] Registro emitido na pasta Reports: " + reportsFilePath);
 
-            // 2. Pergunta ao usuário se deseja armazenar uma cópia no equipamento do usuário
+            // 2. Ask user whether to save an extra copy on machine
             MessageBoxResult promptCopy = MessageBox.Show(
                 "O registro de manutenção foi emitido na pasta Reports.\n\n" +
                 "Deseja armazenar uma cópia deste relatório no equipamento do usuário?",
@@ -1170,7 +1181,7 @@ namespace OptiAssist
                 Log("[RELATÓRIO] Cópia gravada no equipamento do usuário: " + clientCopyPath);
             }
 
-            // 3. Exibe confirmação e opção de abrir
+            // 3. Display confirmation and option to open
             string msg;
             if (!string.IsNullOrEmpty(clientCopyPath))
             {
@@ -1223,7 +1234,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region CONFIGURAÇÕES & IDIOMA
+        #region SETTINGS & LOCALIZATION
         private void BtnLangPt_Click(object sender, RoutedEventArgs e)
         {
             SetLanguage("pt-BR");
@@ -1245,10 +1256,10 @@ namespace OptiAssist
 
         public void ApplyLanguage(string langCode)
         {
-            if (string.IsNullOrWhiteSpace(langCode)) langCode = "pt-BR";
+            if (string.IsNullOrWhiteSpace(langCode)) langCode = "en-US";
             LocalizationHelper.LoadLanguage(langCode);
 
-            // 1. Navegação lateral
+            // 1. Sidebar Navigation
             if (rbNavDashboard != null) rbNavDashboard.Content = LocalizationHelper.Get("Nav_Dashboard", "💻  Visão Geral");
             if (rbNavPostInstall != null) rbNavPostInstall.Content = LocalizationHelper.Get("Nav_PostInstall", "📦  Gerenciador de Apps");
             if (rbNavOptimization != null) rbNavOptimization.Content = LocalizationHelper.Get("Nav_Optimization", "⚡  Otimização");
@@ -1258,7 +1269,7 @@ namespace OptiAssist
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Configurações");
             if (rbNavAbout != null) rbNavAbout.Content = LocalizationHelper.Get("Nav_About", "ℹ️  Sobre o aplicativo");
 
-            // 2. Visão Geral (Dashboard)
+            // 2. Overview (Dashboard)
             if (txtDashboardTitle != null) txtDashboardTitle.Text = LocalizationHelper.Get("Dashboard_Title", "Bem vindo ao OptiAssist!");
             if (txtDashboardSubtitle != null) txtDashboardSubtitle.Text = LocalizationHelper.Get("Dashboard_Subtitle", "A ferramenta suprema para manter seu equipamento em ordem");
             if (txtHwCardTitle != null) txtHwCardTitle.Text = LocalizationHelper.Get("Card_Hardware_Title", "🧠 Informações do hardware");
@@ -1277,7 +1288,7 @@ namespace OptiAssist
             if (btnTaskSysDm != null) btnTaskSysDm.Content = LocalizationHelper.Get("Task_SysDm", "⚙️ Propriedades Sistema");
             if (btnRebootBios != null) btnRebootBios.Content = LocalizationHelper.Get("Task_RebootBios", "⚡ Reiniciar p/ UEFI");
 
-            // 3. Gerenciador de Apps (PostInstall)
+            // 3. App Manager (PostInstall)
             if (txtPostInstallTitle != null) txtPostInstallTitle.Text = LocalizationHelper.Get("PostInstall_Title", "Gerenciador de Apps");
             if (txtPostInstallSubtitle != null) txtPostInstallSubtitle.Text = LocalizationHelper.Get("PostInstall_Subtitle", "Instalação automatizada de softwares essenciais e atualização de programas instalados");
             if (txtWingetCardTitle != null) txtWingetCardTitle.Text = LocalizationHelper.Get("Upgrade_Card_Title", "🔄 Atualização de Aplicativos");
@@ -1318,7 +1329,7 @@ namespace OptiAssist
             if (btnOpenPostInstallFolder != null) btnOpenPostInstallFolder.Content = LocalizationHelper.Get("Btn_OpenPostInstallFolder", "📂 Pasta de Instaladores");
             if (btnRunInstallSelected != null) btnRunInstallSelected.Content = LocalizationHelper.Get("Btn_RunInstallSelected", "🚀 Instalar Selecionados");
 
-            // 4. Otimização
+            // 4. Optimization
             if (txtOptTitle != null) txtOptTitle.Text = LocalizationHelper.Get("Opt_Title", "Otimização do Sistema e Limpeza");
             if (txtOptSubtitle != null) txtOptSubtitle.Text = LocalizationHelper.Get("Opt_Subtitle", "Ajustes avançados de desempenho, correções de integridade e utilitários rápidos");
             if (txtCommSectionTitle != null) txtCommSectionTitle.Text = LocalizationHelper.Get("Opt_Community_Title", "🌐 Ferramentas da Comunidade");
@@ -1341,7 +1352,7 @@ namespace OptiAssist
             if (txtBtnCompactOsText != null) txtBtnCompactOsText.Text = LocalizationHelper.Get("Btn_CompactOs", "Compactar Instalação do Windows");
             if (btnOpenScriptsFolder != null) btnOpenScriptsFolder.Content = LocalizationHelper.Get("Btn_OpenScriptsFolder", "📂 Abrir Pasta Scripts");
 
-            // 5. Ferramentas Administrativas
+            // 5. Windows Administrative Tools
             if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Tools_Title", "Ferramentas do Windows");
             if (txtToolsSubtitle != null) txtToolsSubtitle.Text = LocalizationHelper.Get("Tools_Subtitle", "Acesso imediato às ferramentas administrativas nativas do Windows e utilitários portáteis");
             if (txtAdminToolsTitle != null) txtAdminToolsTitle.Text = LocalizationHelper.Get("Tools_Section_Title", "🪟 Ferramentas Administrativas");
@@ -1364,7 +1375,7 @@ namespace OptiAssist
             if (txtBtnGpeditText != null) txtBtnGpeditText.Text = LocalizationHelper.Get("Tool_Gpedit", "📜 Ferramenta GPEDIT (Pro/Enterprise)");
             if (btnOpenMaintenanceFolderTool != null) btnOpenMaintenanceFolderTool.Content = LocalizationHelper.Get("Btn_OpenMaintenanceFolder", "📂 Pasta de Ferramentas de Manutenção");
 
-            // 6. Relatório de Manutenção
+            // 6. Maintenance Report
             if (txtReportTitle != null) txtReportTitle.Text = LocalizationHelper.Get("Report_Title", "Registrar Ordem de Manutenção");
             if (txtReportSub != null) txtReportSub.Text = LocalizationHelper.Get("Report_Subtitle", "Gera um laudo com especificações da máquina, placa-mãe, número de série e procedimentos");
             if (txtReportOrderLabel != null) txtReportOrderLabel.Text = LocalizationHelper.Get("Report_Label_Order", "Nº da Ordem de Serviço:");
@@ -1391,7 +1402,7 @@ namespace OptiAssist
             if (btnCopyAllLog != null) btnCopyAllLog.Content = LocalizationHelper.Get("Btn_CopyAllLog", "📋 Copiar Tudo");
             if (btnClearLog != null) btnClearLog.Content = LocalizationHelper.Get("Btn_ClearLog", "🗑️ Limpar Console");
 
-            // 8. Configurações
+            // 8. Settings
             if (txtSettingsTitle != null) txtSettingsTitle.Text = LocalizationHelper.Get("Settings_Title", "Configurações do OptiAssist");
             if (txtSettingsSub != null) txtSettingsSub.Text = LocalizationHelper.Get("Settings_Subtitle", "Dados salvos em Config\\settings.json no pen drive");
             if (chkServiceProviderMode != null) chkServiceProviderMode.Content = LocalizationHelper.Get("Settings_Chk_ProviderMode", "Modo prestador de serviço");
@@ -1417,7 +1428,7 @@ namespace OptiAssist
             if (btnApplyCustomColor != null) btnApplyCustomColor.Content = LocalizationHelper.Get("Btn_ApplyColor", "Aplicar Cor");
             if (txtPresetLabel != null) txtPresetLabel.Text = LocalizationHelper.Get("Settings_Label_Presets", "Cores Sugeridas:");
 
-            // Cores sugeridas
+            // Suggested color presets
             if (btnPresetBlue != null) btnPresetBlue.Content = "🔵 " + LocalizationHelper.Get("Color_Blue", "Azul (Padrão)");
             if (btnPresetGreen != null) btnPresetGreen.Content = "🟢 " + LocalizationHelper.Get("Color_Green", "Verde claro");
             if (btnPresetPurple != null) btnPresetPurple.Content = "🟣 " + LocalizationHelper.Get("Color_Purple", "Roxo");
@@ -1426,18 +1437,18 @@ namespace OptiAssist
             if (btnPresetYellow != null) btnPresetYellow.Content = "🟡 " + LocalizationHelper.Get("Color_Yellow", "Amarelo");
             if (btnPresetPink != null) btnPresetPink.Content = "🌸 " + LocalizationHelper.Get("Color_Pink", "Rosa");
 
-            // 9. Sobre
+            // 9. About
             if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("About_Title", "Sobre o OptiAssist");
             if (txtAboutSub != null) txtAboutSub.Text = LocalizationHelper.Get("About_Subtitle", "Informações da versão, direitos autorais e licença de código aberto");
             if (btnAboutGithub != null) btnAboutGithub.Content = LocalizationHelper.Get("Btn_AboutGithub", "🌐 Repositório GitHub");
             if (btnAboutWebsite != null) btnAboutWebsite.Content = LocalizationHelper.Get("Btn_AboutWebsite", "🔗 Site Oficial");
 
-            // 10. Barra de status inferior
+            // 10. Bottom status bar
             if (txtBitLockerLabel != null) txtBitLockerLabel.Text = LocalizationHelper.Get("Status_BitLocker", "🔒 BitLocker: ");
             if (txtTpmLabel != null) txtTpmLabel.Text = LocalizationHelper.Get("Status_Tpm", "🛡️ TPM: ");
             if (txtSecureBootLabel != null) txtSecureBootLabel.Text = LocalizationHelper.Get("Status_SecureBoot", "⚡ Secure Boot: ");
 
-            // 11. Atualiza visualização de hardware se já tiver sido detectado
+            // 11. Update hardware display if already detected
             if (_hardware != null)
             {
                 UpdateHardwareDisplay(_hardware);
@@ -1483,7 +1494,7 @@ namespace OptiAssist
             Log("[CONFIG] Configurações da aplicação atualizadas e salvas.");
         }
 
-        #region PERSONALIZAÇÃO DE TEMA & CORES
+        #region THEME & COLOR PERSONALIZATION
         public void ApplyThemeAccentColor(string hexColor)
         {
             if (string.IsNullOrWhiteSpace(hexColor)) return;
@@ -1495,7 +1506,7 @@ namespace OptiAssist
                 if (colorObj == null) return;
                 System.Windows.Media.Color color = (System.Windows.Media.Color)colorObj;
 
-                // Tom mais claro para hover e mais escuro para pressionado
+                // Lighter tone for hover and darker tone for pressed
                 System.Windows.Media.Color hoverColor = System.Windows.Media.Color.FromArgb(
                     color.A,
                     (byte)Math.Min(255, color.R + 35),
@@ -1508,7 +1519,7 @@ namespace OptiAssist
                     (byte)Math.Max(0, color.G - 35),
                     (byte)Math.Max(0, color.B - 35));
 
-                // Atualiza os recursos dinâmicos globais da aplicação
+                // Update dynamic global application resources
                 Application.Current.Resources["ColorAccent"] = color;
                 Application.Current.Resources["ColorAccentHover"] = hoverColor;
                 Application.Current.Resources["ColorAccentPressed"] = pressedColor;
@@ -1669,7 +1680,7 @@ namespace OptiAssist
         }
         #endregion
 
-        #region SOBRE O APLICATIVO
+        #region ABOUT APPLICATION
         private void BtnAboutGithub_Click(object sender, RoutedEventArgs e)
         {
             try

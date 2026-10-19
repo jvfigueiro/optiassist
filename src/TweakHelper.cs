@@ -41,7 +41,7 @@ namespace OptiAssist
             long totalDeletedBytes = 0;
             int totalDeletedFiles = 0;
 
-            // 1. %TEMP% do Usuário
+            // 1. User %TEMP% folder
             string userTemp = Path.GetTempPath();
             log("-> Limpando temporários do usuário: " + userTemp);
             CleanDirectory(userTemp, ref totalDeletedFiles, ref totalDeletedBytes, log);
@@ -56,7 +56,7 @@ namespace OptiAssist
             log("-> Limpando arquivos de Prefetch...");
             CleanDirectory(prefetch, ref totalDeletedFiles, ref totalDeletedBytes, log);
 
-            // 4. Relatórios de erro do Windows (WER)
+            // 4. Windows Error Reporting (WER) queue
             string werPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"Microsoft\Windows\WER\ReportQueue");
             if (Directory.Exists(werPath))
             {
@@ -64,7 +64,7 @@ namespace OptiAssist
                 CleanDirectory(werPath, ref totalDeletedFiles, ref totalDeletedBytes, log);
             }
 
-            // 5. Esvaziar Lixeira de todas as unidades
+            // 5. Empty Recycle Bin on all drives
             try
             {
                 log("-> Esvaziando a Lixeira de todas as unidades...");
@@ -175,7 +175,7 @@ namespace OptiAssist
             log("=== OTIMIZANDO EFEITOS VISUAIS PARA MÁXIMO DESEMPENHO ===");
             try
             {
-                // VisualFXSetting = 2 (Melhor Desempenho)
+                // VisualFXSetting = 2 (Best Performance)
                 using (RegistryKey rk = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"))
                 {
                     if (rk != null)
@@ -185,7 +185,7 @@ namespace OptiAssist
                     }
                 }
 
-                // Desativar animações de minimizar/maximizar
+                // Disable minimize/maximize animations
                 using (RegistryKey rk = Registry.CurrentUser.CreateSubKey(@"Control Panel\Desktop\WindowMetrics"))
                 {
                     if (rk != null)
@@ -205,7 +205,7 @@ namespace OptiAssist
                     }
                 }
 
-                // Notificar o shell do Windows sobre as alterações
+                // Notify Windows shell about environment settings change
                 UIntPtr result;
                 SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, UIntPtr.Zero, "TraySettings", SMTO_ABORTIFHUNG, 1000, out result);
 
@@ -221,16 +221,16 @@ namespace OptiAssist
         {
             log("=== OTIMIZANDO SERVIÇOS NÃO ESSENCIAIS E TELEMETRIA ===");
 
-            // 1. Desativar DiagTrack (Connected User Experiences and Telemetry)
+            // 1. Disable DiagTrack (Connected User Experiences and Telemetry)
             DisableService("DiagTrack", "Telemetria do Windows (DiagTrack)", log);
 
-            // 2. Desativar dmwappushservice
+            // 2. Disable dmwappushservice
             DisableService("dmwappushservice", "Serviço de Rastreamento WAP", log);
 
-            // 3. Desativar Relatório de Erros do Windows (WerSvc)
+            // 3. Disable Windows Error Reporting (WerSvc)
             DisableService("WerSvc", "Relatório de Erros do Windows (WerSvc)", log);
 
-            // 4. Registro: Desativar coleta de dados de telemetria
+            // 4. Registry: Disable telemetry data collection
             try
             {
                 using (RegistryKey rk = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection"))
@@ -434,7 +434,7 @@ namespace OptiAssist
                     }
                 }
 
-                // Definir StartupType para Disabled via sc.exe
+                // Set StartupType to Disabled via sc.exe
                 ProcessStartInfo psi = new ProcessStartInfo("sc.exe", string.Format("config \"{0}\" start= disabled", serviceName));
                 psi.UseShellExecute = false;
                 psi.CreateNoWindow = true;
