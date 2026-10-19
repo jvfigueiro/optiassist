@@ -374,16 +374,16 @@ namespace OptiAssist
             if (app.IsWingetType)
             {
                 string packageId = !string.IsNullOrEmpty(app.WingetId) ? app.WingetId : app.Name;
-                log(string.Format("==> [MÉTODO WINGET] Instalando '{0}' via Winget ({1})...", app.Name, packageId));
+                log(string.Format("==> [WINGET METHOD] Installing '{0}' via Winget ({1})...", app.Name, packageId));
                 bool ok = InstallViaWinget(packageId, log);
                 if (ok)
                 {
-                    log(string.Format("[SUCESSO] '{0}' instalado com sucesso via Winget!", app.Name));
+                    log(string.Format("[SUCCESS] '{0}' successfully installed via Winget!", app.Name));
                     return;
                 }
 
                 // Fallback to local installer if Winget fails
-                log(string.Format("[AVISO] Winget falhou para '{0}'. Verificando instalador local de contingência...", app.Name));
+                log(string.Format("[WARNING] Winget failed for '{0}'. Checking for a local fallback installer...", app.Name));
                 string fallbackLocal = FindLocalInstaller(app);
                 if (!string.IsNullOrEmpty(fallbackLocal))
                 {
@@ -391,13 +391,13 @@ namespace OptiAssist
                 }
                 else
                 {
-                    log(string.Format("[FALHA] Não foi possível instalar '{0}' via Winget e nenhum instalador local foi encontrado.", app.Name));
+                    log(string.Format("[FAILED] Could not install '{0}' via Winget and no local installer was found.", app.Name));
                 }
                 return;
             }
 
             // 2. Configured as Local installation type (searches for <Name>Setup.exe)
-            log(string.Format("==> [MÉTODO LOCAL] Verificando instalador de '{0}' na pasta PostInstall\\...", app.Name));
+            log(string.Format("==> [LOCAL METHOD] Checking installer for '{0}' in the PostInstall\\ folder...", app.Name));
             string localFile = FindLocalInstaller(app);
 
             if (!string.IsNullOrEmpty(localFile) && File.Exists(localFile))
@@ -411,30 +411,30 @@ namespace OptiAssist
             {
                 string packageId = !string.IsNullOrEmpty(app.WingetId) ? app.WingetId : app.Name;
                 string cleanExpected = (!string.IsNullOrEmpty(app.Name) ? app.Name.Replace(" ", "") : "App") + "Setup.exe";
-                log(string.Format("==> [CONTINGÊNCIA WINGET] Instalador local '{0}' não encontrado. Tentando instalar {1} via Winget ({2})...",
+                log(string.Format("==> [WINGET FALLBACK] Local installer '{0}' not found. Trying to install {1} via Winget ({2})...",
                     cleanExpected, app.Name, packageId));
 
                 bool wingetOk = InstallViaWinget(packageId, log);
                 if (wingetOk)
                 {
-                    log(string.Format("[SUCESSO] {0} instalado com sucesso via Winget!", app.Name));
+                    log(string.Format("[SUCCESS] {0} successfully installed via Winget!", app.Name));
                 }
                 else
                 {
-                    log(string.Format("[ERRO] Falha ao instalar {0} via Winget. Verifique sua conexão com a internet.", app.Name));
+                    log(string.Format("[ERROR] Failed to install {0} via Winget. Check your internet connection.", app.Name));
                 }
             }
             else
             {
                 string cleanExpected = (!string.IsNullOrEmpty(app.Name) ? app.Name.Replace(" ", "") : "App") + "Setup.exe";
-                log(string.Format("[PULADO] {0}: Instalador local '{1}' ausente na pasta PostInstall\\ e contingência Winget desativada.",
+                log(string.Format("[SKIPPED] {0}: Local installer '{1}' missing in the PostInstall\\ folder and Winget fallback is disabled.",
                     app.Name, cleanExpected));
             }
         }
 
         private static bool InstallOfflineFile(InstallAppItem app, string offlineFile, Action<string> log)
         {
-            log(string.Format("==> [EXECUTANDO LOCAL] Arquivo: {0}...", Path.GetFileName(offlineFile)));
+            log(string.Format("==> [RUNNING LOCAL] File: {0}...", Path.GetFileName(offlineFile)));
 
             string ext = Path.GetExtension(offlineFile).ToLowerInvariant();
             ProcessStartInfo psi = new ProcessStartInfo();
@@ -472,19 +472,19 @@ namespace OptiAssist
 
                     if (proc.ExitCode == 0 || proc.ExitCode == 3010)
                     {
-                        log(string.Format("[OK] {0} instalado com sucesso via instalador local!", app.Name));
+                        log(string.Format("[OK] {0} successfully installed via local installer!", app.Name));
                         return true;
                     }
                     else
                     {
-                        log(string.Format("[AVISO] {0} finalizou com código {1}.", app.Name, proc.ExitCode));
+                        log(string.Format("[WARNING] {0} finished with exit code {1}.", app.Name, proc.ExitCode));
                         return false;
                     }
                 }
             }
             catch (Exception ex)
             {
-                log(string.Format("[ERRO] Falha ao executar instalador de {0}: {1}", app.Name, ex.Message));
+                log(string.Format("[ERROR] Failed to run installer for {0}: {1}", app.Name, ex.Message));
                 return false;
             }
         }
@@ -534,7 +534,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                log(string.Format("[ERRO] Falha ao invocar Winget para {0}: {1}", wingetIdOrName, ex.Message));
+                log(string.Format("[ERROR] Failed to invoke Winget for {0}: {1}", wingetIdOrName, ex.Message));
                 return false;
             }
         }
@@ -698,7 +698,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                if (log != null) log(string.Format("[ERRO] Falha ao verificar atualizações via Winget: {0}", ex.Message));
+                if (log != null) log(string.Format("[ERROR] Failed to check for updates via Winget: {0}", ex.Message));
             }
 
             return list;
@@ -821,7 +821,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                if (log != null) log(string.Format("[ERRO] Falha ao atualizar {0}: {1}", packageId, ex.Message));
+                if (log != null) log(string.Format("[ERROR] Failed to update {0}: {1}", packageId, ex.Message));
                 return false;
             }
         }
@@ -851,7 +851,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                if (log != null) log(string.Format("[ERRO] Falha ao executar atualização geral do Winget: {0}", ex.Message));
+                if (log != null) log(string.Format("[ERROR] Failed to run Winget bulk upgrade: {0}", ex.Message));
                 return false;
             }
         }

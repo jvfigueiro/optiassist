@@ -1352,12 +1352,21 @@
                                           Content="Atualizar especificações de hardware automaticamente na inicialização"
                                           Margin="0,2,0,12"/>
 
-                                <Button x:Name="btnSaveSettings"
-                                        Content="💾 Salvar Configurações"
-                                        Style="{StaticResource BtnAccent}"
-                                        Width="160"
-                                        HorizontalAlignment="Left"
-                                        Click="BtnSaveSettings_Click"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="btnSaveSettings"
+                                            Content="💾 Salvar Configurações"
+                                            Style="{StaticResource BtnAccent}"
+                                            Width="160"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,8,0"
+                                            Click="BtnSaveSettings_Click"/>
+                                    <Button x:Name="btnResetSettings"
+                                            Content="🔄 Restaurar Padrões"
+                                            Style="{StaticResource BtnDefault}"
+                                            Padding="14,0"
+                                            HorizontalAlignment="Left"
+                                            Click="BtnResetSettings_Click"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -1403,7 +1412,7 @@
                                 <!-- Row: Hex Code + Color Picker + Apply Button + Preview -->
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="220" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
@@ -1459,13 +1468,13 @@
                                 <!-- Preset Color Palette -->
                                 <TextBlock x:Name="txtPresetLabel" Text="Cores Sugeridas:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <WrapPanel Margin="0,0,0,4">
-                                    <Button x:Name="btnPresetBlue" Content="🔵 Azul (Padrão)" Tag="#0EA5E9" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetGreen" Content="🟢 Verde claro" Tag="#10B981" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetPurple" Content="🟣 Roxo" Tag="#8B5CF6" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetOrange" Content="🟠 Laranja" Tag="#F97316" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetRed" Content="🔴 Vermelho" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetYellow" Content="🟡 Amarelo" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                    <Button x:Name="btnPresetPink" Content="🌸 Rosa" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="26" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetBlue" Content="🔵 Azul (Padrão)" Tag="#0EA5E9" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetGreen" Content="🟢 Verde claro" Tag="#10B981" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetPurple" Content="🟣 Roxo" Tag="#8B5CF6" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetOrange" Content="🟠 Laranja" Tag="#F97316" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetRed" Content="🔴 Vermelho" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetYellow" Content="🟡 Amarelo" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                    <Button x:Name="btnPresetPink" Content="🌸 Rosa" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                 </WrapPanel>
                             </StackPanel>
                         </Border>

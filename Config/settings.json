@@ -1,7 +1,6 @@
 {
-  "StoreName": "OptiAssist",
-  "TechnicianName": "N/A",
-  "Phone": "",
+  "CustomerName": "OptiAssist",
+  "ContactInfo": "https://github.com/jvfigueiro/optiassist",
   "Language": "en-US",
   "ReportSavePath": "C:\\MaintenanceReport.txt",
   "AutoRefreshHardware": true,
@@ -9,5 +8,5 @@
   "Theme": "Dark",
   "AccentColor": "#0EA5E9",
   "ServiceProviderMode": false,
-  "EnableMaintenanceReport": true
+  "EnableMaintenanceReport": false
 }

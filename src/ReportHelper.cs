@@ -8,7 +8,6 @@ namespace OptiAssist
     public class MaintenanceRecord
     {
         public string StoreName { get; set; }
-        public string TechnicianName { get; set; }
         public string Phone { get; set; }
         public string ClientName { get; set; }
         public string ClientPhone { get; set; }

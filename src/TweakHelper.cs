@@ -36,143 +36,143 @@ namespace OptiAssist
 
         public static void CleanTempFiles(Action<string> log)
         {
-            log("=== INICIANDO LIMPEZA DE ARQUIVOS TEMPORÁRIOS ===");
+            log("=== STARTING TEMPORARY FILES CLEANUP ===");
 
             long totalDeletedBytes = 0;
             int totalDeletedFiles = 0;
 
             // 1. User %TEMP% folder
             string userTemp = Path.GetTempPath();
-            log("-> Limpando temporários do usuário: " + userTemp);
+            log("-> Cleaning user temporary files: " + userTemp);
             CleanDirectory(userTemp, ref totalDeletedFiles, ref totalDeletedBytes, log);
 
             // 2. C:\Windows\Temp
             string winTemp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp");
-            log("-> Limpando temporários do Windows: " + winTemp);
+            log("-> Cleaning Windows temporary files: " + winTemp);
             CleanDirectory(winTemp, ref totalDeletedFiles, ref totalDeletedBytes, log);
 
             // 3. Prefetch
             string prefetch = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch");
-            log("-> Limpando arquivos de Prefetch...");
+            log("-> Cleaning Prefetch files...");
             CleanDirectory(prefetch, ref totalDeletedFiles, ref totalDeletedBytes, log);
 
             // 4. Windows Error Reporting (WER) queue
             string werPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"Microsoft\Windows\WER\ReportQueue");
             if (Directory.Exists(werPath))
             {
-                log("-> Limpando fila de relatórios de erros (WER)...");
+                log("-> Cleaning Windows Error Reporting (WER) queue...");
                 CleanDirectory(werPath, ref totalDeletedFiles, ref totalDeletedBytes, log);
             }
 
             // 5. Empty Recycle Bin on all drives
             try
             {
-                log("-> Esvaziando a Lixeira de todas as unidades...");
+                log("-> Emptying the Recycle Bin on all drives...");
                 SHEmptyRecycleBin(IntPtr.Zero, null, SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND);
-                log("   [OK] Lixeira esvaziada.");
+                log("   [OK] Recycle Bin emptied.");
             }
             catch (Exception ex)
             {
-                log("   [AVISO] Não foi possível esvaziar a lixeira: " + ex.Message);
+                log("   [WARNING] Could not empty the Recycle Bin: " + ex.Message);
             }
 
             double mb = Math.Round(totalDeletedBytes / (1024.0 * 1024.0), 2);
-            log(string.Format("=== LIMPEZA CONCLUÍDA! {0} arquivos removidos ({1} MB liberados) ===", totalDeletedFiles, mb));
+            log(string.Format("=== CLEANUP COMPLETED! {0} files removed ({1} MB freed) ===", totalDeletedFiles, mb));
         }
 
         public static void CleanWindowsUpdateCache(Action<string> log)
         {
-            log("=== LIMPANDO CACHE DE DOWNLOAD DO WINDOWS UPDATE ===");
+            log("=== CLEANING WINDOWS UPDATE DOWNLOAD CACHE ===");
             try
             {
-                log("-> Parando serviço do Windows Update (wuauserv)...");
+                log("-> Stopping Windows Update service (wuauserv)...");
                 StopService("wuauserv", 10);
 
                 string dlPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), @"SoftwareDistribution\Download");
                 if (Directory.Exists(dlPath))
                 {
-                    log("-> Removendo arquivos temporários em SoftwareDistribution\\Download...");
+                    log("-> Removing temporary files in SoftwareDistribution\\Download...");
                     int count = 0;
                     long bytes = 0;
                     CleanDirectory(dlPath, ref count, ref bytes, log);
-                    log(string.Format("   [OK] {0} arquivos de atualizações removidos ({1} MB liberados).", count, Math.Round(bytes / (1024.0 * 1024.0), 2)));
+                    log(string.Format("   [OK] {0} update files removed ({1} MB freed).", count, Math.Round(bytes / (1024.0 * 1024.0), 2)));
                 }
 
-                log("-> Reiniciando serviço do Windows Update (wuauserv)...");
+                log("-> Restarting Windows Update service (wuauserv)...");
                 StartService("wuauserv", 10);
-                log("=== CACHE DO WINDOWS UPDATE LIMPO COM SUCESSO! ===");
+                log("=== WINDOWS UPDATE CACHE CLEANED SUCCESSFULLY! ===");
             }
             catch (Exception ex)
             {
-                log("[ERRO] Erro ao limpar cache do Windows Update: " + ex.Message);
+                log("[ERROR] Error cleaning Windows Update cache: " + ex.Message);
             }
         }
 
         public static void RunSfcRepair(Action<string> log)
         {
             log("=================================================");
-            log("   REPARO DA INSTALAÇÃO DO WINDOWS (MÉTODO SFC)  ");
+            log("   WINDOWS INSTALLATION REPAIR (SFC METHOD)      ");
             log("=================================================");
-            log("Executando: sfc /scannow...");
-            log("AVISO: A verificação dos arquivos protegidos do Windows pode levar de 3 a 10 minutos.");
+            log("Running: sfc /scannow...");
+            log("WARNING: Scanning protected Windows files may take 3 to 10 minutes.");
             RunProcessStreamed("sfc.exe", "/scannow", log);
-            log("\n=== VERIFICAÇÃO E REPARO SFC FINALIZADO! ===");
+            log("\n=== SFC SCAN AND REPAIR FINISHED! ===");
         }
 
         public static void RunDismRepair(Action<string> log)
         {
             log("=================================================");
-            log("  REPARO DA INSTALAÇÃO DO WINDOWS (MÉTODO DISM)  ");
+            log("  WINDOWS INSTALLATION REPAIR (DISM METHOD)      ");
             log("=================================================");
-            log("Executando: Dism /Online /Cleanup-Image /RestoreHealth...");
-            log("AVISO: O DISM verifica a integridade da imagem do sistema e substitui arquivos corrompidos.");
+            log("Running: Dism /Online /Cleanup-Image /RestoreHealth...");
+            log("WARNING: DISM checks the system image integrity and replaces corrupted files.");
             RunProcessStreamed("DISM.exe", "/Online /Cleanup-Image /RestoreHealth", log);
-            log("\n=== RESTAURAÇÃO DE IMAGEM DISM FINALIZADA! ===");
+            log("\n=== DISM IMAGE RESTORE FINISHED! ===");
         }
 
         public static void RunDismAndSfc(Action<string> log)
         {
             log("=================================================");
-            log("   VERIFICAÇÃO E REPARO DO SISTEMA (DISM + SFC)  ");
+            log("   SYSTEM SCAN AND REPAIR (DISM + SFC)           ");
             log("=================================================");
-            log("AVISO: Este procedimento pode levar de 5 a 15 minutos dependendo da velocidade do SSD/disco.");
+            log("WARNING: This procedure may take 5 to 15 minutes depending on SSD/disk speed.");
 
             // 1. DISM RestoreHealth
-            log("\n[ETAPA 1/2] Executando DISM /Online /Cleanup-Image /RestoreHealth...");
+            log("\n[STEP 1/2] Running DISM /Online /Cleanup-Image /RestoreHealth...");
             RunProcessStreamed("DISM.exe", "/Online /Cleanup-Image /RestoreHealth", log);
 
             // 2. SFC Scannow
-            log("\n[ETAPA 2/2] Executando SFC /scannow...");
+            log("\n[STEP 2/2] Running SFC /scannow...");
             RunProcessStreamed("sfc.exe", "/scannow", log);
 
-            log("\n=== VERIFICAÇÃO DISM E SFC FINALIZADA COM SUCESSO! ===");
+            log("\n=== DISM AND SFC SCAN FINISHED SUCCESSFULLY! ===");
         }
 
         public static void CompactOsInstall(Action<string> log)
         {
             log("=================================================");
-            log("       COMPACTAÇÃO DA INSTALAÇÃO DO WINDOWS      ");
+            log("       WINDOWS INSTALLATION COMPACTION           ");
             log("=================================================");
-            log("Executando: compact.exe /CompactOS:always...");
-            log("AVISO: A compactação dos binários do Windows (Compact OS) pode liberar de 1,5 a 3 GB em disco.");
-            log("Aguarde, este procedimento pode levar alguns minutos...");
+            log("Running: compact.exe /CompactOS:always...");
+            log("WARNING: Compacting Windows binaries (Compact OS) may free 1.5 to 3 GB of disk space.");
+            log("Please wait, this procedure may take a few minutes...");
             RunProcessStreamed("compact.exe", "/CompactOS:always", log);
-            log("\n=== COMPACTAÇÃO DA INSTALAÇÃO DO WINDOWS CONCLUÍDA! ===");
+            log("\n=== WINDOWS INSTALLATION COMPACTION COMPLETED! ===");
         }
 
         public static void RunChkdsk(Action<string> log)
         {
             log("=================================================");
-            log("      VERIFICAÇÃO DE INTEGRIDADE DE DISCO        ");
+            log("        DISK INTEGRITY CHECK                     ");
             log("=================================================");
-            log("Executando verificação rápida (somente leitura) na unidade C:...");
+            log("Running quick check (read-only) on drive C:...");
             RunProcessStreamed("chkdsk.exe", "C:", log);
-            log("\n=== VERIFICAÇÃO DO CHKDSK FINALIZADA! ===");
+            log("\n=== CHKDSK CHECK FINISHED! ===");
         }
 
         public static void OptimizeVisualEffects(Action<string> log)
         {
-            log("=== OTIMIZANDO EFEITOS VISUAIS PARA MÁXIMO DESEMPENHO ===");
+            log("=== OPTIMIZING VISUAL EFFECTS FOR MAXIMUM PERFORMANCE ===");
             try
             {
                 // VisualFXSetting = 2 (Best Performance)
@@ -181,7 +181,7 @@ namespace OptiAssist
                     if (rk != null)
                     {
                         rk.SetValue("VisualFXSetting", 2, RegistryValueKind.DWord);
-                        log("-> VisualEffects configurado para 'Melhor Desempenho'.");
+                        log("-> VisualEffects set to 'Best Performance'.");
                     }
                 }
 
@@ -191,7 +191,7 @@ namespace OptiAssist
                     if (rk != null)
                     {
                         rk.SetValue("MinAnimate", "0", RegistryValueKind.String);
-                        log("-> Animações de minimização/maximização desativadas.");
+                        log("-> Minimize/maximize animations disabled.");
                     }
                 }
 
@@ -201,7 +201,7 @@ namespace OptiAssist
                     if (rk != null)
                     {
                         rk.SetValue("MenuShowDelay", "50", RegistryValueKind.String);
-                        log("-> Atraso de abertura de menus reduzido para 50ms.");
+                        log("-> Menu open delay reduced to 50ms.");
                     }
                 }
 
@@ -209,26 +209,26 @@ namespace OptiAssist
                 UIntPtr result;
                 SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, UIntPtr.Zero, "TraySettings", SMTO_ABORTIFHUNG, 1000, out result);
 
-                log("=== EFEITOS VISUAIS OTIMIZADOS COM SUCESSO! ===");
+                log("=== VISUAL EFFECTS OPTIMIZED SUCCESSFULLY! ===");
             }
             catch (Exception ex)
             {
-                log("[ERRO] Erro ao otimizar efeitos visuais: " + ex.Message);
+                log("[ERROR] Error optimizing visual effects: " + ex.Message);
             }
         }
 
         public static void OptimizeTelemetryAndServices(Action<string> log)
         {
-            log("=== OTIMIZANDO SERVIÇOS NÃO ESSENCIAIS E TELEMETRIA ===");
+            log("=== OPTIMIZING NON-ESSENTIAL SERVICES AND TELEMETRY ===");
 
             // 1. Disable DiagTrack (Connected User Experiences and Telemetry)
-            DisableService("DiagTrack", "Telemetria do Windows (DiagTrack)", log);
+            DisableService("DiagTrack", "Windows Telemetry (DiagTrack)", log);
 
             // 2. Disable dmwappushservice
-            DisableService("dmwappushservice", "Serviço de Rastreamento WAP", log);
+            DisableService("dmwappushservice", "WAP Push Tracking Service", log);
 
             // 3. Disable Windows Error Reporting (WerSvc)
-            DisableService("WerSvc", "Relatório de Erros do Windows (WerSvc)", log);
+            DisableService("WerSvc", "Windows Error Reporting (WerSvc)", log);
 
             // 4. Registry: Disable telemetry data collection
             try
@@ -238,21 +238,21 @@ namespace OptiAssist
                     if (rk != null)
                     {
                         rk.SetValue("AllowTelemetry", 0, RegistryValueKind.DWord);
-                        log("-> Telemetria corporativa bloqueada via Registro (AllowTelemetry = 0).");
+                        log("-> Enterprise telemetry blocked via Registry (AllowTelemetry = 0).");
                     }
                 }
             }
             catch (Exception ex)
             {
-                log("[AVISO] Não foi possível definir chave de telemetria: " + ex.Message);
+                log("[WARNING] Could not set telemetry key: " + ex.Message);
             }
 
-            log("=== OTIMIZAÇÃO DE SERVIÇOS E TELEMETRIA CONCLUÍDA! ===");
+            log("=== SERVICES AND TELEMETRY OPTIMIZATION COMPLETED! ===");
         }
 
         public static void FixNetworkPrinterRpc(Action<string> log)
         {
-            log("=== CORRIGINDO ERRO DE IMPRESSORAS EM REDE (RPC 0x11b / 0x709) ===");
+            log("=== FIXING NETWORK PRINTER ERROR (RPC 0x11b / 0x709) ===");
             try
             {
                 using (RegistryKey rk = Registry.LocalMachine.CreateSubKey(@"SYSTEM\CurrentControlSet\Control\Print"))
@@ -260,26 +260,26 @@ namespace OptiAssist
                     if (rk != null)
                     {
                         rk.SetValue("RpcAuthnLevelPrivacyEnabled", 0, RegistryValueKind.DWord);
-                        log("-> Chave de Registro RpcAuthnLevelPrivacyEnabled = 0 aplicada com sucesso.");
+                        log("-> Registry key RpcAuthnLevelPrivacyEnabled = 0 applied successfully.");
                     }
                 }
 
-                log("-> Reiniciando o Spooler de Impressão...");
+                log("-> Restarting Print Spooler...");
                 StopService("Spooler", 5);
                 StartService("Spooler", 5);
-                log("   [OK] Spooler de Impressão reiniciado!");
+                log("   [OK] Print Spooler restarted!");
 
-                log("=== CORREÇÃO DE IMPRESSORAS EM REDE APLICADA COM SUCESSO! ===");
+                log("=== NETWORK PRINTER FIX APPLIED SUCCESSFULLY! ===");
             }
             catch (Exception ex)
             {
-                log("[ERRO] Falha ao aplicar correção de impressora: " + ex.Message);
+                log("[ERROR] Failed to apply printer fix: " + ex.Message);
             }
         }
 
         public static void FixDualBootClock(Action<string> log)
         {
-            log("=== CORRIGINDO DIVERGÊNCIA DE HORA EM DUAL-BOOT (LINUX / WINDOWS) ===");
+            log("=== FIXING DUAL-BOOT TIME MISMATCH (LINUX / WINDOWS) ===");
             try
             {
                 using (RegistryKey rk = Registry.LocalMachine.CreateSubKey(@"SYSTEM\CurrentControlSet\Control\TimeZoneInformation"))
@@ -287,51 +287,51 @@ namespace OptiAssist
                     if (rk != null)
                     {
                         rk.SetValue("RealTimeIsUniversal", 1, RegistryValueKind.DWord);
-                        log("-> Registro RealTimeIsUniversal = 1 aplicado com sucesso.");
+                        log("-> Registry RealTimeIsUniversal = 1 applied successfully.");
                     }
                 }
-                log("=== RELÓGIO DUAL-BOOT CONFIGURADO! O relógio da BIOS agora usará UTC (padrão Linux). ===");
+                log("=== DUAL-BOOT CLOCK CONFIGURED! BIOS clock will now use UTC (Linux standard). ===");
             }
             catch (Exception ex)
             {
-                log("[ERRO] Falha ao configurar hora dual boot: " + ex.Message);
+                log("[ERROR] Failed to configure dual-boot time: " + ex.Message);
             }
         }
 
         public static void RepairWindowsStore(Action<string> log)
         {
-            log("=== INICIANDO REPARO E REINICIALIZAÇÃO DA MICROSOFT STORE ===");
-            log("Executando wsreset.exe -i (este processo reinstala e limpa o cache da Loja)...");
+            log("=== STARTING MICROSOFT STORE REPAIR AND RESET ===");
+            log("Running wsreset.exe -i (this process reinstalls and clears the Store cache)...");
             RunProcessStreamed("wsreset.exe", "-i", log);
-            log("=== COMANDO DE REPARO DA MICROSOFT STORE DISPARADO COM SUCESSO! ===");
+            log("=== MICROSOFT STORE REPAIR COMMAND TRIGGERED SUCCESSFULLY! ===");
         }
 
         public static void ResetNetwork(Action<string> log)
         {
-            log("=== REDEFININDO PILHA DE REDE, DNS E CATÁLOGO WINSOCK ===");
+            log("=== RESETTING NETWORK STACK, DNS AND WINSOCK CATALOG ===");
 
-            log("-> 1. Limpando cache do resolvedor DNS (ipconfig /flushdns)...");
+            log("-> 1. Flushing DNS resolver cache (ipconfig /flushdns)...");
             RunProcessStreamed("ipconfig.exe", "/flushdns", log);
 
-            log("-> 2. Redefinindo catálogo Winsock (netsh winsock reset)...");
+            log("-> 2. Resetting Winsock catalog (netsh winsock reset)...");
             RunProcessStreamed("netsh.exe", "winsock reset", log);
 
-            log("-> 3. Redefinindo pilha TCP/IP (netsh int ip reset)...");
+            log("-> 3. Resetting TCP/IP stack (netsh int ip reset)...");
             RunProcessStreamed("netsh.exe", "int ip reset", log);
 
-            log("=== PILHA DE REDE REDEFINIDA! Recomendado reiniciar o equipamento. ===");
+            log("=== NETWORK STACK RESET! Restarting the computer is recommended. ===");
         }
 
         public static void ExecuteCustomScript(string scriptPath, Action<string> log)
         {
             if (!File.Exists(scriptPath))
             {
-                log("[ERRO] Arquivo de script não encontrado: " + scriptPath);
+                log("[ERROR] Script file not found: " + scriptPath);
                 return;
             }
 
             string ext = Path.GetExtension(scriptPath).ToLowerInvariant();
-            log("=== EXECUTANDO SCRIPT: " + Path.GetFileName(scriptPath) + " ===");
+            log("=== RUNNING SCRIPT: " + Path.GetFileName(scriptPath) + " ===");
 
             if (ext == ".ps1")
             {
@@ -344,14 +344,14 @@ namespace OptiAssist
             else if (ext == ".reg")
             {
                 RunProcessStreamed("regedit.exe", string.Format("/s \"{0}\"", scriptPath), log);
-                log("[OK] Arquivo .reg importado para o Registro com sucesso!");
+                log("[OK] .reg file successfully imported into the Registry!");
             }
             else
             {
                 RunProcessStreamed(scriptPath, "", log);
             }
 
-            log("=== EXECUÇÃO DO SCRIPT FINALIZADA! ===");
+            log("=== SCRIPT EXECUTION FINISHED! ===");
         }
 
         private static void CleanDirectory(string dirPath, ref int totalFiles, ref long totalBytes, Action<string> log)
@@ -443,11 +443,11 @@ namespace OptiAssist
                     p.WaitForExit(3000);
                 }
 
-                log(string.Format("-> Serviço {0} desativado com sucesso.", displayName));
+                log(string.Format("-> Service {0} disabled successfully.", displayName));
             }
             catch (Exception ex)
             {
-                log(string.Format("[AVISO] Não foi possível desativar {0}: {1}", displayName, ex.Message));
+                log(string.Format("[WARNING] Could not disable {0}: {1}", displayName, ex.Message));
             }
         }
 
@@ -466,7 +466,7 @@ namespace OptiAssist
                 using (Process proc = Process.Start(psi))
                 {
                     proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) log(e.Data); };
-                    proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) log("ERRO: " + e.Data); };
+                    proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) log("ERROR: " + e.Data); };
                     proc.BeginOutputReadLine();
                     proc.BeginErrorReadLine();
                     proc.WaitForExit();
@@ -474,7 +474,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                log("[ERRO AO EXECUTAR] " + fileName + " " + args + " -> " + ex.Message);
+                log("[ERROR RUNNING] " + fileName + " " + args + " -> " + ex.Message);
             }
         }
     }

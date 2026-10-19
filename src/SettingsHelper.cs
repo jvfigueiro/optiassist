@@ -7,9 +7,8 @@ namespace OptiAssist
 {
     public class AppSettings
     {
-        public string StoreName { get; set; }
-        public string TechnicianName { get; set; }
-        public string Phone { get; set; }
+        public string CustomerName { get; set; }
+        public string ContactInfo { get; set; }
         public string Language { get; set; }
         public string ReportSavePath { get; set; }
         public bool AutoRefreshHardware { get; set; }
@@ -19,11 +18,11 @@ namespace OptiAssist
         public bool ServiceProviderMode { get; set; }
         public bool EnableMaintenanceReport { get; set; }
 
+        // A new instance always holds the factory default values
         public AppSettings()
         {
-            StoreName = "N/A";
-            TechnicianName = "N/A";
-            Phone = "N/A";
+            CustomerName = "OptiAssist";
+            ContactInfo = "https://github.com/jvfigueiro/optiassist";
             Language = "en-US";
             ReportSavePath = @"C:\MaintenanceReport.txt";
             AutoRefreshHardware = true;
@@ -31,7 +30,7 @@ namespace OptiAssist
             Theme = "Dark";
             AccentColor = "#0EA5E9";
             ServiceProviderMode = false;
-            EnableMaintenanceReport = true;
+            EnableMaintenanceReport = false;
         }
     }
 
@@ -68,9 +67,10 @@ namespace OptiAssist
             {
                 string json = File.ReadAllText(path, Encoding.UTF8);
                 var dict = ParseSimpleJson(json);
-                if (dict.ContainsKey("StoreName")) settings.StoreName = dict["StoreName"];
-                if (dict.ContainsKey("TechnicianName")) settings.TechnicianName = dict["TechnicianName"];
-                if (dict.ContainsKey("Phone")) settings.Phone = dict["Phone"];
+                if (dict.ContainsKey("CustomerName")) settings.CustomerName = dict["CustomerName"];
+                else if (dict.ContainsKey("StoreName")) settings.CustomerName = dict["StoreName"]; // Legacy key
+                if (dict.ContainsKey("ContactInfo")) settings.ContactInfo = dict["ContactInfo"];
+                else if (dict.ContainsKey("Phone")) settings.ContactInfo = dict["Phone"]; // Legacy key
                 if (dict.ContainsKey("Language")) settings.Language = dict["Language"];
                 if (dict.ContainsKey("ReportSavePath")) settings.ReportSavePath = dict["ReportSavePath"];
                 if (dict.ContainsKey("Theme")) settings.Theme = dict["Theme"];
@@ -89,10 +89,6 @@ namespace OptiAssist
                 {
                     bool b;
                     if (bool.TryParse(dict["ServiceProviderMode"], out b)) settings.ServiceProviderMode = b;
-                }
-                else if (!string.IsNullOrWhiteSpace(settings.StoreName) && settings.StoreName != "N/A")
-                {
-                    settings.ServiceProviderMode = true;
                 }
                 if (dict.ContainsKey("EnableMaintenanceReport"))
                 {
@@ -115,9 +111,8 @@ namespace OptiAssist
                 string path = GetSettingsFilePath();
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("{");
-                sb.AppendLine(string.Format("  \"StoreName\": \"{0}\",", EscapeJson(settings.StoreName)));
-                sb.AppendLine(string.Format("  \"TechnicianName\": \"{0}\",", EscapeJson(settings.TechnicianName)));
-                sb.AppendLine(string.Format("  \"Phone\": \"{0}\",", EscapeJson(settings.Phone)));
+                sb.AppendLine(string.Format("  \"CustomerName\": \"{0}\",", EscapeJson(settings.CustomerName)));
+                sb.AppendLine(string.Format("  \"ContactInfo\": \"{0}\",", EscapeJson(settings.ContactInfo)));
                 sb.AppendLine(string.Format("  \"Language\": \"{0}\",", EscapeJson(settings.Language)));
                 sb.AppendLine(string.Format("  \"ReportSavePath\": \"{0}\",", EscapeJson(settings.ReportSavePath)));
                 sb.AppendLine(string.Format("  \"AutoRefreshHardware\": {0},", settings.AutoRefreshHardware ? "true" : "false"));

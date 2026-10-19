@@ -183,7 +183,7 @@ namespace OptiAssist
                 {
                     System.IO.File.WriteAllText(sfd.FileName, txtConsoleLog.Text, System.Text.Encoding.UTF8);
                     MessageBox.Show("Log salvo com sucesso em:\n" + sfd.FileName, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                    Log("[SALVO] Log exportado para: " + sfd.FileName);
+                    Log("[SAVED] Log exported to: " + sfd.FileName);
                 }
             }
             catch (Exception ex)
@@ -203,8 +203,8 @@ namespace OptiAssist
             if (chkEnableMaintenanceReport != null)
                 chkEnableMaintenanceReport.IsChecked = _settings.EnableMaintenanceReport;
 
-            txtSettingStore.Text = _settings.StoreName;
-            txtSettingPhone.Text = _settings.Phone;
+            txtSettingStore.Text = _settings.CustomerName;
+            txtSettingPhone.Text = _settings.ContactInfo;
             txtSettingReportPath.Text = string.IsNullOrEmpty(_settings.ReportSavePath) ? @"C:\MaintenanceReport.txt" : _settings.ReportSavePath;
             if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
@@ -260,7 +260,7 @@ namespace OptiAssist
             // Update footer with Custom App Name
             if (lblFooterStoreName != null)
             {
-                string customName = _settings.StoreName;
+                string customName = _settings.CustomerName;
                 if (txtSettingStore != null && !string.IsNullOrWhiteSpace(txtSettingStore.Text))
                 {
                     customName = txtSettingStore.Text.Trim();
@@ -322,7 +322,7 @@ namespace OptiAssist
                 Dispatcher.Invoke(new Action(() =>
                 {
                     UpdateHardwareDisplay(info);
-                    Log(string.Format("[INFO] Hardware atualizado. Serial: {0} | Placa: {1}", info.SerialNumber, info.Motherboard));
+                    Log(string.Format("[INFO] Hardware updated. Serial: {0} | Motherboard: {1}", info.SerialNumber, info.Motherboard));
                 }));
             });
         }
@@ -386,7 +386,7 @@ namespace OptiAssist
             {
                 Clipboard.SetText(sn);
                 MessageBox.Show(LocalizationHelper.Get("Msg_SerialCopied", "Número de série copiado para a Área de Transferência!") + "\n\n" + sn, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                Log(string.Format("[CLIPBOARD] Número de série '{0}' copiado para a Área de Transferência.", sn));
+                Log(string.Format("[CLIPBOARD] Serial number '{0}' copied to the clipboard.", sn));
             }
             else
             {
@@ -409,7 +409,7 @@ namespace OptiAssist
                 if (!ok)
                 {
                     MessageBox.Show(error, "OptiAssist - Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    Log("[AVISO BIOS] " + error);
+                    Log("[BIOS WARNING] " + error);
                 }
             }
         }
@@ -708,9 +708,9 @@ namespace OptiAssist
             ThreadPool.QueueUserWorkItem(state =>
             {
                 Log("=================================================");
-                Log("   INICIANDO INSTALAÇÃO AUTOMÁTICA DE SOFTWARES  ");
-                Log(string.Format("   Total de programas a instalar: {0}", selected.Count));
-                Log("   (Configuração: Config\\autoinstall.json)");
+                Log("   STARTING AUTOMATED SOFTWARE INSTALLATION      ");
+                Log(string.Format("   Total programs to install: {0}", selected.Count));
+                Log("   (Configuration: Config\\autoinstall.json)");
                 Log("=================================================\n");
 
                 bool wingetFallback = _settings != null ? _settings.EnableWingetFallback : true;
@@ -719,7 +719,7 @@ namespace OptiAssist
                 foreach (var app in selected)
                 {
                     current++;
-                    Log(string.Format("[{0}/{1}] Processando: {2}...", current, selected.Count, app.Name));
+                    Log(string.Format("[{0}/{1}] Processing: {2}...", current, selected.Count, app.Name));
                     InstallerHelper.InstallApp(app, wingetFallback, msg => Log(msg));
                     Log("");
 
@@ -731,7 +731,7 @@ namespace OptiAssist
                 }
 
                 Log("=================================================");
-                Log("   INSTALAÇÃO DE PROGRAMAS CONCLUÍDA!            ");
+                Log("   PROGRAM INSTALLATION COMPLETED!               ");
                 Log("=================================================");
 
                 Dispatcher.Invoke(new Action(() =>
@@ -830,8 +830,8 @@ namespace OptiAssist
             ThreadPool.QueueUserWorkItem(state =>
             {
                 Log("=================================================");
-                Log("   INICIANDO ATUALIZAÇÃO DE APLICATIVOS (WINGET) ");
-                Log(string.Format("   Total de programas a atualizar: {0}", selected.Count));
+                Log("   STARTING APPLICATION UPDATE (WINGET)          ");
+                Log(string.Format("   Total programs to update: {0}", selected.Count));
                 Log("=================================================\n");
 
                 int current = 0;
@@ -839,14 +839,14 @@ namespace OptiAssist
                 foreach (var item in selected)
                 {
                     current++;
-                    Log(string.Format("[{0}/{1}] Atualizando {2} ({3})...", current, selected.Count, item.Name, item.Id));
+                    Log(string.Format("[{0}/{1}] Updating {2} ({3})...", current, selected.Count, item.Name, item.Id));
                     bool ok = InstallerHelper.UpgradeWingetPackage(item.Id, Log);
                     if (ok) successes++;
                     Log("");
                 }
 
                 Log("=================================================");
-                Log(string.Format("   ATUALIZAÇÕES CONCLUÍDAS ({0}/{1} com sucesso)  ", successes, selected.Count));
+                Log(string.Format("   UPDATES COMPLETED ({0}/{1} successful)        ", successes, selected.Count));
                 Log("=================================================\n");
 
                 Dispatcher.Invoke(new Action(() =>
@@ -880,13 +880,13 @@ namespace OptiAssist
             ThreadPool.QueueUserWorkItem(state =>
             {
                 Log("=================================================");
-                Log("   EXECUTANDO ATUALIZAÇÃO GERAL: winget upgrade --all ");
+                Log("   RUNNING BULK UPDATE: winget upgrade --all     ");
                 Log("=================================================\n");
 
                 bool ok = InstallerHelper.UpgradeAllWingetPackages(Log);
 
                 Log("=================================================");
-                Log(ok ? "   ATUALIZAÇÃO GERAL FINALIZADA COM SUCESSO!     " : "   ATUALIZAÇÃO GERAL FINALIZADA COM AVISOS/ERROS ");
+                Log(ok ? "   BULK UPDATE FINISHED SUCCESSFULLY!            " : "   BULK UPDATE FINISHED WITH WARNINGS/ERRORS     ");
                 Log("=================================================\n");
 
                 Dispatcher.Invoke(new Action(() =>
@@ -923,20 +923,20 @@ namespace OptiAssist
                 }
                 catch (Exception ex)
                 {
-                    Log("[ERRO INESPERADO] " + ex.Message);
+                    Log("[UNEXPECTED ERROR] " + ex.Message);
                 }
             });
         }
 
         private void BtnChrisTitus_Click(object sender, RoutedEventArgs e)
         {
-            Log("[FERRAMENTA] Disparando Chris Titus Tool (irm https://christitus.com/win | iex)...");
+            Log("[TOOL] Launching Chris Titus Tool (irm https://christitus.com/win | iex)...");
             ShortcutsHelper.OpenChrisTitusTool();
         }
 
         private void BtnMassgrave_Click(object sender, RoutedEventArgs e)
         {
-            Log("[FERRAMENTA] Disparando Massgrave (irm https://get.activated.win | iex)...");
+            Log("[TOOL] Launching Massgrave (irm https://get.activated.win | iex)...");
             ShortcutsHelper.OpenMassgrave();
         }
 
@@ -960,7 +960,7 @@ namespace OptiAssist
                 MessageBoxResult res = MessageBox.Show(infoMsg, "OptiAssist - Benchmark WinSAT", MessageBoxButton.YesNo, MessageBoxImage.Information);
                 if (res != MessageBoxResult.Yes)
                 {
-                    Log(string.Format("[WINSAT] Pontuações: Geral {0:F1} | CPU {1:F1} | RAM {2:F1} | Disco {3:F1} | D3D {4:F1}",
+                    Log(string.Format("[WINSAT] Scores: Overall {0:F1} | CPU {1:F1} | RAM {2:F1} | Disk {3:F1} | D3D {4:F1}",
                         current.OverallScore, current.CpuScore, current.MemoryScore, current.DiskScore, current.D3DScore));
                     return;
                 }
@@ -974,12 +974,12 @@ namespace OptiAssist
                 WinSatScores updated = SystemInfoHelper.GetWinSatScores();
                 if (updated.HasData)
                 {
-                    Log("\n--- PONTUAÇÕES DO BENCHMARK WINSAT ---");
-                    Log(string.Format("• Pontuação Geral (WinSPR): {0:F1}", updated.OverallScore));
-                    Log(string.Format("• Processador (CPU):        {0:F1}", updated.CpuScore));
-                    Log(string.Format("• Memória RAM:              {0:F1}", updated.MemoryScore));
-                    Log(string.Format("• Gráficos / Jogos (D3D):   {0:F1}", updated.D3DScore));
-                    Log(string.Format("• Disco Primário:           {0:F1}", updated.DiskScore));
+                    Log("\n--- WINSAT BENCHMARK SCORES ---");
+                    Log(string.Format("• Overall Score (WinSPR): {0:F1}", updated.OverallScore));
+                    Log(string.Format("• Processor (CPU):        {0:F1}", updated.CpuScore));
+                    Log(string.Format("• Memory (RAM):           {0:F1}", updated.MemoryScore));
+                    Log(string.Format("• Graphics / Games (D3D): {0:F1}", updated.D3DScore));
+                    Log(string.Format("• Primary Disk:           {0:F1}", updated.DiskScore));
                     Log("--------------------------------------\n");
 
                     Dispatcher.Invoke(new Action(() =>
@@ -1072,7 +1072,7 @@ namespace OptiAssist
         private void BtnDevMgmt_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenWindowsTool("devmgmt.msc"); }
         private void BtnNetplwiz_Click(object sender, RoutedEventArgs e)
         {
-            Log("[ATALHO] Abrindo Contas de Usuário Legado (netplwiz)...");
+            Log("[SHORTCUT] Opening Legacy User Accounts (netplwiz)...");
             ShortcutsHelper.OpenNetplwiz();
         }
         private void BtnDiskMgmt_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenWindowsTool("diskmgmt.msc"); }
@@ -1081,7 +1081,7 @@ namespace OptiAssist
         private void BtnWinver_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenWindowsTool("winver.exe"); }
         private void BtnMsConfig_Click(object sender, RoutedEventArgs e)
         {
-            Log("[ATALHO] Abrindo Ferramenta MSCONFIG (msconfig)...");
+            Log("[SHORTCUT] Opening MSCONFIG tool (msconfig)...");
             ShortcutsHelper.OpenMsConfig();
         }
         private void BtnSysDm_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenWindowsTool("sysdm.cpl"); }
@@ -1092,22 +1092,22 @@ namespace OptiAssist
         private void BtnResmon_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenWindowsTool("resmon.exe"); }
         private void BtnMemoryDiag_Click(object sender, RoutedEventArgs e)
         {
-            Log("[ATALHO] Abrindo Diagnóstico de Memória do Windows (mdsched.exe)...");
+            Log("[SHORTCUT] Opening Windows Memory Diagnostic (mdsched.exe)...");
             ShortcutsHelper.OpenMemoryDiagnostic();
         }
         private void BtnReliability_Click(object sender, RoutedEventArgs e)
         {
-            Log("[ATALHO] Abrindo Monitor de Confiabilidade (perfmon.exe /rel)...");
+            Log("[SHORTCUT] Opening Reliability Monitor (perfmon.exe /rel)...");
             ShortcutsHelper.OpenReliabilityMonitor();
         }
         private void BtnEventVwr_Click(object sender, RoutedEventArgs e)
         {
-            Log("[ATALHO] Abrindo Visualizador de Eventos (eventvwr.msc)...");
+            Log("[SHORTCUT] Opening Event Viewer (eventvwr.msc)...");
             ShortcutsHelper.OpenEventViewer();
         }
         private void BtnGpedit_Click(object sender, RoutedEventArgs e)
         {
-            Log("[ATALHO] Abrindo Ferramenta GPEDIT (gpedit.msc)...");
+            Log("[SHORTCUT] Opening GPEDIT tool (gpedit.msc)...");
             ShortcutsHelper.OpenGpedit();
         }
 
@@ -1130,9 +1130,8 @@ namespace OptiAssist
         private MaintenanceRecord BuildRecordFromUI()
         {
             MaintenanceRecord rec = new MaintenanceRecord();
-            rec.StoreName = _settings != null ? _settings.StoreName : "OptiAssist";
-            rec.TechnicianName = _settings != null ? _settings.TechnicianName : "N/A";
-            rec.Phone = _settings != null ? _settings.Phone : "N/A";
+            rec.StoreName = _settings != null ? _settings.CustomerName : "OptiAssist";
+            rec.Phone = _settings != null ? _settings.ContactInfo : "N/A";
             rec.OrderNumber = txtReportOrder.Text.Trim();
             rec.ClientName = txtReportClient.Text.Trim();
             rec.ClientPhone = "";
@@ -1160,7 +1159,7 @@ namespace OptiAssist
 
             // 1. Always generate in application Reports folder
             string reportsFilePath = ReportHelper.SaveReportToReportsFolder(rec);
-            Log("[RELATÓRIO] Registro emitido na pasta Reports: " + reportsFilePath);
+            Log("[REPORT] Record issued in Reports folder: " + reportsFilePath);
 
             // 2. Ask user whether to save an extra copy on machine
             MessageBoxResult promptCopy = MessageBox.Show(
@@ -1178,7 +1177,7 @@ namespace OptiAssist
                     : @"C:\MaintenanceReport.txt";
 
                 clientCopyPath = ReportHelper.SaveReportCopy(rec, configuredPath);
-                Log("[RELATÓRIO] Cópia gravada no equipamento do usuário: " + clientCopyPath);
+                Log("[REPORT] Copy saved on the user's machine: " + clientCopyPath);
             }
 
             // 3. Display confirmation and option to open
@@ -1219,7 +1218,7 @@ namespace OptiAssist
             Clipboard.SetText(text);
             MessageBox.Show("Relatório completo copiado para a Área de Transferência!\nVocê pode colá-lo no WhatsApp ou no seu sistema de gestão.",
                 "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-            Log("[RELATÓRIO] Laudo copiado para a área de transferência.");
+            Log("[REPORT] Technical report copied to the clipboard.");
         }
 
         private void BtnOpenReportFolder_Click(object sender, RoutedEventArgs e)
@@ -1251,7 +1250,7 @@ namespace OptiAssist
             _settings.Language = langCode;
             SettingsHelper.Save(_settings);
             ApplyLanguage(langCode);
-            Log(string.Format("[IDIOMA/LANGUAGE] Idioma alterado para {0} e salvo em Config\\settings.json.", langCode));
+            Log(string.Format("[LANGUAGE] Language changed to {0} and saved in Config\\settings.json.", langCode));
         }
 
         public void ApplyLanguage(string langCode)
@@ -1419,6 +1418,7 @@ namespace OptiAssist
             if (chkSettingWinget != null) chkSettingWinget.Content = LocalizationHelper.Get("Settings_Chk_WingetFallback", "Habilitar download via Winget quando o programa não existir na pasta PostInstall");
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.Content = LocalizationHelper.Get("Settings_Chk_AutoRefresh", "Atualizar especificações de hardware automaticamente na inicialização");
             if (btnSaveSettings != null) btnSaveSettings.Content = LocalizationHelper.Get("Btn_SaveSettings", "💾 Salvar Configurações");
+            if (btnResetSettings != null) btnResetSettings.Content = LocalizationHelper.Get("Btn_ResetSettings", "🔄 Restaurar Padrões");
             if (txtPersonalizeTitle != null) txtPersonalizeTitle.Text = LocalizationHelper.Get("Settings_Personalize_Title", "🎨 Personalizar o Aplicativo");
             if (txtPersonalizeSub != null) txtPersonalizeSub.Text = LocalizationHelper.Get("Settings_Personalize_Subtitle", "Personalize o tema visual, as cores dos botões principais e acentos do OptiAssist:");
             if (txtThemeLabel != null) txtThemeLabel.Text = LocalizationHelper.Get("Settings_Label_Theme", "Tema Visual:");
@@ -1426,6 +1426,7 @@ namespace OptiAssist
             if (txtAccentLabel != null) txtAccentLabel.Text = LocalizationHelper.Get("Settings_Label_AccentColor", "Cor de Acento e Botões (Hexadecimal):");
             if (btnOpenColorDialog != null) btnOpenColorDialog.Content = LocalizationHelper.Get("Btn_ColorPicker", "🎨 Seletor de Cores...");
             if (btnApplyCustomColor != null) btnApplyCustomColor.Content = LocalizationHelper.Get("Btn_ApplyColor", "Aplicar Cor");
+            if (txtPreviewLabel != null) txtPreviewLabel.Text = LocalizationHelper.Get("Settings_Label_Preview", "Pré-visualização: ");
             if (txtPresetLabel != null) txtPresetLabel.Text = LocalizationHelper.Get("Settings_Label_Presets", "Cores Sugeridas:");
 
             // Suggested color presets
@@ -1478,8 +1479,8 @@ namespace OptiAssist
             if (_settings == null) _settings = new AppSettings();
             _settings.ServiceProviderMode = chkServiceProviderMode.IsChecked == true;
             _settings.EnableMaintenanceReport = chkEnableMaintenanceReport.IsChecked == true;
-            _settings.StoreName = txtSettingStore.Text.Trim();
-            _settings.Phone = txtSettingPhone.Text.Trim();
+            _settings.CustomerName = txtSettingStore.Text.Trim();
+            _settings.ContactInfo = txtSettingPhone.Text.Trim();
             _settings.ReportSavePath = txtSettingReportPath.Text.Trim();
             _settings.EnableWingetFallback = chkSettingWinget.IsChecked == true;
             _settings.AutoRefreshHardware = chkSettingAutoRefresh.IsChecked == true;
@@ -1491,7 +1492,25 @@ namespace OptiAssist
             ApplyThemeAccentColor(_settings.AccentColor);
 
             MessageBox.Show(LocalizationHelper.Get("Msg_SettingsSaved", "Configurações salvas com sucesso em Config\\settings.json!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-            Log("[CONFIG] Configurações da aplicação atualizadas e salvas.");
+            Log("[CONFIG] Application settings updated and saved.");
+        }
+
+        private void BtnResetSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var res = MessageBox.Show(
+                LocalizationHelper.Get("Msg_ResetSettingsConfirm", "Deseja restaurar todas as configurações do aplicativo para os valores padrão?"),
+                "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (res != MessageBoxResult.Yes) return;
+
+            // A fresh AppSettings instance holds the factory defaults
+            AppSettings defaults = new AppSettings();
+            SettingsHelper.Save(defaults);
+
+            // Reload everything from disk so language, theme, accent color and visibility are re-applied
+            LoadApplicationSettings();
+
+            MessageBox.Show(LocalizationHelper.Get("Msg_ResetSettingsDone", "Configurações padrão restauradas com sucesso!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+            Log("[CONFIG] Application settings restored to factory defaults.");
         }
 
         #region THEME & COLOR PERSONALIZATION
@@ -1584,7 +1603,7 @@ namespace OptiAssist
                         if (_settings == null) _settings = new AppSettings();
                         _settings.AccentColor = hex;
                         SettingsHelper.Save(_settings);
-                        Log("[CONFIG] Cor personalizada selecionada e salva: " + hex);
+                        Log("[CONFIG] Custom color selected and saved: " + hex);
                     }
                 }
             }
@@ -1605,7 +1624,7 @@ namespace OptiAssist
                 if (_settings == null) _settings = new AppSettings();
                 _settings.AccentColor = hex;
                 SettingsHelper.Save(_settings);
-                Log("[CONFIG] Cor personalizada aplicada e salva: " + hex);
+                Log("[CONFIG] Custom color applied and saved: " + hex);
                 MessageBox.Show("Cor de botões e acentos aplicada com sucesso!\n" + hex, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch
@@ -1625,7 +1644,7 @@ namespace OptiAssist
                 if (_settings == null) _settings = new AppSettings();
                 _settings.AccentColor = hex;
                 SettingsHelper.Save(_settings);
-                Log("[CONFIG] Cor personalizada aplicada e salva: " + hex);
+                Log("[CONFIG] Custom color applied and saved: " + hex);
             }
         }
 
@@ -1676,7 +1695,7 @@ namespace OptiAssist
             if (_settings == null) _settings = new AppSettings();
             _settings.Theme = _isDarkMode ? "Dark" : "Light";
             SettingsHelper.Save(_settings);
-            Log(string.Format("[TEMA] Modo visual alternado para: {0}", _isDarkMode ? "Escuro" : "Claro"));
+            Log(string.Format("[THEME] Visual mode switched to: {0}", _isDarkMode ? "Dark" : "Light"));
         }
         #endregion
 
