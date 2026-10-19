@@ -76,7 +76,7 @@
   "Custom_Chk_Automate": "Automatizar",
   "Btn_SaveCustomApps": "💾 Salvar Alterações",
   "Btn_ResetDefaultApps": "🔄 Restaurar Lista Padrão",
-  "Btn_OpenPostInstallJson": "📂 Abrir PostInstall.json",
+  "Btn_OpenPostInstallJson": "📂 Abrir autoinstall.json",
   "Install_Card_Title": "📦 Instalação Automatizada de Aplicativos",
   "Install_Card_Subtitle": "Selecione os programas que deseja instalar automaticamente em lote no computador:",
   "Btn_SelectEssentials": "Selecionar Essenciais",
@@ -203,7 +203,7 @@
   "Msg_UpgradeAllConfirm": "Deseja executar a atualização de todos os programas do sistema agora via 'winget upgrade --all'?",
   "Msg_NoAppsSelected": "Nenhum aplicativo foi selecionado.",
   "Msg_EnterAppName": "Por favor, digite o nome do programa.",
-  "Msg_CustomAppsSaved": "Lista de programas salva em Config\\PostInstall.json com sucesso!",
-  "Msg_ResetDefaultAppsConfirm": "Deseja restaurar a lista padrão de programas recomendados no PostInstall.json?",
+  "Msg_CustomAppsSaved": "Lista de programas salva em Config\\autoinstall.json com sucesso!",
+  "Msg_ResetDefaultAppsConfirm": "Deseja restaurar a lista padrão de programas recomendados no autoinstall.json?",
   "Msg_ResetDefaultAppsDone": "Lista padrão restaurada com sucesso!"
 }

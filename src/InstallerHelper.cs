@@ -180,7 +180,16 @@ namespace OptiAssist
 
         public static string GetPostInstallJsonPath()
         {
-            return Path.Combine(SettingsHelper.GetConfigDirectory(), "PostInstall.json");
+            string configDir = SettingsHelper.GetConfigDirectory();
+            string newPath = Path.Combine(configDir, "autoinstall.json");
+            string legacyPath = Path.Combine(configDir, "PostInstall.json");
+
+            if (!File.Exists(newPath) && File.Exists(legacyPath))
+            {
+                try { File.Move(legacyPath, newPath); } catch { }
+            }
+
+            return newPath;
         }
 
         public static List<InstallAppItem> GetDefaultApps()
@@ -219,7 +228,7 @@ namespace OptiAssist
                 catch { }
             }
 
-            // If missing, empty or invalid, generate defaults and persist to PostInstall.json
+            // If missing, empty or invalid, generate defaults and persist to autoinstall.json
             var defaultList = GetDefaultApps();
             SaveApps(defaultList);
             return defaultList;

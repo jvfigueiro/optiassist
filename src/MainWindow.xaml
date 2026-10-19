@@ -537,7 +537,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Expandable Customization Panel (Config\PostInstall.json) -->
+                        <!-- Expandable Customization Panel (Config\autoinstall.json) -->
                         <Border x:Name="cardCustomizePostInstall"
                                 Visibility="Collapsed"
                                 Background="{DynamicResource BrushBgCard}"
@@ -663,7 +663,7 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- PostInstall.json Programs List for Editing -->
+                                <!-- autoinstall.json Programs List for Editing -->
                                 <TextBlock x:Name="txtCurrentListTitle"
                                            Text="Programas na lista atual:"
                                            FontWeight="SemiBold"
@@ -776,7 +776,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                                         <Button x:Name="btnOpenPostInstallJson"
-                                                Content="📂 Abrir PostInstall.json"
+                                                Content="📂 Abrir autoinstall.json"
                                                 Style="{StaticResource BtnDefault}"
                                                 Click="BtnOpenPostInstallJson_Click" />
                                     </StackPanel>

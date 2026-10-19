@@ -659,12 +659,12 @@ namespace OptiAssist
             if (_customEditorApps == null) return;
             InstallerHelper.SaveApps(_customEditorApps);
             LoadPostInstallApps();
-            MessageBox.Show(LocalizationHelper.Get("Msg_CustomAppsSaved", "Lista de programas salva em Config\\PostInstall.json com sucesso!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(LocalizationHelper.Get("Msg_CustomAppsSaved", "Lista de programas salva em Config\\autoinstall.json com sucesso!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BtnResetDefaultApps_Click(object sender, RoutedEventArgs e)
         {
-            var res = MessageBox.Show(LocalizationHelper.Get("Msg_ResetDefaultAppsConfirm", "Deseja restaurar a lista padrão de programas recomendados no PostInstall.json?"), "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var res = MessageBox.Show(LocalizationHelper.Get("Msg_ResetDefaultAppsConfirm", "Deseja restaurar a lista padrão de programas recomendados no autoinstall.json?"), "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res == MessageBoxResult.Yes)
             {
                 var defaults = InstallerHelper.GetDefaultApps();
@@ -710,7 +710,7 @@ namespace OptiAssist
                 Log("=================================================");
                 Log("   INICIANDO INSTALAÇÃO AUTOMÁTICA DE SOFTWARES  ");
                 Log(string.Format("   Total de programas a instalar: {0}", selected.Count));
-                Log("   (Configuração: Config\\PostInstall.json)");
+                Log("   (Configuração: Config\\autoinstall.json)");
                 Log("=================================================\n");
 
                 bool wingetFallback = _settings != null ? _settings.EnableWingetFallback : true;
@@ -1319,7 +1319,7 @@ namespace OptiAssist
             if (txtCurrentListTitle != null) txtCurrentListTitle.Text = LocalizationHelper.Get("Custom_CurrentList_Title", "Programas na lista atual:");
             if (btnSaveCustomApps != null) btnSaveCustomApps.Content = LocalizationHelper.Get("Btn_SaveCustomApps", "💾 Salvar Alterações");
             if (btnResetDefaultApps != null) btnResetDefaultApps.Content = LocalizationHelper.Get("Btn_ResetDefaultApps", "🔄 Restaurar Lista Padrão");
-            if (btnOpenPostInstallJson != null) btnOpenPostInstallJson.Content = LocalizationHelper.Get("Btn_OpenPostInstallJson", "📂 Abrir PostInstall.json");
+            if (btnOpenPostInstallJson != null) btnOpenPostInstallJson.Content = LocalizationHelper.Get("Btn_OpenPostInstallJson", "📂 Abrir autoinstall.json");
 
             if (txtAppsInstallCardTitle != null) txtAppsInstallCardTitle.Text = LocalizationHelper.Get("Install_Card_Title", "📦 Instalação Automatizada de Aplicativos");
             if (txtAppsInstallCardSub != null) txtAppsInstallCardSub.Text = LocalizationHelper.Get("Install_Card_Subtitle", "Selecione os programas que deseja instalar automaticamente em lote no computador:");

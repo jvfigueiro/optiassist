@@ -57,7 +57,7 @@ A interface foi desenhada seguindo uma arquitetura moderna, responsiva e alinhad
   - **Atualização de Aplicativos (Sempre Visível)**: Painel superior permanente com consulta de atualizações via Winget. Durante o processo de atualização, exibe a barra de progresso em tempo real e um botão centralizado **`⬛ Visualizar Logs`** para navegar diretamente à tela de Logs.
     - **Ações de Atualização**: Botão **`🚀 Atualizar Tudo`** na esquerda (estilo padrão) e **`🔄 Atualizar Selecionados`** em destaque à direita com a cor de acento (`BrushAccent`).
   - **Instalação Automatizada de Aplicativos (Bloco Integrado)**: Lista de programas organizada dentro de um card padrão (`Border`), contendo no rodapé as ações: **`Selecionar Essenciais`**, **`Desmarcar Todos`**, **`⚙️ Personalizar Instalação Automatizada`**, **`📂 Pasta de Instaladores`** e **`🚀 Instalar Selecionados`**.
-  - **Personalizar instalação automatizada de aplicativos (Config\PostInstall.json)**:
+  - **Personalizar instalação automatizada de aplicativos (Config\autoinstall.json)**:
     - O técnico pode gerenciar os softwares instaláveis diretamente na interface:
       1. **Nome do Programa**: Identificação visual na lista.
       2. **Tipo de Instalação**: Alternância dinâmica entre **`Local`** (com botão seletor de arquivos executáveis `.exe`/`.msi` na pasta `PostInstall\`) e **`Winget`** (com campo para ID oficial do pacote).
@@ -131,7 +131,7 @@ A interface foi desenhada seguindo uma arquitetura moderna, responsiva e alinhad
 │
 ├── 📁 Config/
 │   ├── settings.json          <-- Configurações da sua loja, telefone, módulos e cor de acento
-│   ├── PostInstall.json       <-- Lista de programas personalizáveis de pós-instalação (Local/Winget)
+│   ├── autoinstall.json       <-- Lista de programas personalizáveis de pós-instalação (Local/Winget)
 │   └── 📁 Languages/          <-- Dicionários de tradução multi-idioma
 │       ├── pt-BR.json         <-- Português (Brasil)
 │       └── en-US.json         <-- English (US)
