@@ -706,7 +706,7 @@
                                                                        TextTrimming="CharacterEllipsis" />
 
                                                             <CheckBox Grid.Column="2"
-                                                                      Content="Automate"
+                                                                      Content="{Binding AutomateLabel}"
                                                                       IsChecked="{Binding PreSelected, Mode=TwoWay}"
                                                                       VerticalAlignment="Center" />
 
@@ -724,28 +724,28 @@
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnMoveAppUp_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Move up" />
+                                                                        ToolTip="{Binding ToolTipMoveUp}" />
                                                                 <Button Content="▼"
                                                                         Width="28" Height="24"
                                                                         Margin="0,0,3,0"
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnMoveAppDown_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Move down" />
+                                                                        ToolTip="{Binding ToolTipMoveDown}" />
                                                                 <Button Content="✏"
                                                                         Width="28" Height="24"
                                                                         Margin="0,0,3,0"
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnEditCustomApp_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Edit" />
+                                                                        ToolTip="{Binding ToolTipEdit}" />
                                                                 <Button Content="🗑"
                                                                         Width="28" Height="24"
                                                                         Margin="0,0,0,0"
                                                                         Style="{StaticResource BtnRowAction}"
                                                                         Click="BtnRemoveCustomApp_Click"
                                                                         Tag="{Binding}"
-                                                                        ToolTip="Remove" />
+                                                                        ToolTip="{Binding ToolTipRemove}" />
                                                             </StackPanel>
                                                         </Grid>
                                                     </Border>
@@ -1226,6 +1226,7 @@
                                          Text="Enter technical observations, hardware replaced, or recommendations..."
                                          Foreground="{DynamicResource BrushTextSecondary}"
                                          GotFocus="TxtReportNotes_GotFocus"
+                                         LostFocus="TxtReportNotes_LostFocus"
                                          Margin="0,0,0,8"/>
 
                                 <!-- Report Actions -->
@@ -1326,7 +1327,7 @@
 
                                 <!-- Language Selection Buttons -->
                                 <TextBlock x:Name="txtLangLabel" Text="Application Language:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <StackPanel x:Name="pnlLanguageButtons" Orientation="Horizontal" Margin="0,0,0,10">
                                     <Button x:Name="btnLangPt"
                                             Content="🇧🇷 Português (Brasil)"
                                             Style="{StaticResource BtnDefault}"

@@ -52,8 +52,8 @@ namespace OptiAssist
                 }
                 catch
                 {
-                    MessageBox.Show("Unable to start command '" + command + "': " + ex.Message,
-                        "OptiAssist - Error Opening Tool", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ToolOpenError", "Unable to start command '{0}': {1}"), command, ex.Message),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -91,7 +91,7 @@ namespace OptiAssist
                 }
                 catch
                 {
-                    MessageBox.Show("Unable to open msconfig: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_MsconfigError", "Unable to open msconfig: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -133,10 +133,8 @@ namespace OptiAssist
             else
             {
                 MessageBox.Show(
-                    "The Local Group Policy Editor (gpedit.msc) was not found on this machine.\n\n" +
-                    "This tool is native exclusively to Windows Pro, Enterprise, and Education editions.\n" +
-                    "On Windows Home / Single Language editions, gpedit is not pre-installed by Windows.",
-                    "OptiAssist - gpedit.msc Unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
+                    LocalizationHelper.Get("Msg_GpeditNotFound", "The Local Group Policy Editor (gpedit.msc) was not found on this machine.\n\nThis tool is native exclusively to Windows Pro, Enterprise, and Education editions.\nOn Windows Home / Single Language editions, gpedit is not pre-installed by Windows."),
+                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -169,7 +167,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error launching Chris Titus Tool: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ChrisTitusError", "Error launching Chris Titus Tool: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -186,7 +184,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error launching Massgrave (MAS): " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_MassgraveError", "Error launching Massgrave (MAS): {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -210,11 +208,10 @@ namespace OptiAssist
                 }
             }
 
+            string expectedPath = Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo64.exe");
             MessageBoxResult res = MessageBox.Show(
-                "Portable CrystalDiskInfo was not found at:\n" +
-                Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo64.exe") + "\n\n" +
-                "Do you want to open the 'Maintenance' folder to place portable tool files?",
-                "CrystalDiskInfo Not Found", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                string.Format(LocalizationHelper.Get("Msg_CrystalDiskNotFound", "Portable CrystalDiskInfo was not found at:\n{0}\n\nDo you want to open the 'Maintenance' folder to place portable tool files?"), expectedPath),
+                "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
             if (res == MessageBoxResult.Yes)
             {
@@ -241,11 +238,10 @@ namespace OptiAssist
                 }
             }
 
+            string expectedPath = Path.Combine(maintDir, @"CPU-Z\cpuz_x64.exe");
             MessageBoxResult res = MessageBox.Show(
-                "Portable CPU-Z was not found at:\n" +
-                Path.Combine(maintDir, @"CPU-Z\cpuz_x64.exe") + "\n\n" +
-                "Do you want to open the 'Maintenance' folder to place portable tool files?",
-                "CPU-Z Not Found", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                string.Format(LocalizationHelper.Get("Msg_CpuZNotFound", "Portable CPU-Z was not found at:\n{0}\n\nDo you want to open the 'Maintenance' folder to place portable tool files?"), expectedPath),
+                "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
             if (res == MessageBoxResult.Yes)
             {

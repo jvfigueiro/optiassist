@@ -526,7 +526,7 @@ namespace OptiAssist
                     {
                         string err = proc.StandardError.ReadToEnd();
                         errorMessage = string.IsNullOrEmpty(err)
-                            ? "The motherboard or BIOS does not support direct software reboot to UEFI firmware.\nPlease restart manually and press DEL or F2 during boot."
+                            ? LocalizationHelper.Get("Msg_BiosDirectRebootError", "The motherboard or BIOS does not support direct software reboot to UEFI firmware.\nPlease restart manually and press DEL or F2 during boot.")
                             : err.Trim();
                         return false;
                     }

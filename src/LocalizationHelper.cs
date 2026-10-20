@@ -58,6 +58,25 @@ namespace OptiAssist
             return list;
         }
 
+        public static string GetLanguageDisplayName(string langCode)
+        {
+            try
+            {
+                string filePath = GetLanguageFilePath(langCode);
+                if (File.Exists(filePath))
+                {
+                    string json = File.ReadAllText(filePath, Encoding.UTF8);
+                    var dict = ParseLanguageJson(json);
+                    if (dict.ContainsKey("Lang_Name") && !string.IsNullOrEmpty(dict["Lang_Name"]))
+                    {
+                        return dict["Lang_Name"];
+                    }
+                }
+            }
+            catch { }
+            return langCode;
+        }
+
         public static void LoadLanguage(string langCode)
         {
             if (string.IsNullOrWhiteSpace(langCode)) langCode = "en-US";

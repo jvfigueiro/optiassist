@@ -119,6 +119,41 @@ namespace OptiAssist
             }
         }
 
+        public string AutomateLabel
+        {
+            get { return LocalizationHelper.Get("Custom_Chk_Automate", "Automate"); }
+        }
+
+        public string ToolTipMoveUp
+        {
+            get { return LocalizationHelper.Get("Tooltip_MoveUp", "Move up"); }
+        }
+
+        public string ToolTipMoveDown
+        {
+            get { return LocalizationHelper.Get("Tooltip_MoveDown", "Move down"); }
+        }
+
+        public string ToolTipEdit
+        {
+            get { return LocalizationHelper.Get("Tooltip_Edit", "Edit"); }
+        }
+
+        public string ToolTipRemove
+        {
+            get { return LocalizationHelper.Get("Tooltip_Remove", "Remove"); }
+        }
+
+        public void RefreshLocalization()
+        {
+            OnPropertyChanged("AutomateLabel");
+            OnPropertyChanged("DisplayTypeInfo");
+            OnPropertyChanged("ToolTipMoveUp");
+            OnPropertyChanged("ToolTipMoveDown");
+            OnPropertyChanged("ToolTipEdit");
+            OnPropertyChanged("ToolTipRemove");
+        }
+
         // Legacy properties for backwards compatibility
         public string Id
         {
