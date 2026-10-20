@@ -20,6 +20,7 @@ namespace OptiAssist
         private ObservableCollection<InstallAppItem> _customEditorApps;
         private ObservableCollection<WingetUpgradeItem> _wingetUpgrades;
         private InstallAppItem _editingAppItem;
+        private bool _isLoadingSettings = false;
 
         public MainWindow()
         {
@@ -196,39 +197,47 @@ namespace OptiAssist
         #region LOAD CONFIGURATION & APPLICATIONS
         private void LoadApplicationSettings()
         {
-            _settings = SettingsHelper.Load();
-
-            if (chkServiceProviderMode != null)
-                chkServiceProviderMode.IsChecked = _settings.ServiceProviderMode;
-            if (chkEnableMaintenanceReport != null)
-                chkEnableMaintenanceReport.IsChecked = _settings.EnableMaintenanceReport;
-
-            txtSettingStore.Text = _settings.CustomerName;
-            txtSettingPhone.Text = _settings.ContactInfo;
-            txtSettingReportPath.Text = string.IsNullOrEmpty(_settings.ReportSavePath) ? @"C:\MaintenanceReport.txt" : _settings.ReportSavePath;
-            if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
-            if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
-
-            string currentLang = string.IsNullOrEmpty(_settings.Language) ? "en-US" : _settings.Language;
-            ApplyLanguage(currentLang);
-
-            txtReportOrder.Text = ""; // Kept empty by request
-
-            UpdateServiceProviderUI();
-
-            // Load and apply custom accent and button color
-            string accent = string.IsNullOrEmpty(_settings.AccentColor) ? "#0EA5E9" : _settings.AccentColor;
-            txtSettingAccentColor.Text = accent;
-            ApplyThemeAccentColor(accent);
-
-            // Load and apply theme (Dark / Light)
-            if (!string.IsNullOrEmpty(_settings.Theme) && _settings.Theme.Equals("Light", StringComparison.OrdinalIgnoreCase))
+            _isLoadingSettings = true;
+            try
             {
-                ApplyTheme(false);
+                _settings = SettingsHelper.Load();
+
+                if (chkServiceProviderMode != null)
+                    chkServiceProviderMode.IsChecked = _settings.ServiceProviderMode;
+                if (chkEnableMaintenanceReport != null)
+                    chkEnableMaintenanceReport.IsChecked = _settings.EnableMaintenanceReport;
+
+                txtSettingStore.Text = _settings.CustomerName;
+                txtSettingPhone.Text = _settings.ContactInfo;
+                txtSettingReportPath.Text = string.IsNullOrEmpty(_settings.ReportSavePath) ? @"C:\MaintenanceReport.txt" : _settings.ReportSavePath;
+                if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
+                if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
+
+                string currentLang = string.IsNullOrEmpty(_settings.Language) ? "en-US" : _settings.Language;
+                ApplyLanguage(currentLang);
+
+                txtReportOrder.Text = ""; // Kept empty by request
+
+                UpdateServiceProviderUI();
+
+                // Load and apply custom accent and button color
+                string accent = string.IsNullOrEmpty(_settings.AccentColor) ? "#0EA5E9" : _settings.AccentColor;
+                txtSettingAccentColor.Text = accent;
+                ApplyThemeAccentColor(accent);
+
+                // Load and apply theme (Dark / Light)
+                if (!string.IsNullOrEmpty(_settings.Theme) && _settings.Theme.Equals("Light", StringComparison.OrdinalIgnoreCase))
+                {
+                    ApplyTheme(false);
+                }
+                else
+                {
+                    ApplyTheme(true);
+                }
             }
-            else
+            finally
             {
-                ApplyTheme(true);
+                _isLoadingSettings = false;
             }
         }
 
@@ -1701,20 +1710,48 @@ namespace OptiAssist
 
         private void ChkServiceProviderMode_Changed(object sender, RoutedEventArgs e)
         {
-            if (_settings != null)
-            {
-                _settings.ServiceProviderMode = chkServiceProviderMode.IsChecked == true;
-            }
+            if (_isLoadingSettings) return;
+
+            if (_settings == null) _settings = SettingsHelper.Load();
+            _settings.ServiceProviderMode = chkServiceProviderMode.IsChecked == true;
+            SettingsHelper.Save(_settings);
+
             UpdateServiceProviderUI();
+            Log(string.Format("[CONFIG] ServiceProviderMode updated to {0} and saved to settings.json.", _settings.ServiceProviderMode));
         }
 
         private void ChkEnableMaintenanceReport_Changed(object sender, RoutedEventArgs e)
         {
-            if (_settings != null)
-            {
-                _settings.EnableMaintenanceReport = chkEnableMaintenanceReport.IsChecked == true;
-            }
+            if (_isLoadingSettings) return;
+
+            if (_settings == null) _settings = SettingsHelper.Load();
+            _settings.EnableMaintenanceReport = chkEnableMaintenanceReport.IsChecked == true;
+            SettingsHelper.Save(_settings);
+
             UpdateServiceProviderUI();
+            Log(string.Format("[CONFIG] EnableMaintenanceReport updated to {0} and saved to settings.json.", _settings.EnableMaintenanceReport));
+        }
+
+        private void ChkSettingWinget_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings) return;
+
+            if (_settings == null) _settings = SettingsHelper.Load();
+            _settings.EnableWingetFallback = chkSettingWinget.IsChecked == true;
+            SettingsHelper.Save(_settings);
+
+            Log(string.Format("[CONFIG] EnableWingetFallback updated to {0} and saved to settings.json.", _settings.EnableWingetFallback));
+        }
+
+        private void ChkSettingAutoRefresh_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings) return;
+
+            if (_settings == null) _settings = SettingsHelper.Load();
+            _settings.AutoRefreshHardware = chkSettingAutoRefresh.IsChecked == true;
+            SettingsHelper.Save(_settings);
+
+            Log(string.Format("[CONFIG] AutoRefreshHardware updated to {0} and saved to settings.json.", _settings.AutoRefreshHardware));
         }
 
         private void BtnSaveSettings_Click(object sender, RoutedEventArgs e)

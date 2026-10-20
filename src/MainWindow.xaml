@@ -1348,9 +1348,13 @@
                                 </StackPanel>
 
                                 <CheckBox x:Name="chkSettingWinget"
+                                          Checked="ChkSettingWinget_Changed"
+                                          Unchecked="ChkSettingWinget_Changed"
                                           Content="Enable Winget download fallback when program is not in PostInstall folder"
                                           Margin="0,2,0,4"/>
                                 <CheckBox x:Name="chkSettingAutoRefresh"
+                                          Checked="ChkSettingAutoRefresh_Changed"
+                                          Unchecked="ChkSettingAutoRefresh_Changed"
                                           Content="Automatically refresh hardware specs on startup"
                                           Margin="0,2,0,12"/>
 
