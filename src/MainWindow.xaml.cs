@@ -766,12 +766,10 @@ namespace OptiAssist
                     lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_Initial", "Click 'Check for Updates' or wait for winget scan...");
                     break;
                 case WingetStatusState.Scanning:
-                    _wingetStatusState = WingetStatusState.Scanning;
-            UpdateWingetStatusText();
+                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_Scanning", "Scanning for available updates via winget...");
                     break;
                 case WingetStatusState.UpToDate:
-                    _wingetStatusState = WingetStatusState.UpToDate;
-                        UpdateWingetStatusText();
+                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_UpToDate", "✔️ All installed applications are already up to date!");
                     break;
                 case WingetStatusState.Found:
                     lblWingetUpgradeStatus.Text = string.Format(LocalizationHelper.Get("Upgrade_Status_Found", "Updates found for {0} application(s):"), _wingetFoundCount);
@@ -780,8 +778,7 @@ namespace OptiAssist
                     lblWingetUpgradeStatus.Text = string.Format(LocalizationHelper.Get("Upgrade_Status_Updating", "Updating {0} selected application(s)... Track progress in Logs."), _wingetUpdatingCount);
                     break;
                 case WingetStatusState.UpdatingAll:
-                    _wingetStatusState = WingetStatusState.UpdatingAll;
-            UpdateWingetStatusText();
+                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_UpdatingAll", "Running 'winget upgrade --all' in background... Track progress in Logs.");
                     break;
             }
         }
