@@ -2,6 +2,8 @@
 
 **OptiAssist** is a native portable **WPF (.NET Framework 4.8 / XAML)** application designed for computer technicians, IT support professionals, and maintenance workshops. Its purpose is to streamline and standardize post-formatting tasks, quick hardware diagnostics, system optimization, network/printer repairs, and the generation of technical maintenance reports.
 
+📖 **Full Documentation**: Comprehensive technical guides detailing every button and feature are available in the [**Docs/**](Docs/README.md) directory.
+
 ---
 
 ## 🚀 Architecture and Layout Structure
@@ -128,7 +130,15 @@ The user interface was built following a modern, responsive layout that eliminat
 ├── OptiAssist.exe             <-- Compiled portable executable (~125 KB)
 ├── OptiAssist.csproj          <-- MSBuild project file for WPF compilation
 ├── build.bat                  <-- 1-click fast build script
-├── README.md                  <-- User guide and technical documentation
+├── README.md                  <-- Overview and quick reference
+├── 📁 Docs/                   <-- Comprehensive technical documentation chapters
+│   ├── README.md              (Documentation index and principles)
+│   ├── 01-DASHBOARD.md        (Hardware, WMI discovery, serial number, security)
+│   ├── 02-APP-MANAGER.md      (Post-install automation, offline & Winget engines)
+│   ├── 03-OPTIMIZATION.md     (Deep dive into all 16 repair & cleanup tweaks)
+│   ├── 04-WINDOWS-TOOLS.md    (Native administrative consoles and portable tools)
+│   ├── 05-MAINTENANCE-REPORT.md (Service Provider Mode and technical reports)
+│   └── 06-SETTINGS-AND-LOCALIZATION.md (Dynamic i18n, themes, and persistence)
 │
 ├── 📁 Config/
 │   ├── settings.json          <-- App preferences, contact info, modules, and accent color
