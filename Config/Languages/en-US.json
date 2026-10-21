@@ -327,6 +327,7 @@
   "Addons_Help_Title": "💡 How Modular DLL Add-ons Work",
   "Addons_Help_Text": "Each OptiAssist module is a compiled .NET library (.dll) stored in Config\\Addons\\<ModuleName>\\<ModuleName>.dll implementing IOptiAssistAddon. Enabled modules integrate seamlessly into the sidebar navigation as native pages.",
   "Nav_SystemCleaner": "System Cleaner",
+  "Nav_MaintenanceReport": "Maintenance Report",
   "Msg_AddonAdded": "Module (.dll) successfully added and integrated into OptiAssist!",
   "Msg_AddonAddError": "Could not load or install the selected DLL module:\n{0}",
   "Msg_RemoveAddonConfirm": "Are you sure you want to remove the module '{0}' ({1})?\n\nThis will delete its DLL from Config\\Addons and remove it from the sidebar.",

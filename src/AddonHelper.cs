@@ -16,6 +16,9 @@ namespace OptiAssist
         void Log(string message);
         string GetLocalizedString(string key, string defaultValue);
         string CurrentLanguage { get; }
+        AppSettings Settings { get; }
+        HardwareSummary Hardware { get; }
+        void SaveSettings();
     }
 
     /// <summary>

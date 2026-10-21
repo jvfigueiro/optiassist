@@ -327,6 +327,7 @@
   "Addons_Help_Title": "💡 Como funcionam os Módulos (.dll)",
   "Addons_Help_Text": "Cada módulo do OptiAssist consiste em uma biblioteca compilada (.dll) armazenada em Config\\Addons\\<NomeDoModulo>\\<NomeDoModulo>.dll que implementa a interface IOptiAssistAddon. Módulos ativos integram-se nativamente ao menu lateral do aplicativo.",
   "Nav_SystemCleaner": "Limpeza do Sistema",
+  "Nav_MaintenanceReport": "Registro de Manutenção",
   "Msg_AddonAdded": "Módulo (.dll) adicionado e integrado ao OptiAssist com sucesso!",
   "Msg_AddonAddError": "Não foi possível carregar ou instalar a DLL selecionada:\n{0}",
   "Msg_RemoveAddonConfirm": "Tem certeza que deseja remover o módulo '{0}' ({1})?\n\nIsso excluirá a DLL de Config\\Addons e removerá o módulo do menu lateral.",

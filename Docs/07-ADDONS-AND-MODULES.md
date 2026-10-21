@@ -66,3 +66,19 @@ Config/Addons/SystemCleaner/SystemCleaner.dll
 | `prefetch` | **Windows Prefetch** | `C:\Windows\Prefetch` | ⚪ Optional |
 | `shellbags` | **Explorer Shellbags** | `BagMRU` & `Bags` registry keys under `Shell` and `ShellNoRoam` | ⚪ Optional |
 | `system_logs` | **System Event Logs** | `wevtutil cl` for `Application`, `System`, `Setup`, and `Security` | ⚪ Optional |
+
+---
+
+## 4. Built-in Module: Maintenance Report (`Config/Addons/MaintenanceReport/MaintenanceReport.dll`)
+
+All code, UI construction, and report generation logic (`MaintenanceRecord` and `ReportHelper`) for the **Maintenance Service Record** reside inside `src/Addons/MaintenanceReport/MaintenanceReportAddon.cs` (`MaintenanceReport.csproj`), which compiles directly to:
+
+```text
+Config/Addons/MaintenanceReport/MaintenanceReport.dll
+```
+
+### Features
+- **Service & Customer Details**: Captures Service Order (SO) number, Client Name, and auto-fills the machine's detected Serial Number / Service Tag via `IOptiAssistHost.Hardware`.
+- **Service Provider Branding**: Reads `CustomerName` and `ContactInfo` from `IOptiAssistHost.Settings` when Service Provider Mode is enabled.
+- **8-Point Maintenance Checklist**: Disk SMART check, internal cleaning & thermal paste, clean Windows format, driver/BIOS update, essential apps installation, temporary file cleanup, DISM/SFC repair, and network/printer setup.
+- **Technical Observations & Report Generation**: Issues timestamped `.txt` reports into `Reports/`, optionally saves a copy on the customer's machine (`ReportSavePath`), or copies the full formatted report directly to the Windows Clipboard.

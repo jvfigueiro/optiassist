@@ -95,7 +95,6 @@ namespace OptiAssist
             panelOptimization.Visibility = Visibility.Collapsed;
             panelShortcuts.Visibility = Visibility.Collapsed;
             panelAddonHost.Visibility = Visibility.Collapsed;
-            panelReport.Visibility = Visibility.Collapsed;
             panelTerminal.Visibility = Visibility.Collapsed;
             panelSettings.Visibility = Visibility.Collapsed;
             panelAbout.Visibility = Visibility.Collapsed;
@@ -120,11 +119,6 @@ namespace OptiAssist
             {
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelShortcuts.Visibility = Visibility.Visible;
-            }
-            else if (rb == rbNavReport)
-            {
-                scrollViewerContent.Visibility = Visibility.Visible;
-                panelReport.Visibility = Visibility.Visible;
             }
             else if (rb == rbNavTerminal)
             {
@@ -220,19 +214,14 @@ namespace OptiAssist
 
                 if (chkServiceProviderMode != null)
                     chkServiceProviderMode.IsChecked = _settings.ServiceProviderMode;
-                if (chkEnableMaintenanceReport != null)
-                    chkEnableMaintenanceReport.IsChecked = _settings.EnableMaintenanceReport;
 
                 txtSettingStore.Text = _settings.CustomerName;
                 txtSettingPhone.Text = _settings.ContactInfo;
-                txtSettingReportPath.Text = string.IsNullOrEmpty(_settings.ReportSavePath) ? @"C:\MaintenanceReport.txt" : _settings.ReportSavePath;
                 if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
                 if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
 
                 string currentLang = string.IsNullOrEmpty(_settings.Language) ? "en-US" : _settings.Language;
                 ApplyLanguage(currentLang);
-
-                txtReportOrder.Text = ""; // Kept empty by request
 
                 UpdateServiceProviderUI();
 
@@ -262,24 +251,10 @@ namespace OptiAssist
             if (_settings == null) return;
 
             bool isProvider = chkServiceProviderMode != null && chkServiceProviderMode.IsChecked == true;
-            bool enableReport = chkEnableMaintenanceReport != null && chkEnableMaintenanceReport.IsChecked == true;
 
             if (pnlServiceProviderFields != null)
             {
                 pnlServiceProviderFields.Visibility = isProvider ? Visibility.Visible : Visibility.Collapsed;
-            }
-
-            // Show or hide "Maintenance Report" in sidebar menu
-            if (rbNavReport != null)
-            {
-                bool showReport = isProvider && enableReport;
-                rbNavReport.Visibility = showReport ? Visibility.Visible : Visibility.Collapsed;
-
-                if (!showReport && rbNavReport.IsChecked == true && rbNavDashboard != null)
-                {
-                    rbNavDashboard.IsChecked = true;
-                    NavButton_Click(rbNavDashboard, null);
-                }
             }
 
             // Update top bar application branding
@@ -410,12 +385,6 @@ namespace OptiAssist
                 LocalizationHelper.Get("Label_Bios", "BIOS: "), info.BiosInfo);
             lblDiskDetails.Text = string.Format("{0}{1}",
                 LocalizationHelper.Get("Label_Storage", "Storage: "), info.PrimaryDiskInfo);
-
-            // Auto-fill serial number in maintenance report form if empty
-            if (string.IsNullOrEmpty(txtReportSerial.Text) || txtReportSerial.Text == "Não informado" || txtReportSerial.Text == "Not informed" || txtReportSerial.Text == "Not available")
-            {
-                txtReportSerial.Text = info.SerialNumber;
-            }
         }
 
         private void BtnCopySerial_Click(object sender, RoutedEventArgs e)
@@ -1215,6 +1184,24 @@ namespace OptiAssist
             get { return _settings != null && !string.IsNullOrEmpty(_settings.Language) ? _settings.Language : "en-US"; }
         }
 
+        public AppSettings Settings
+        {
+            get { return _settings; }
+        }
+
+        public HardwareSummary Hardware
+        {
+            get { return _hardware; }
+        }
+
+        public void SaveSettings()
+        {
+            if (_settings != null)
+            {
+                SettingsHelper.Save(_settings);
+            }
+        }
+
         private void ReloadAddonsList()
         {
             try
@@ -1438,134 +1425,6 @@ namespace OptiAssist
         }
         #endregion
 
-        #region MAINTENANCE REPORT (SERVICE ORDER)
-        private void TxtReportNotes_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtReportNotes.Text))
-            {
-                txtReportNotes.Text = LocalizationHelper.Get("Report_Notes_Placeholder", "You can provide further details about the services performed on this machine here...");
-                txtReportNotes.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
-            }
-        }
-
-        private void TxtReportNotes_GotFocus(object sender, RoutedEventArgs e)
-        {
-            if (txtReportNotes.Text.StartsWith("Você pode informar") ||
-                txtReportNotes.Text.StartsWith("You can enter") ||
-                txtReportNotes.Text.StartsWith("You can provide") ||
-                txtReportNotes.Text.StartsWith("Enter technical observations"))
-            {
-                txtReportNotes.Text = "";
-                txtReportNotes.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
-            }
-        }
-
-        private MaintenanceRecord BuildRecordFromUI()
-        {
-            MaintenanceRecord rec = new MaintenanceRecord();
-            rec.CustomerName = _settings != null ? _settings.CustomerName : "OptiAssist";
-            rec.ContactInfo = _settings != null ? _settings.ContactInfo : "";
-            rec.OrderNumber = txtReportOrder.Text.Trim();
-            rec.ClientName = txtReportClient.Text.Trim();
-            rec.ClientPhone = "";
-            rec.SerialNumber = txtReportSerial.Text.Trim();
-            rec.ExecutionDate = DateTime.Now;
-            rec.Hardware = _hardware;
-            rec.Notes = txtReportNotes.Text.Trim();
-
-            rec.ActionsDone = new List<string>();
-            if (chkActSmart.IsChecked == true) rec.ActionsDone.Add(chkActSmart.Content.ToString());
-            if (chkActClean.IsChecked == true) rec.ActionsDone.Add(chkActClean.Content.ToString());
-            if (chkActFormat.IsChecked == true) rec.ActionsDone.Add(chkActFormat.Content.ToString());
-            if (chkActDrivers.IsChecked == true) rec.ActionsDone.Add(chkActDrivers.Content.ToString());
-            if (chkActApps.IsChecked == true) rec.ActionsDone.Add(chkActApps.Content.ToString());
-            if (chkActTemp.IsChecked == true) rec.ActionsDone.Add(chkActTemp.Content.ToString());
-            if (chkActDism.IsChecked == true) rec.ActionsDone.Add(chkActDism.Content.ToString());
-            if (chkActNet.IsChecked == true) rec.ActionsDone.Add(chkActNet.Content.ToString());
-
-            return rec;
-        }
-
-        private void BtnSaveReport_Click(object sender, RoutedEventArgs e)
-        {
-            MaintenanceRecord rec = BuildRecordFromUI();
-
-            // 1. Always generate in application Reports folder
-            string reportsFilePath = ReportHelper.SaveReportToReportsFolder(rec);
-            Log("[REPORT] Record issued in Reports folder: " + reportsFilePath);
-
-            // 2. Ask user whether to save an extra copy on machine
-            MessageBoxResult promptCopy = MessageBox.Show(
-                LocalizationHelper.Get("Msg_ReportPromptCopy", "The maintenance report has been generated in the Reports folder.\n\nDo you want to save a copy of this report on the user's machine?"),
-
-                "OptiAssist",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            string clientCopyPath = null;
-            if (promptCopy == MessageBoxResult.Yes)
-            {
-                string configuredPath = _settings != null && !string.IsNullOrWhiteSpace(_settings.ReportSavePath) 
-                    ? _settings.ReportSavePath 
-                    : @"C:\MaintenanceReport.txt";
-
-                clientCopyPath = ReportHelper.SaveReportCopy(rec, configuredPath);
-                Log("[REPORT] Copy saved on the user's machine: " + clientCopyPath);
-            }
-
-            // 3. Display confirmation and option to open
-            string msg;
-            if (!string.IsNullOrEmpty(clientCopyPath))
-            {
-                msg = "Maintenance report saved successfully!\n\n" +
-                      "• Reports folder (application): " + reportsFilePath + "\n" +
-                      "• Copy on machine: " + clientCopyPath + "\n\n" +
-                      "Do you want to open the report file now?";
-            }
-            else
-            {
-                msg = "Maintenance report issued successfully in the Reports folder!\n\n" +
-                      "• File: " + reportsFilePath + "\n\n" +
-                      "Do you want to open the report file now?";
-            }
-
-            MessageBoxResult openRes = MessageBox.Show(msg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (openRes == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    string pathToOpen = !string.IsNullOrEmpty(clientCopyPath) ? clientCopyPath : reportsFilePath;
-                    Process.Start(pathToOpen);
-                }
-                catch
-                {
-                    try { Process.Start(reportsFilePath); } catch { }
-                }
-            }
-        }
-
-        private void BtnCopyReport_Click(object sender, RoutedEventArgs e)
-        {
-            MaintenanceRecord rec = BuildRecordFromUI();
-            string text = ReportHelper.GenerateReportText(rec);
-            Clipboard.SetText(text);
-            MessageBox.Show(LocalizationHelper.Get("Msg_ReportCopied", "Full maintenance report copied to clipboard!\nYou can paste it into WhatsApp, email, or your management system."),
-                "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-            Log("[REPORT] Technical report copied to the clipboard.");
-        }
-
-        private void BtnOpenReportFolder_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                string reportsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Reports");
-                if (!Directory.Exists(reportsDir)) Directory.CreateDirectory(reportsDir);
-                Process.Start("explorer.exe", reportsDir);
-            }
-            catch { }
-        }
-        #endregion
-
         #region SETTINGS & LOCALIZATION
         private void BtnLangPt_Click(object sender, RoutedEventArgs e)
         {
@@ -1599,7 +1458,6 @@ namespace OptiAssist
             if (rbNavPostInstall != null) rbNavPostInstall.Content = LocalizationHelper.Get("Nav_PostInstall", "📦  App Manager");
             if (rbNavOptimization != null) rbNavOptimization.Content = LocalizationHelper.Get("Nav_Optimization", "⚡  Optimization");
             if (rbNavShortcuts != null) rbNavShortcuts.Content = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
-            if (rbNavReport != null) rbNavReport.Content = LocalizationHelper.Get("Nav_Report", "📋  Maintenance Report");
             if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "⬛  Logs");
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
             if (rbNavAbout != null) rbNavAbout.Content = LocalizationHelper.Get("Nav_About", "ℹ️  About");
@@ -1812,42 +1670,6 @@ namespace OptiAssist
                 }
             }
 
-            // 6. Maintenance Report
-            if (txtReportTitle != null) txtReportTitle.Text = LocalizationHelper.Get("Report_Title", "Maintenance Service Record");
-            if (txtReportSub != null) txtReportSub.Text = LocalizationHelper.Get("Report_Subtitle", "Generates a report with machine specs, motherboard, serial number, and performed services");
-            if (txtReportOrderLabel != null) txtReportOrderLabel.Text = LocalizationHelper.Get("Report_Label_Order", "Service Order (SO) Number:");
-            if (txtReportClientLabel != null) txtReportClientLabel.Text = LocalizationHelper.Get("Report_Label_Client", "Client Name:");
-            if (txtReportSerialLabel != null) txtReportSerialLabel.Text = LocalizationHelper.Get("Report_Label_Serial", "Serial Number / Service Tag:");
-            if (txtChecklistLabel != null) txtChecklistLabel.Text = LocalizationHelper.Get("Report_Label_Checklist", "Checklist of Performed Procedures:");
-            if (chkActSmart != null) chkActSmart.Content = LocalizationHelper.Get("Act_Smart", "Disk diagnostic and SMART health check");
-            if (chkActClean != null) chkActClean.Content = LocalizationHelper.Get("Act_Clean", "Preventive internal cleaning & thermal paste replacement");
-            if (chkActFormat != null) chkActFormat.Content = LocalizationHelper.Get("Act_Format", "Clean Windows format and reinstallation");
-            if (chkActDrivers != null) chkActDrivers.Content = LocalizationHelper.Get("Act_Drivers", "Full driver and BIOS update");
-            if (chkActApps != null) chkActApps.Content = LocalizationHelper.Get("Act_Apps", "Essential application installation");
-            if (chkActTemp != null) chkActTemp.Content = LocalizationHelper.Get("Act_Temp", "Deep temporary file cleanup");
-            if (chkActDism != null) chkActDism.Content = LocalizationHelper.Get("Act_Dism", "System integrity repair (DISM / SFC)");
-            if (chkActNet != null) chkActNet.Content = LocalizationHelper.Get("Act_Net", "Network and printer setup");
-            if (txtReportNotesLabel != null) txtReportNotesLabel.Text = LocalizationHelper.Get("Report_Label_Notes", "Technical Report & Observations:");
-
-            // Update notes placeholder if user hasn't typed custom notes
-            if (txtReportNotes != null)
-            {
-                string cur = txtReportNotes.Text != null ? txtReportNotes.Text.Trim() : "";
-                if (string.IsNullOrEmpty(cur) ||
-                    cur.StartsWith("Você pode informar", StringComparison.OrdinalIgnoreCase) ||
-                    cur.StartsWith("You can enter", StringComparison.OrdinalIgnoreCase) ||
-                    cur.StartsWith("You can provide", StringComparison.OrdinalIgnoreCase) ||
-                    cur.StartsWith("Enter technical observations", StringComparison.OrdinalIgnoreCase))
-                {
-                    txtReportNotes.Text = LocalizationHelper.Get("Report_Notes_Placeholder", "You can provide further details about the services performed on this machine here...");
-                    txtReportNotes.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
-                }
-            }
-
-            if (btnSaveReport != null) btnSaveReport.Content = LocalizationHelper.Get("Btn_SaveReport", "📄 Generate Maintenance Report");
-            if (btnCopyReport != null) btnCopyReport.Content = LocalizationHelper.Get("Btn_CopyReport", "📋 Copy Technical Report");
-            if (btnOpenReportFolder != null) btnOpenReportFolder.Content = LocalizationHelper.Get("Btn_OpenReportsFolder", "📂 Open Reports Folder");
-
             // 7. Logs
             if (txtLogsTitle != null) txtLogsTitle.Text = LocalizationHelper.Get("Logs_Title", "⬛ Logs");
             if (txtLogsSub != null) txtLogsSub.Text = LocalizationHelper.Get("Logs_Subtitle", "Real-time log of diagnostics, scripts, and system executions");
@@ -1866,9 +1688,6 @@ namespace OptiAssist
             if (txtPhoneLabel != null) txtPhoneLabel.Text = LocalizationHelper.Get("Settings_Label_Phone", "Contact Information:");
             if (txtSettingPhone != null) txtSettingPhone.ToolTip = LocalizationHelper.Get("Settings_Hint_Phone", "💡 Provide an email, phone number, or social media link of your choice");
             if (txtPhoneHint != null) txtPhoneHint.Text = LocalizationHelper.Get("Settings_Hint_Phone", "💡 Provide an email, phone number, or social media link of your choice");
-            if (chkEnableMaintenanceReport != null) chkEnableMaintenanceReport.Content = LocalizationHelper.Get("Settings_Chk_EnableReport", "Enable Maintenance Report");
-            if (txtEnableReportDesc != null) txtEnableReportDesc.Text = LocalizationHelper.Get("Settings_Desc_EnableReport", "Shows or hides the Maintenance Report screen in the sidebar menu");
-            if (txtReportPathLabel != null) txtReportPathLabel.Text = LocalizationHelper.Get("Settings_Label_ReportPath", "Default Report File Path:");
             if (txtLangLabel != null) txtLangLabel.Text = LocalizationHelper.Get("Settings_Label_Language", "Application Language:");
             SetupLanguageButtons(langCode);
 
@@ -2048,18 +1867,6 @@ namespace OptiAssist
             Log(string.Format("[CONFIG] ServiceProviderMode updated to {0} and saved to settings.json.", _settings.ServiceProviderMode));
         }
 
-        private void ChkEnableMaintenanceReport_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_isLoadingSettings) return;
-
-            if (_settings == null) _settings = SettingsHelper.Load();
-            _settings.EnableMaintenanceReport = chkEnableMaintenanceReport.IsChecked == true;
-            SettingsHelper.Save(_settings);
-
-            UpdateServiceProviderUI();
-            Log(string.Format("[CONFIG] EnableMaintenanceReport updated to {0} and saved to settings.json.", _settings.EnableMaintenanceReport));
-        }
-
         private void ChkSettingWinget_Changed(object sender, RoutedEventArgs e)
         {
             if (_isLoadingSettings) return;
@@ -2086,10 +1893,8 @@ namespace OptiAssist
         {
             if (_settings == null) _settings = new AppSettings();
             _settings.ServiceProviderMode = chkServiceProviderMode.IsChecked == true;
-            _settings.EnableMaintenanceReport = chkEnableMaintenanceReport.IsChecked == true;
             _settings.CustomerName = txtSettingStore.Text.Trim();
             _settings.ContactInfo = txtSettingPhone.Text.Trim();
-            _settings.ReportSavePath = txtSettingReportPath.Text.Trim();
             _settings.EnableWingetFallback = chkSettingWinget.IsChecked == true;
             _settings.AutoRefreshHardware = chkSettingAutoRefresh.IsChecked == true;
             _settings.AccentColor = txtSettingAccentColor.Text.Trim();

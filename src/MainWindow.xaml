@@ -133,11 +133,6 @@
                                      Click="NavButton_Click"/>
                         <!-- Dynamic Add-on Modules Container -->
                         <StackPanel x:Name="pnlSidebarAddons" />
-                        <RadioButton x:Name="rbNavReport"
-                                     GroupName="SidebarNavGroup"
-                                     Content="📋  Maintenance Report"
-                                     Style="{StaticResource BtnNav}"
-                                     Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavTerminal"
                                      GroupName="SidebarNavGroup"
                                      Content="⬛  Logs"
@@ -1185,103 +1180,6 @@
                     <Grid x:Name="panelAddonHost" Visibility="Collapsed" Margin="4" />
 
                     <!-- ================================================ -->
-                    <!-- TAB 5: MAINTENANCE REPORT                      -->
-                    <!-- ================================================ -->
-                    <StackPanel x:Name="panelReport" Visibility="Collapsed" Margin="4">
-                        <StackPanel Margin="0,0,0,8">
-                            <TextBlock x:Name="txtReportTitle"
-                                       Text="Maintenance Report"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtReportSub"
-                                       Text="Generates a report with machine specs, motherboard, serial number, and services"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-
-                        <!-- Report Form -->
-                        <Border Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0,0,0,8"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel>
-                                <!-- Service and Device Details -->
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="220" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                        <TextBlock x:Name="txtReportOrderLabel" Text="Order No.:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                        <TextBox x:Name="txtReportOrder" Height="26"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Margin="0,0,6,0">
-                                        <TextBlock x:Name="txtReportClientLabel" Text="Client Name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                        <TextBox x:Name="txtReportClient" Height="26"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock x:Name="txtReportSerialLabel" Text="Serial No. / Service Tag:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                        <TextBox x:Name="txtReportSerial" Height="26"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- Services Checklist (ALL UNCHECKED BY DEFAULT) -->
-                                <TextBlock x:Name="txtChecklistLabel" Text="Services and Procedures Checklist:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <UniformGrid Columns="2" Margin="0,0,0,8">
-                                    <CheckBox x:Name="chkActSmart" Content="Disk diagnostics and SMART health" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActClean" Content="Preventive internal cleaning and thermal paste" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActFormat" Content="Clean Windows installation" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActDrivers" Content="Full driver and BIOS update" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActApps" Content="Essential application setup" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActTemp" Content="Deep temporary files cleanup" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActDism" Content="System integrity repair (DISM / SFC)" IsChecked="False"/>
-                                    <CheckBox x:Name="chkActNet" Content="Network and printer setup" IsChecked="False"/>
-                                </UniformGrid>
-
-                                <!-- Technical Assessment with Suggestive Placeholder -->
-                                <TextBlock x:Name="txtReportNotesLabel" Text="Technical Assessment &amp; Observations:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                <TextBox x:Name="txtReportNotes"
-                                         Height="50"
-                                         TextWrapping="Wrap"
-                                         AcceptsReturn="True"
-                                         VerticalScrollBarVisibility="Auto"
-                                         Text="Enter technical observations, hardware replaced, or recommendations..."
-                                         Foreground="{DynamicResource BrushTextSecondary}"
-                                         GotFocus="TxtReportNotes_GotFocus"
-                                         LostFocus="TxtReportNotes_LostFocus"
-                                         Margin="0,0,0,8"/>
-
-                                <!-- Report Actions -->
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="btnSaveReport"
-                                            Content="📄 Generate Maintenance Report"
-                                            Style="{StaticResource BtnAccent}"
-                                            Margin="0,0,8,0"
-                                            Click="BtnSaveReport_Click"/>
-                                    <Button x:Name="btnCopyReport"
-                                            Content="📋 Copy Technical Report"
-                                            Style="{StaticResource BtnDefault}"
-                                            Margin="0,0,8,0"
-                                            Click="BtnCopyReport_Click"/>
-                                    <Button x:Name="btnOpenReportFolder"
-                                            Content="📂 Open Reports Folder"
-                                            Style="{StaticResource BtnDefault}"
-                                            Click="BtnOpenReportFolder_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- ================================================ -->
-                    <!-- ================================================ -->
                     <!-- TAB 5: SETTINGS                                -->
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelSettings" Visibility="Collapsed" Margin="4">
@@ -1327,7 +1225,7 @@
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    Margin="24,2,0,0"/>
 
-                                        <!-- Section with Custom App Name, Contact Info and Enable Maintenance Report -->
+                                        <!-- Section with Custom App Name and Contact Info -->
                                         <StackPanel x:Name="pnlServiceProviderFields" Margin="0,10,0,0" Visibility="Collapsed">
                                             <TextBlock x:Name="txtStoreNameLabel" Text="Custom application name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                             <TextBox x:Name="txtSettingStore" Height="26" TextChanged="TxtSettingStore_TextChanged" ToolTip="Customize the application according to the name you prefer."/>
@@ -1335,25 +1233,10 @@
 
                                             <TextBlock x:Name="txtPhoneLabel" Text="Contact Information:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                                             <TextBox x:Name="txtSettingPhone" Height="26" ToolTip="Provide an email, phone number, or social media link of your choice"/>
-                                            <TextBlock x:Name="txtPhoneHint" Text="💡 Provide an email, phone number, or social media link of your choice" FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
-
-                                            <CheckBox x:Name="chkEnableMaintenanceReport"
-                                                      Content="Enable Maintenance Report"
-                                                      FontWeight="SemiBold"
-                                                      Margin="0,4,0,2"
-                                                      Checked="ChkEnableMaintenanceReport_Changed"
-                                                      Unchecked="ChkEnableMaintenanceReport_Changed"/>
-                                            <TextBlock x:Name="txtEnableReportDesc"
-                                                       Text="Shows or hides the Maintenance Report screen in the sidebar menu"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                                       Margin="24,0,0,0"/>
+                                            <TextBlock x:Name="txtPhoneHint" Text="💡 Provide an email, phone number, or social media link of your choice" FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
-
-                                <TextBlock x:Name="txtReportPathLabel" Text="Default Report File Path:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                <TextBox x:Name="txtSettingReportPath" Height="26" Margin="0,0,0,8"/>
 
                                 <!-- Language Selection Buttons -->
                                 <TextBlock x:Name="txtLangLabel" Text="Application Language:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>

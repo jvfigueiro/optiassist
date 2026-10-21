@@ -53,7 +53,6 @@
     <Compile Include="src\InstallerHelper.cs" />
     <Compile Include="src\TweakHelper.cs" />
     <Compile Include="src\ShortcutsHelper.cs" />
-    <Compile Include="src\ReportHelper.cs" />
     <Compile Include="src\LocalizationHelper.cs" />
     <Compile Include="src\AddonHelper.cs" />
     <Resource Include="src\app.ico" />
@@ -63,5 +62,6 @@
   <Target Name="CleanupLocalArtifacts" AfterTargets="Build">
     <Delete Files="mscorlib.dll;normidna.nlp;normnfc.nlp;normnfd.nlp;normnfkc.nlp;normnfkd.nlp" />
     <MSBuild Projects="src\Addons\SystemCleaner\SystemCleaner.csproj" Properties="Configuration=$(Configuration);Platform=$(Platform)" />
+    <MSBuild Projects="src\Addons\MaintenanceReport\MaintenanceReport.csproj" Properties="Configuration=$(Configuration);Platform=$(Platform)" />
   </Target>
 </Project>

@@ -9,6 +9,8 @@ Each module lives in its own subdirectory inside `Config/Addons/<ModuleName>/` a
 ```text
 Config/
 └── Addons/
+    ├── MaintenanceReport/
+    │   └── MaintenanceReport.dll
     └── SystemCleaner/
         └── SystemCleaner.dll
 ```
@@ -27,3 +29,5 @@ Config/
 
 - **`SystemCleaner` (`Config/Addons/SystemCleaner/SystemCleaner.dll`)**:
   Full-featured System Cleaner & Optimizer compiled as a standalone plugin DLL (`src/Addons/SystemCleaner/SystemCleaner.csproj`), encapsulating its entire WPF user interface, scanning engine, Win32 P/Invoke definitions (`SHEmptyRecycleBin`, `SHQueryRecycleBin`, `DnsFlushResolverCache`), and 15 cleanup categories.
+- **`MaintenanceReport` (`Config/Addons/MaintenanceReport/MaintenanceReport.dll`)**:
+  Service Order & Maintenance Report generator compiled as a standalone plugin DLL (`src/Addons/MaintenanceReport/MaintenanceReport.csproj`), encapsulating the complete report UI, checklist, hardware summary formatting, and report file export (`Reports/` folder & machine copy).
