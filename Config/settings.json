@@ -1,4 +1,4 @@
-{
+﻿{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
   "Language": "en-US",
@@ -7,6 +7,6 @@
   "EnableWingetFallback": true,
   "Theme": "Dark",
   "AccentColor": "#0EA5E9",
-  "ServiceProviderMode": false,
+  "ServiceProviderMode": true,
   "EnableMaintenanceReport": false
 }

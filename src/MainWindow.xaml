@@ -36,12 +36,20 @@
                     <ColumnDefinition Width="Auto" /> <!-- Right: Quick Hardware Specifications -->
                 </Grid.ColumnDefinitions>
 
-                <!-- Top Left: Application Branding -->
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="OptiAssist"
+                <!-- Top Left: Application Branding (Logo + Title) -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="app.png"
+                           Width="28"
+                           Height="28"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+                    <TextBlock x:Name="lblAppTitle"
+                               Text="OptiAssist"
                                FontSize="17"
                                FontWeight="Bold"
                                Foreground="{DynamicResource BrushTextPrimary}"
+                               VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
 
@@ -1301,7 +1309,7 @@
                                         <!-- Section with Custom App Name, Contact Info and Enable Maintenance Report -->
                                         <StackPanel x:Name="pnlServiceProviderFields" Margin="0,10,0,0" Visibility="Collapsed">
                                             <TextBlock x:Name="txtStoreNameLabel" Text="Custom application name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox x:Name="txtSettingStore" Height="26" ToolTip="Customize the application according to the name you prefer."/>
+                                            <TextBox x:Name="txtSettingStore" Height="26" TextChanged="TxtSettingStore_TextChanged" ToolTip="Customize the application according to the name you prefer."/>
                                             <TextBlock x:Name="txtStoreNameHint" Text="💡 Customize the application according to the name you prefer." FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
 
                                             <TextBlock x:Name="txtPhoneLabel" Text="Contact Information:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
@@ -1719,33 +1727,49 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- 1. BitLocker -->
-                <TextBlock x:Name="txtBitLockerLabel"
-                           Text="🔒 BitLocker: "
-                           FontSize="11"
-                           Foreground="{DynamicResource BrushTextSecondary}"
-                           VerticalAlignment="Center"/>
-                <TextBlock x:Name="txtBitLockerStatus"
-                           Text="Querying..."
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource BrushWarning}"
-                           VerticalAlignment="Center"/>
+                <!-- 1. BitLocker (Clickable) -->
+                <StackPanel x:Name="pnlBitLockerStatus"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            ToolTip="Click to open BitLocker / Device Encryption settings"
+                            MouseLeftButtonDown="PnlBitLockerStatus_MouseLeftButtonDown">
+                    <TextBlock x:Name="txtBitLockerLabel"
+                               Text="🔒 BitLocker: "
+                               FontSize="11"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="txtBitLockerStatus"
+                               Text="Querying..."
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource BrushWarning}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
 
                 <TextBlock Text="|" Foreground="{DynamicResource BrushBorderCard}" Margin="10,0" VerticalAlignment="Center"/>
 
-                <!-- 2. TPM -->
-                <TextBlock x:Name="txtTpmLabel"
-                           Text="🛡️ TPM: "
-                           FontSize="11"
-                           Foreground="{DynamicResource BrushTextSecondary}"
-                           VerticalAlignment="Center"/>
-                <TextBlock x:Name="txtTpmStatus"
-                           Text="Querying..."
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource BrushWarning}"
-                           VerticalAlignment="Center"/>
+                <!-- 2. TPM (Clickable) -->
+                <StackPanel x:Name="pnlTpmStatus"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            ToolTip="Click to open TPM Management console (tpm.msc)"
+                            MouseLeftButtonDown="PnlTpmStatus_MouseLeftButtonDown">
+                    <TextBlock x:Name="txtTpmLabel"
+                               Text="🛡️ TPM: "
+                               FontSize="11"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="txtTpmStatus"
+                               Text="Querying..."
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource BrushWarning}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
 
                 <TextBlock Text="|" Foreground="{DynamicResource BrushBorderCard}" Margin="10,0" VerticalAlignment="Center"/>
 
@@ -1763,10 +1787,10 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                            VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Right Side: Custom Application Name -->
+            <!-- Right Side: Persistent OptiAssist Brand -->
             <TextBlock x:Name="lblFooterStoreName"
                        Grid.Column="1"
-                       Text="N/A"
+                       Text="OptiAssist"
                        FontSize="11"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextSecondary}"

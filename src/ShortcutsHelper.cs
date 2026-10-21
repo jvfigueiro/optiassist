@@ -58,6 +58,33 @@ namespace OptiAssist
             }
         }
 
+        public static void OpenBitLockerSettings()
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("control.exe", "/name Microsoft.BitLockerDriveEncryption") { UseShellExecute = true });
+            }
+            catch
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo("ms-settings:deviceencryption") { UseShellExecute = true });
+                }
+                catch
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo("ms-settings:bitlocker") { UseShellExecute = true });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ToolOpenError", "Unable to start command '{0}': {1}"), "BitLocker", ex.Message),
+                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                }
+            }
+        }
+
         public static void OpenMsConfig()
         {
             try

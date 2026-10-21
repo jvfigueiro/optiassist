@@ -266,8 +266,8 @@ namespace OptiAssist
                 }
             }
 
-            // Update footer with Custom App Name
-            if (lblFooterStoreName != null)
+            // Update top bar application branding
+            if (lblAppTitle != null)
             {
                 string customName = _settings.CustomerName;
                 if (txtSettingStore != null && !string.IsNullOrWhiteSpace(txtSettingStore.Text))
@@ -277,14 +277,19 @@ namespace OptiAssist
 
                 if (isProvider && !string.IsNullOrWhiteSpace(customName) && customName != "N/A")
                 {
-                    lblFooterStoreName.Text = customName;
-                    lblFooterStoreName.Visibility = Visibility.Visible;
+                    lblAppTitle.Text = customName;
                 }
                 else
                 {
-                    lblFooterStoreName.Text = "";
-                    lblFooterStoreName.Visibility = Visibility.Collapsed;
+                    lblAppTitle.Text = "OptiAssist";
                 }
+            }
+
+            // Bottom status bar right label remains always visible and displays "OptiAssist"
+            if (lblFooterStoreName != null)
+            {
+                lblFooterStoreName.Text = "OptiAssist";
+                lblFooterStoreName.Visibility = Visibility.Visible;
             }
         }
 
@@ -1619,6 +1624,8 @@ namespace OptiAssist
             if (txtBitLockerLabel != null) txtBitLockerLabel.Text = LocalizationHelper.Get("Status_BitLocker", "🔒 BitLocker: ");
             if (txtTpmLabel != null) txtTpmLabel.Text = LocalizationHelper.Get("Status_Tpm", "🛡️ TPM: ");
             if (txtSecureBootLabel != null) txtSecureBootLabel.Text = LocalizationHelper.Get("Status_SecureBoot", "⚡ Secure Boot: ");
+            if (pnlBitLockerStatus != null) pnlBitLockerStatus.ToolTip = LocalizationHelper.Get("Tooltip_BitLockerStatus", "Click to open BitLocker / Device Encryption settings");
+            if (pnlTpmStatus != null) pnlTpmStatus.ToolTip = LocalizationHelper.Get("Tooltip_TpmStatus", "Click to open TPM Management console (tpm.msc)");
 
             // 11. Update hardware display or detecting placeholders
             if (_hardware != null)
@@ -1710,6 +1717,24 @@ namespace OptiAssist
                 }
                 dynamicBtn.Style = (activeLang == lang) ? (Style)FindResource("BtnAccent") : (Style)FindResource("BtnDefault");
             }
+        }
+
+        private void TxtSettingStore_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isLoadingSettings) return;
+            UpdateServiceProviderUI();
+        }
+
+        private void PnlBitLockerStatus_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Log("[SHORTCUT] Opening BitLocker / Device Encryption settings...");
+            ShortcutsHelper.OpenBitLockerSettings();
+        }
+
+        private void PnlTpmStatus_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Log("[SHORTCUT] Opening TPM Management console (tpm.msc)...");
+            ShortcutsHelper.OpenWindowsTool("tpm.msc");
         }
 
         private void ChkServiceProviderMode_Changed(object sender, RoutedEventArgs e)

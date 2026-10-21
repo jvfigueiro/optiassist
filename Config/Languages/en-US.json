@@ -260,5 +260,7 @@
   "Msg_MsconfigError": "Unable to open msconfig: {0}",
   "About_License_Tag": "⚖️ License: GNU General Public License v3.0 (GNU GPLv3)",
   "About_Credits_Title": "🤝 Acknowledgments & Credits",
-  "About_Credits_Text": "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist."
+  "About_Credits_Text": "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist.",
+  "Tooltip_BitLockerStatus": "Click to open BitLocker / Device Encryption settings",
+  "Tooltip_TpmStatus": "Click to open TPM Management console (tpm.msc)"
 }

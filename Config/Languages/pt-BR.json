@@ -260,5 +260,7 @@
   "Msg_MsconfigError": "Não foi possível abrir o msconfig: {0}",
   "About_License_Tag": "⚖️ Licença: GNU General Public License v3.0 (GNU GPLv3)",
   "About_Credits_Title": "🤝 Agradecimentos e Créditos",
-  "About_Credits_Text": "Agradecimento especial e créditos ao trabalho de Chris Titus Tech e à comunidade open-source do WinUtil, cujo projeto serviu como base e inspiração para a implementação de diversos recursos de otimização e manutenção do sistema presentes no OptiAssist."
+  "About_Credits_Text": "Agradecimento especial e créditos ao trabalho de Chris Titus Tech e à comunidade open-source do WinUtil, cujo projeto serviu como base e inspiração para a implementação de diversos recursos de otimização e manutenção do sistema presentes no OptiAssist.",
+  "Tooltip_BitLockerStatus": "Clique para abrir as configurações de criptografia de dispositivo / BitLocker",
+  "Tooltip_TpmStatus": "Clique para abrir o console de gerenciamento do TPM (tpm.msc)"
 }
