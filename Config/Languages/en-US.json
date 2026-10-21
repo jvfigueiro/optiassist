@@ -257,5 +257,8 @@
   "Msg_ChrisTitusError": "Error launching Chris Titus Tool: {0}",
   "Msg_MassgraveError": "Error launching Massgrave (MAS): {0}",
   "Msg_ToolOpenError": "Unable to start command '{0}': {1}",
-  "Msg_MsconfigError": "Unable to open msconfig: {0}"
+  "Msg_MsconfigError": "Unable to open msconfig: {0}",
+  "About_License_Tag": "⚖️ License: GNU General Public License v3.0 (GNU GPLv3)",
+  "About_Credits_Title": "🤝 Acknowledgments & Credits",
+  "About_Credits_Text": "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist."
 }

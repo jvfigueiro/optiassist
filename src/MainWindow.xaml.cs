@@ -1609,6 +1609,9 @@ namespace OptiAssist
             // 9. About
             if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("About_Title", "About OptiAssist");
             if (txtAboutSub != null) txtAboutSub.Text = LocalizationHelper.Get("About_Subtitle", "Version information, copyright, and open-source license");
+            if (txtAboutLicenseTag != null) txtAboutLicenseTag.Text = LocalizationHelper.Get("About_License_Tag", "⚖️ License: GNU General Public License v3.0 (GNU GPLv3)");
+            if (txtAboutCreditsTitle != null) txtAboutCreditsTitle.Text = LocalizationHelper.Get("About_Credits_Title", "🤝 Acknowledgments & Credits");
+            if (txtAboutCreditsText != null) txtAboutCreditsText.Text = LocalizationHelper.Get("About_Credits_Text", "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist.");
             if (btnAboutGithub != null) btnAboutGithub.Content = LocalizationHelper.Get("Btn_AboutGithub", "🌐 GitHub Repository");
             if (btnAboutWebsite != null) btnAboutWebsite.Content = LocalizationHelper.Get("Btn_AboutWebsite", "🔗 Official Website");
 
@@ -1687,7 +1690,8 @@ namespace OptiAssist
                     dynamicBtn = new Button();
                     dynamicBtn.Name = btnName;
                     dynamicBtn.Content = LocalizationHelper.GetLanguageDisplayName(lang);
-                    dynamicBtn.Height = 28;
+                    dynamicBtn.Height = 32;
+                    dynamicBtn.Padding = new Thickness(14, 4, 14, 4);
                     dynamicBtn.Margin = new Thickness(0, 0, 8, 0);
                     dynamicBtn.Tag = lang;
                     dynamicBtn.Click += (s, e) =>
@@ -1996,7 +2000,7 @@ namespace OptiAssist
         {
             try
             {
-                Process.Start(new ProcessStartInfo("https://joaovfigueiro.github.io/") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo("https://jvfigueiro.com/projects/optiassist") { UseShellExecute = true });
             }
             catch (Exception ex)
             {

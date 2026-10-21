@@ -302,7 +302,8 @@
                                                    Text="Device Name: "
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
                                         <TextBlock x:Name="lblMachineName"
                                                    Text="Detecting..."
                                                    FontSize="11"
@@ -1331,13 +1332,15 @@
                                     <Button x:Name="btnLangPt"
                                             Content="🇧🇷 Português (Brasil)"
                                             Style="{StaticResource BtnDefault}"
-                                            Height="28"
+                                            Height="32"
+                                            Padding="14,4"
                                             Margin="0,0,8,0"
                                             Click="BtnLangPt_Click"/>
                                     <Button x:Name="btnLangEn"
                                             Content="🇺🇸 English (US)"
                                             Style="{StaticResource BtnDefault}"
-                                            Height="28"
+                                            Height="32"
+                                            Padding="14,4"
                                             Margin="0,0,8,0"
                                             Click="BtnLangEn_Click"/>
                                     <TextBlock x:Name="lblCurrentLanguage"
@@ -1524,18 +1527,57 @@
                                            FontSize="12"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource BrushTextPrimary}"
-                                           Margin="0,0,0,12"/>
+                                           Margin="0,0,0,10"/>
 
+                                <!-- GNU GPLv3 Explicit License Badge -->
+                                <Border Background="{DynamicResource BrushBgInput}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="10,6"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,0,0,12">
+                                    <TextBlock x:Name="txtAboutLicenseTag"
+                                               Text="⚖️ License: GNU General Public License v3.0 (GNU GPLv3)"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrushAccent}"/>
+                                </Border>
+
+                                <!-- Acknowledgments & Credits to Chris Titus -->
                                 <Border Background="{DynamicResource BrushBgPrimary}"
                                         BorderBrush="{DynamicResource BrushBorderCard}"
                                         BorderThickness="1"
                                         CornerRadius="5"
-                                        Padding="14"
+                                        Padding="12"
+                                        Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock x:Name="txtAboutCreditsTitle"
+                                                   Text="🤝 Acknowledgments &amp; Credits"
+                                                   FontSize="12"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="txtAboutCreditsText"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="11"
+                                                   LineHeight="16"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Text="Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist."/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- GPLv3 Notice Box -->
+                                <Border Background="{DynamicResource BrushBgPrimary}"
+                                        BorderBrush="{DynamicResource BrushBorderCard}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="12"
                                         Margin="0,0,0,14">
                                     <TextBlock TextWrapping="Wrap"
                                                FontFamily="Consolas, Lucida Console, Segoe UI"
                                                FontSize="11"
-                                               LineHeight="18"
+                                               LineHeight="17"
                                                Foreground="{DynamicResource BrushTextSecondary}">
 This program is free software: you can redistribute it and/or modify 
 it under the terms of the GNU General Public License as published by 
