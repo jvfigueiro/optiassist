@@ -1,7 +1,7 @@
 ﻿{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
-  "Language": "en-US",
+  "Language": "pt-BR",
   "ReportSavePath": "C:\\MaintenanceReport.txt",
   "AutoRefreshHardware": true,
   "EnableWingetFallback": true,

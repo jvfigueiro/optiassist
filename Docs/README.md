@@ -14,6 +14,7 @@ Welcome to the official technical documentation for **OptiAssist**, the portable
 | [**04. Windows Administrative Tools**](04-WINDOWS-TOOLS.md) | Native Consoles | Quick access to MMC management consoles, GPEDIT support, and portable tools. |
 | [**05. Maintenance Service Report**](05-MAINTENANCE-REPORT.md) | Client Deliverables | Service Provider Mode, hardware logging, procedure checklist, and report exports. |
 | [**06. Settings & Localization**](06-SETTINGS-AND-LOCALIZATION.md) | Configuration | Dynamic JSON multi-language engine, dark/light themes, accent colors, and persistence. |
+| [**07. Add-ons & Modular Plugins**](07-ADDONS-AND-MODULES.md) | Extensibility & Plugins | Modular plugins architecture (`Config/Addons`), System Cleaner & Optimizer, and manifest specs. |
 
 ---
 
@@ -36,6 +37,11 @@ OptiAssist/
 ├── Config/
 │   ├── settings.json            # Application settings (Theme, Language, Modes)
 │   ├── autoinstall.json         # Automated software installation catalog
+│   ├── Addons/                  # Modular plugins directory
+│   │   ├── README.md            # Plugin developer guide
+│   │   └── SystemCleaner/       # Built-in System Cleaner & Optimizer
+│   │       ├── addon.json       # Module manifest
+│   │       └── README.md        # Module documentation
 │   └── Languages/
 │       ├── en-US.json           # English (US) dictionary
 │       └── pt-BR.json           # Portuguese (Brazil) dictionary

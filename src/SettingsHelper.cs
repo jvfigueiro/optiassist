@@ -17,6 +17,7 @@ namespace OptiAssist
         public string AccentColor { get; set; }
         public bool ServiceProviderMode { get; set; }
         public bool EnableMaintenanceReport { get; set; }
+        public List<string> DisabledAddons { get; set; }
 
         // A new instance always holds the factory default values
         public AppSettings()
@@ -31,6 +32,7 @@ namespace OptiAssist
             AccentColor = "#0EA5E9";
             ServiceProviderMode = false;
             EnableMaintenanceReport = false;
+            DisabledAddons = new List<string>();
         }
     }
 
@@ -95,6 +97,22 @@ namespace OptiAssist
                     bool b;
                     if (bool.TryParse(dict["EnableMaintenanceReport"], out b)) settings.EnableMaintenanceReport = b;
                 }
+                if (dict.ContainsKey("DisabledAddons"))
+                {
+                    string val = dict["DisabledAddons"];
+                    if (!string.IsNullOrWhiteSpace(val))
+                    {
+                        string[] parts = val.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (string p in parts)
+                        {
+                            string trim = p.Trim();
+                            if (!string.IsNullOrEmpty(trim) && !settings.DisabledAddons.Contains(trim))
+                            {
+                                settings.DisabledAddons.Add(trim);
+                            }
+                        }
+                    }
+                }
             }
             catch
             {
@@ -120,7 +138,9 @@ namespace OptiAssist
                 sb.AppendLine(string.Format("  \"Theme\": \"{0}\",", EscapeJson(settings.Theme)));
                 sb.AppendLine(string.Format("  \"AccentColor\": \"{0}\",", EscapeJson(settings.AccentColor)));
                 sb.AppendLine(string.Format("  \"ServiceProviderMode\": {0},", settings.ServiceProviderMode ? "true" : "false"));
-                sb.AppendLine(string.Format("  \"EnableMaintenanceReport\": {0}", settings.EnableMaintenanceReport ? "true" : "false"));
+                sb.AppendLine(string.Format("  \"EnableMaintenanceReport\": {0},", settings.EnableMaintenanceReport ? "true" : "false"));
+                string disabledStr = settings.DisabledAddons != null ? string.Join(",", settings.DisabledAddons.ToArray()) : "";
+                sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\"", EscapeJson(disabledStr)));
                 sb.AppendLine("}");
 
                 File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
