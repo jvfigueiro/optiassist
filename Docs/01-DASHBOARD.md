@@ -42,14 +42,16 @@ OptiAssist queries the Windows Management Instrumentation (WMI) subsystem asynch
 
 ## 🔒 Security Status Badges (Status Bar)
 
-At the bottom of the dashboard, OptiAssist continuously checks and displays the machine's security posture:
+At the bottom of the dashboard, OptiAssist continuously checks and displays the machine's security posture (each item can be clicked for direct navigation):
 
-1. **BitLocker Drive Encryption**:
+1. **BitLocker Drive Encryption** *(Clickable)*:
    * Inspects `root\CIMV2\Security\MicrosoftVolumeEncryption` -> `Win32_EncryptableVolume`.
    * States: `Active (Encrypted)`, `Inactive (Decrypted)`, or `Unavailable`.
-2. **Trusted Platform Module (TPM)**:
+   * **Click action**: Opens Windows Device Encryption Settings (`ms-settings:deviceencryption`) or BitLocker Control Panel (`control /name Microsoft.BitLockerDriveEncryption`).
+2. **Trusted Platform Module (TPM)** *(Clickable)*:
    * Inspects `root\CIMV2\Security\MicrosoftTpm` -> `Win32_Tpm`.
    * States: `Available (v2.0)`, `Available (v1.2)`, or `Not supported / Disabled`.
+   * **Click action**: Opens native TPM Management Console (`tpm.msc`).
 3. **Secure Boot**:
    * Inspects the registry value `UEFISecureBootEnabled` at `HKLM\SYSTEM\CurrentControlSet\Control\SecureBoot\State`.
    * States: `Active` or `Inactive`.
@@ -58,12 +60,13 @@ At the bottom of the dashboard, OptiAssist continuously checks and displays the 
 
 ## ⚡ Common Tasks & Quick Actions
 
-The bottom section of the Dashboard features direct shortcuts to the most frequent operations:
-* **App Manager**: Quick jump to batch post-installation.
-* **Maintenance Folder**: Opens the portable `Maintenance/` folder containing standalone tools.
-* **Chris Titus WinUtil**: Launches the community PowerShell optimization script.
-* **Massgrave (MAS)**: Launches Microsoft Activation Scripts.
-* **Memory Diagnostic**: Schedules Windows Memory Diagnostic (`mdsched.exe`).
-* **Device Manager**: Opens native device console (`devmgmt.msc`).
-* **System Properties**: Opens system properties dialog (`sysdm.cpl`).
-* **Reboot to UEFI**: Reboots the machine directly into the motherboard BIOS/UEFI firmware without needing to mash `DEL` or `F2` on restart (via `shutdown.exe /r /fw /t 0`).
+The bottom section of the Dashboard features direct shortcuts to the most frequent operations arranged in a balanced 3x3 grid:
+* **🚀 Run Post-Install**: Switches directly to the **App Manager** view and immediately launches the automated installation of all checked/pre-selected software applications.
+* **📦 App Manager**: Quick jump to batch application and installer management.
+* **📁 Maintenance Folder**: Opens the portable `Maintenance/` folder containing standalone tools.
+* **🚀 Chris Titus WinUtil**: Launches the community PowerShell optimization script.
+* **🔑 Massgrave (MAS)**: Launches Microsoft Activation Scripts.
+* **🧠 Memory Diagnostic**: Schedules Windows Memory Diagnostic (`mdsched.exe`).
+* **🖥️ Device Manager**: Opens native device console (`devmgmt.msc`).
+* **⚙️ System Properties**: Opens system properties dialog (`sysdm.cpl`).
+* **⚡ Reboot to UEFI**: Reboots the machine directly into the motherboard BIOS/UEFI firmware without needing to mash `DEL` or `F2` on restart (via `shutdown.exe /r /fw /t 0`).

@@ -1,6 +1,6 @@
 # Chapter 06: Settings & Localization Architecture
 
-The **Settings** module handles runtime application preferences, UI personalization, and the multi-language localization engine.
+The **Settings** module handles runtime application preferences, UI personalization, portable USB configuration, and the multi-language localization engine.
 
 ---
 
@@ -22,6 +22,24 @@ All configuration is stored portably in `Config/settings.json`. Preferences upda
 | `AccentColor` | String | `"#0EA5E9"` | Primary accent and button color in hexadecimal format. |
 | `ServiceProviderMode` | Boolean | `false` | Enables custom branding, Service Order inputs, and reports. |
 | `EnableMaintenanceReport` | Boolean | `false` | Shows or hides the Maintenance Report tab in the sidebar. |
+
+---
+
+## 💿 Portable USB AutoRun Integration
+
+Technicians can deploy OptiAssist directly onto bootable or maintenance USB pen drives. The **Create USB AutoRun** button generates or updates `autorun.inf` directly at the drive's root:
+
+```ini
+[AutoRun]
+open={relative_exe_path}
+action=Executar o OptiAssist
+icon={relative_exe_path},0
+```
+
+* **Preserves Volume Label**: Does not overwrite or modify the existing USB volume name.
+* **AutoPlay Action**: Configures Windows AutoPlay to display the action `"Executar o OptiAssist"`.
+* **Application Icon**: Sets the drive icon in Windows Explorer to the OptiAssist application icon directly from the executable.
+* **Attribute Handling**: Safely clears any existing read-only or hidden flags on existing `autorun.inf` files before updating.
 
 ---
 

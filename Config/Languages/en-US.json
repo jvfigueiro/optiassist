@@ -32,6 +32,7 @@
   "Status_Available": "Available",
   "Status_NotSupported": "Unavailable/Not supported",
   "Card_CommonTasks_Title": "⚡ Common Tasks",
+  "Task_RunPostInstall": "🚀 Run Post-Install",
   "Task_PostInstall": "📦 App Manager",
   "Task_MaintenanceFolder": "📁 Maintenance Folder",
   "Task_ChrisTitus": "🚀 Chris Titus WinUtil",
@@ -165,6 +166,7 @@
   "Settings_Chk_AutoRefresh": "Automatically refresh hardware specs on startup",
   "Btn_SaveSettings": "💾 Save Settings",
   "Btn_ResetSettings": "🔄 Restore Defaults",
+  "Btn_CreateAutorun": "💿 Create USB AutoRun",
   "Settings_Label_Preview": "Preview: ",
   "Msg_ResetSettingsConfirm": "Do you want to restore all application settings to their default values?",
   "Msg_ResetSettingsDone": "Default settings successfully restored!",
@@ -193,6 +195,8 @@
   "Status_Tpm": "🛡️ TPM: ",
   "Status_SecureBoot": "⚡ Secure Boot: ",
   "Msg_SettingsSaved": "Settings successfully saved in Config\\settings.json!",
+  "Msg_AutorunCreated": "autorun.inf created successfully on drive root: {0}\nWhen connecting the USB drive, Windows will display the OptiAssist icon and execution action.",
+  "Msg_AutorunError": "Failed to create autorun.inf: {0}",
   "Msg_RebootUefiConfirm": "Do you really want to reboot the computer now directly into BIOS / UEFI?",
   "Msg_UpgradeAllConfirm": "Do you want to update all system programs now via 'winget upgrade --all'?",
   "Msg_NoAppsSelected": "No application was selected.",
@@ -204,6 +208,7 @@
   "Tooltip_HeaderCpu": "Processor",
   "Tooltip_HeaderRam": "Total RAM Memory",
   "Tooltip_CopySerial": "Copy serial number to clipboard",
+  "Tooltip_TaskRunPostInstall": "Open App Manager and install all selected applications",
   "Tooltip_TaskPostInstall": "Go to application and installer manager",
   "Tooltip_TaskMaintenanceFolder": "Open portable maintenance tools folder",
   "Tooltip_TaskChrisTitus": "Run Chris Titus Tech utility (PowerShell)",
@@ -262,5 +267,6 @@
   "About_Credits_Title": "🤝 Acknowledgments & Credits",
   "About_Credits_Text": "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist.",
   "Tooltip_BitLockerStatus": "Click to open BitLocker / Device Encryption settings",
-  "Tooltip_TpmStatus": "Click to open TPM Management console (tpm.msc)"
+  "Tooltip_TpmStatus": "Click to open TPM Management console (tpm.msc)",
+  "Tooltip_CreateAutorun": "Create autorun.inf on drive root to display application icon and AutoPlay entry"
 }

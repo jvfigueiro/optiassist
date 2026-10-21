@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows.Input;
+using System.Text;
 
 namespace OptiAssist
 {
@@ -435,6 +436,16 @@ namespace OptiAssist
                     Log("[BIOS WARNING] " + error);
                 }
             }
+        }
+
+        private void BtnRunPostInstallTask_Click(object sender, RoutedEventArgs e)
+        {
+            if (rbNavPostInstall != null)
+            {
+                rbNavPostInstall.IsChecked = true;
+                NavButton_Click(rbNavPostInstall, null);
+            }
+            BtnInstallSelected_Click(sender, e);
         }
 
         private void BtnTaskPostInstall_Click(object sender, RoutedEventArgs e)
@@ -1358,6 +1369,11 @@ namespace OptiAssist
             if (lblMachineNameTag != null) lblMachineNameTag.Text = LocalizationHelper.Get("Label_DeviceName", "Device Name:");
             if (txtCommonTasksTitle != null) txtCommonTasksTitle.Text = LocalizationHelper.Get("Card_CommonTasks_Title", "⚡ Common Tasks");
 
+            if (btnRunPostInstallTask != null)
+            {
+                btnRunPostInstallTask.Content = LocalizationHelper.Get("Task_RunPostInstall", "🚀 Run Post-Install");
+                btnRunPostInstallTask.ToolTip = LocalizationHelper.Get("Tooltip_TaskRunPostInstall", "Open App Manager and install all selected applications");
+            }
             if (btnTaskPostInstall != null)
             {
                 btnTaskPostInstall.Content = LocalizationHelper.Get("Task_PostInstall", "📦 App Manager");
@@ -1582,6 +1598,11 @@ namespace OptiAssist
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.Content = LocalizationHelper.Get("Settings_Chk_AutoRefresh", "Automatically refresh hardware specs on startup");
             if (btnSaveSettings != null) btnSaveSettings.Content = LocalizationHelper.Get("Btn_SaveSettings", "💾 Save Settings");
             if (btnResetSettings != null) btnResetSettings.Content = LocalizationHelper.Get("Btn_ResetSettings", "🔄 Restore Defaults");
+            if (btnCreateAutorun != null)
+            {
+                btnCreateAutorun.Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun");
+                btnCreateAutorun.ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry");
+            }
             if (txtPersonalizeTitle != null) txtPersonalizeTitle.Text = LocalizationHelper.Get("Settings_Personalize_Title", "🎨 Customize Application");
             if (txtPersonalizeSub != null) txtPersonalizeSub.Text = LocalizationHelper.Get("Settings_Personalize_Subtitle", "Customize the visual theme, button accent colors, and styling of OptiAssist:");
             if (txtThemeLabel != null) txtThemeLabel.Text = LocalizationHelper.Get("Settings_Label_Theme", "Visual Theme:");
@@ -1820,6 +1841,81 @@ namespace OptiAssist
 
             MessageBox.Show(LocalizationHelper.Get("Msg_ResetSettingsDone", "Default settings successfully restored!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             Log("[CONFIG] Application settings restored to factory defaults.");
+        }
+
+        private void BtnCreateAutorun_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string driveRoot = Path.GetPathRoot(baseDir);
+
+                if (string.IsNullOrEmpty(driveRoot))
+                {
+                    throw new InvalidOperationException("Could not determine drive root path.");
+                }
+
+                string exeFullPath = null;
+                try
+                {
+                    var curProc = Process.GetCurrentProcess();
+                    if (curProc != null && curProc.MainModule != null)
+                    {
+                        exeFullPath = curProc.MainModule.FileName;
+                    }
+                }
+                catch
+                {
+                    // Fallback to standard base path executable if Process module cannot be queried
+                }
+
+                if (string.IsNullOrEmpty(exeFullPath) || !File.Exists(exeFullPath))
+                {
+                    exeFullPath = Path.Combine(baseDir, "OptiAssist.exe");
+                }
+
+                // Compute relative path from drive root to the application executable
+                string relativeExePath;
+                if (exeFullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    relativeExePath = exeFullPath.Substring(driveRoot.Length).TrimStart('\\', '/');
+                }
+                else
+                {
+                    relativeExePath = Path.GetFileName(exeFullPath);
+                }
+
+                string autorunPath = Path.Combine(driveRoot, "autorun.inf");
+
+                // Clear any existing read-only or hidden attributes before writing
+                if (File.Exists(autorunPath))
+                {
+                    File.SetAttributes(autorunPath, FileAttributes.Normal);
+                }
+
+                // AutoRun configuration without altering volume label
+                string autorunContent = string.Format(
+                    "[AutoRun]\r\nopen={0}\r\naction=Executar o OptiAssist\r\nicon={0},0\r\n",
+                    relativeExePath);
+
+                File.WriteAllText(autorunPath, autorunContent, Encoding.Default);
+
+                Log(string.Format("[AUTORUN] autorun.inf created successfully at: {0}", autorunPath));
+                MessageBox.Show(
+                    string.Format(LocalizationHelper.Get("Msg_AutorunCreated", "autorun.inf created successfully on drive root: {0}\nWhen connecting the USB drive, Windows will display the OptiAssist icon and execution action."), autorunPath),
+                    "AutoRun",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                Log(string.Format("[AUTORUN ERROR] Failed to create autorun.inf: {0}", ex.Message));
+                MessageBox.Show(
+                    string.Format(LocalizationHelper.Get("Msg_AutorunError", "Failed to create autorun.inf: {0}"), ex.Message),
+                    "AutoRun",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         #region THEME & COLOR PERSONALIZATION

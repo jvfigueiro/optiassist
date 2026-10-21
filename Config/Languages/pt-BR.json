@@ -32,6 +32,7 @@
   "Status_Available": "Disponível",
   "Status_NotSupported": "Indisponível/não suportado",
   "Card_CommonTasks_Title": "⚡ Tarefas Comuns",
+  "Task_RunPostInstall": "🚀 Executar Pós-Instalação",
   "Task_PostInstall": "📦 Gerenciador de Apps",
   "Task_MaintenanceFolder": "📁 Pasta Manutenção",
   "Task_ChrisTitus": "🚀 Chris Titus WinUtil",
@@ -165,6 +166,7 @@
   "Settings_Chk_AutoRefresh": "Atualizar especificações de hardware automaticamente na inicialização",
   "Btn_SaveSettings": "💾 Salvar Configurações",
   "Btn_ResetSettings": "🔄 Restaurar Padrões",
+  "Btn_CreateAutorun": "💿 Criar AutoRun USB",
   "Settings_Label_Preview": "Pré-visualização: ",
   "Msg_ResetSettingsConfirm": "Deseja restaurar todas as configurações do aplicativo para os valores padrão?",
   "Msg_ResetSettingsDone": "Configurações padrão restauradas com sucesso!",
@@ -193,6 +195,8 @@
   "Status_Tpm": "🛡️ TPM: ",
   "Status_SecureBoot": "⚡ Secure Boot: ",
   "Msg_SettingsSaved": "Configurações salvas com sucesso em Config\\settings.json!",
+  "Msg_AutorunCreated": "Arquivo autorun.inf criado com sucesso na raiz da unidade: {0}\nAo conectar o pendrive ao PC, o Windows exibirá o ícone e o botão para executar o OptiAssist.",
+  "Msg_AutorunError": "Erro ao criar o arquivo autorun.inf: {0}",
   "Msg_RebootUefiConfirm": "Deseja realmente reiniciar o computador agora diretamente na BIOS / UEFI?",
   "Msg_UpgradeAllConfirm": "Deseja executar a atualização de todos os programas do sistema agora via 'winget upgrade --all'?",
   "Msg_NoAppsSelected": "Nenhum aplicativo foi selecionado.",
@@ -204,6 +208,7 @@
   "Tooltip_HeaderCpu": "Processador",
   "Tooltip_HeaderRam": "Memória RAM Total",
   "Tooltip_CopySerial": "Copiar número de série para a Área de Transferência",
+  "Tooltip_TaskRunPostInstall": "Abre o Gerenciador de Aplicativos e instala todos os programas marcados",
   "Tooltip_TaskPostInstall": "Ir para o gerenciador de aplicativos e instaladores",
   "Tooltip_TaskMaintenanceFolder": "Abrir pasta de ferramentas portáteis de manutenção",
   "Tooltip_TaskChrisTitus": "Executar utilitário de Chris Titus (PowerShell)",
@@ -262,5 +267,6 @@
   "About_Credits_Title": "🤝 Agradecimentos e Créditos",
   "About_Credits_Text": "Agradecimento especial e créditos ao trabalho de Chris Titus Tech e à comunidade open-source do WinUtil, cujo projeto serviu como base e inspiração para a implementação de diversos recursos de otimização e manutenção do sistema presentes no OptiAssist.",
   "Tooltip_BitLockerStatus": "Clique para abrir as configurações de criptografia de dispositivo / BitLocker",
-  "Tooltip_TpmStatus": "Clique para abrir o console de gerenciamento do TPM (tpm.msc)"
+  "Tooltip_TpmStatus": "Clique para abrir o console de gerenciamento do TPM (tpm.msc)",
+  "Tooltip_CreateAutorun": "Cria o autorun.inf na raiz da unidade com o ícone e ação de execução do OptiAssist"
 }

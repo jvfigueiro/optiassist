@@ -340,7 +340,13 @@
                                            Foreground="{DynamicResource BrushAccent}"
                                            Margin="0,0,0,8"
                                            TextTrimming="CharacterEllipsis"/>
-                                <UniformGrid Columns="4" Rows="2" HorizontalAlignment="Stretch">
+                                <UniformGrid Columns="3" HorizontalAlignment="Stretch">
+                                    <Button x:Name="btnRunPostInstallTask"
+                                            Content="🚀 Run Post-Install"
+                                            Style="{StaticResource BtnAccent}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Open App Manager and install all selected applications"
+                                            Click="BtnRunPostInstallTask_Click"/>
                                     <Button x:Name="btnTaskPostInstall"
                                             Content="📦 App Manager"
                                             Style="{StaticResource BtnDefault}"
@@ -1382,7 +1388,15 @@
                                             Style="{StaticResource BtnDefault}"
                                             Padding="14,0"
                                             HorizontalAlignment="Left"
+                                            Margin="0,0,8,0"
                                             Click="BtnResetSettings_Click"/>
+                                    <Button x:Name="btnCreateAutorun"
+                                            Content="💿 Create USB AutoRun"
+                                            Style="{StaticResource BtnDefault}"
+                                            Padding="14,0"
+                                            HorizontalAlignment="Left"
+                                            ToolTip="Create autorun.inf on drive root to display application icon and AutoPlay entry"
+                                            Click="BtnCreateAutorun_Click"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
