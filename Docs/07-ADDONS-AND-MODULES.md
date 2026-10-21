@@ -39,33 +39,79 @@ Inside **Settings (`⚙️ Settings` → `🧩 Modular Add-ons & Plugins`)**, us
 
 ---
 
-## 3. Built-in Module: System Cleaner (`Config/Addons/SystemCleaner/SystemCleaner.dll`)
+## 3. Built-in Module: System Cleaner v2.0 (`Config/Addons/SystemCleaner/SystemCleaner.dll`)
 
-All code, UI construction, Win32 API calls, and cleaning logic for the **System Cleaner & Optimizer** reside inside `src/Addons/SystemCleaner/SystemCleanerAddon.cs` (`SystemCleaner.csproj`), which compiles directly to:
+Inspired by **BleachBit**, the **System Cleaner & Optimizer** (`src/Addons/SystemCleaner/SystemCleanerAddon.cs`) implements an extensible, object-oriented `BaseCleaner` architecture supporting non-destructive **Dry-Run (`Scan()`)** analysis and safe **Execution (`Clean()`)** with strict path sanitization and locked-file resilience.
 
-```text
-Config/Addons/SystemCleaner/SystemCleaner.dll
+### `BaseCleaner` Architecture
+- **`BaseCleaner` (Abstract Base Class)**:
+  - Metadata properties: `Id`, `CategoryId`, `Category`, `Name`, `Description`, `Icon`, `RequiresAdmin` (`bool`), `IsDangerous` (`bool`), `WarningMessage` (`string`), and `IsRecommended` (`bool`).
+  - `ScanResult Scan(CleanerContext context)` — Performs a 100% non-destructive dry-run scan, returning `FoundItems` (`List<string>`), `EstimatedBytes` (`long`), and `SkippedOrLockedCount` (`int`).
+  - `CleanResult Clean(CleanerContext context)` — Executes cleanup/maintenance, returning `FreedBytes` (`long`), `DeletedCount` (`int`), and `ErrorOrLockedCount` (`int`) while gracefully skipping locked (`EBUSY` / `IOException`) or permission-denied (`UnauthorizedAccessException`) files.
+- **`PathSanitizer` (Strict Scope Protection)**:
+  - Blocks accidental deletion of root drives (`C:\`), `C:\Windows` (except explicitly whitelisted temp/prefetch/update subpaths), `Program Files`, user profile roots, and the OptiAssist installation directory.
+  - Excludes reparse points/symlinks (`FileAttributes.ReparsePoint`) and critical system folders during recursive Deep Scans.
+
+### Supported Cleanup Modules (23 Cleaners Across 5 Categories)
+
+#### 🪟 Category 1: Windows Core (`win_core`)
+| ID | Name | Target Location / Mechanism | Admin | Caution |
+| :--- | :--- | :--- | :---: | :---: |
+| `user_temp` | **User Temporary Files (`%TEMP%`)** | `%TEMP%` and `%LOCALAPPDATA%\Temp` | No | No |
+| `system_temp` | **Windows System Temp** | `C:\Windows\Temp` | 🛡️ Yes | No |
+| `win_update` | **Windows Update & Delivery Cache** | `C:\Windows\SoftwareDistribution\Download` & `DeliveryOptimization` | 🛡️ Yes | No |
+| `memory_dumps` | **Memory Dumps (`*.dmp`, `MEMORY.DMP`)** | `C:\Windows\MEMORY.DMP`, `Minidump`, `LiveKernelReports`, `CrashDumps` | 🛡️ Yes | No |
+| `error_reports` | **Windows Error Reporting (WER)** | `%ProgramData%\Microsoft\Windows\WER` & `%LOCALAPPDATA%\Microsoft\Windows\WER` | No | No |
+| `prefetch` | **Windows Prefetch** | `C:\Windows\Prefetch\*.pf` | 🛡️ Yes | No |
+| `recycle_bin` | **Empty Recycle Bin** | Win32 `SHQueryRecycleBin` & `SHEmptyRecycleBin` across all drives | No | No |
+| `clipboard` | **Windows Clipboard** | STA thread `System.Windows.Clipboard.Clear()` | No | No |
+| `dns_cache` | **DNS Resolver Cache** | `dnsapi.dll` (`DnsFlushResolverCache`) + `ipconfig /flushdns` fallback | No | No |
+| `mui_cache` | **Registry MUICache** | `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache` | No | No |
+| `system_logs` | **System Event & Setup Logs** | `EventLog` / `wevtutil cl` (`Application`, `System`, `Setup`, `Security`) + `CBS` & `Panther` logs | 🛡️ Yes | ⚠️ Yes |
+
+#### 🗂️ Category 2: Windows Explorer & Shell (`explorer_shell`)
+| ID | Name | Target Location / Mechanism | Admin | Caution |
+| :--- | :--- | :--- | :---: | :---: |
+| `thumbnails` | **Thumbnail Cache (`thumbcache_*.db`)** | `%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*.db` | No | No |
+| `run_mru` | **Run Dialog MRU History** | `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU` | No | No |
+| `recent_docs` | **Recent Documents & Jump Lists** | `%APPDATA%\Microsoft\Windows\Recent`, `AutomaticDestinations`, `CustomDestinations`, `RecentDocs` | No | No |
+| `shellbags` | **Explorer Shellbags & Search History** | `BagMRU`, `Bags`, and `WordWheelQuery` registry keys | No | ⚠️ Yes |
+
+#### 🌐 Category 3: Chromium Browsers — Google Chrome & Microsoft Edge (`chromium`)
+Automatically discovers all profiles (`Default`, `Profile 1`, `Profile 2`, `Guest Profile`, `System Profile`) in `%LOCALAPPDATA%\Google\Chrome\User Data` and `%LOCALAPPDATA%\Microsoft\Edge\User Data`, and detects running `chrome.exe` / `msedge.exe` processes before accessing locked databases.
+
+| ID | Name | Target Location / Mechanism | Admin | Caution |
+| :--- | :--- | :--- | :---: | :---: |
+| `chromium_cache` | **Network, GPU & Code Cache** | `Cache\Cache_Data`, `Code Cache`, `GPUCache`, `Service Worker`, `ShaderCache` | No | No |
+| `chromium_crash_reports` | **Crashpad & Crash Reports** | `Crashpad\reports`, `Crashpad\completed`, `Crashpad\pending` | No | No |
+| `chromium_ai_models` | **Local AI Models (Gemini Nano)** | `OptGuideOnDeviceModel`, `optimization_guide_model_store` | No | No |
+| `chromium_vacuum` | **SQLite Database Vacuum** | Executes native `VACUUM;` via `winsqlite3.dll` on `History`, `Web Data`, `Favicons`, `Top Sites`, `Cookies` | No | No |
+| `chromium_cookies` | **Browser Cookies** | `Cookies`, `Network\Cookies` across all profiles | No | ⚠️ Yes |
+| `chromium_history` | **Browsing & Download History** | `History`, `Visited Links`, `Top Sites` across all profiles | No | ⚠️ Yes |
+| `chromium_form_data` | **Autofill Form Data** | `Web Data` across all profiles | No | ⚠️ Yes |
+| `chromium_site_data` | **Site Data (LocalStorage & IndexedDB)** | `Local Storage\leveldb`, `IndexedDB`, `Session Storage`, `File System` | No | ⚠️ Yes |
+| `chromium_sessions` | **Saved Sessions & Open Tabs** | `Sessions`, `Current Session`, `Current Tabs`, `Last Session` | No | ⚠️ Yes |
+
+#### 🛡️ Category 4: Windows Defender (`defender`)
+| ID | Name | Target Location / Mechanism | Admin | Caution |
+| :--- | :--- | :--- | :---: | :---: |
+| `defender_temp` | **Scan Logs & Support Temp** | `C:\ProgramData\Microsoft\Windows Defender\Scans\History` & `Support` | 🛡️ Yes | No |
+| `defender_quarantine` | **Quarantine Files** | `C:\ProgramData\Microsoft\Windows Defender\Quarantine` | 🛡️ Yes | ⚠️ Yes |
+
+#### 🔎 Category 5: Deep Scan — Developer & Orphaned Files (`deep_scan`)
+Supports configurable root directory (`DeepScanRootPath`, defaulting to `C:\Users\<user>`) and recursion depth limit (`DeepScanMaxDepth`) while skipping critical OS and hidden `.git` directories.
+
+| ID | Name | Target Location / Mechanism | Admin | Caution |
+| :--- | :--- | :--- | :---: | :---: |
+| `deep_junk_files` | **Orphaned Metadata & Editor Swap Files** | `.DS_Store`, `Thumbs.db`, `*.swp`, `*.swo`, `*.tmp` | No | No |
+| `deep_node_modules` | **Node.js & Angular Cache** | `node_modules`, `.angular` directories | No | ⚠️ Yes |
+| `deep_python_cache` | **Python Bytecode & VirtualEnvs** | `__pycache__`, `venv`, `.venv` directories | No | ⚠️ Yes |
+
+### Automated Unit Tests & Dry-Run Simulation Script
+Run `Tests/Run-SystemCleanerTests.ps1` in PowerShell to execute unit tests for `PathSanitizer`, sandboxed `DeepScan` (`Scan()`, `Clean()`, and `EBUSY` locked-file skipping), SQLite `VACUUM;` defragmentation, and a live non-destructive dry-run report across all modules:
+```powershell
+.\Tests\Run-SystemCleanerTests.ps1
 ```
-
-### Supported Cleanup Categories (15 Items)
-
-| ID | Category | Target Location / Mechanism | Recommended by Default |
-| :--- | :--- | :--- | :---: |
-| `user_temp` | **User Temporary Files** | `%TEMP%` (`Path.GetTempPath()`) | ✅ Yes |
-| `system_temp` | **Windows System Temp** | `C:\Windows\Temp` | ✅ Yes |
-| `win_update` | **Windows Update Cache** | `C:\Windows\SoftwareDistribution\Download` | ✅ Yes |
-| `thumbnails` | **Thumbnail Cache** | `%LocalAppData%\Microsoft\Windows\Explorer\thumbcache_*.db` & `iconcache_*.db` | ✅ Yes |
-| `recycle_bin` | **Empty Recycle Bin** | `shell32.dll` (`SHQueryRecycleBin` / `SHEmptyRecycleBin`) across all drives | ✅ Yes |
-| `defender_temp` | **Windows Defender Temp & Scans** | `C:\ProgramData\Microsoft\Windows Defender\Scans\History\Service` & `Support` | ✅ Yes |
-| `dns_cache` | **DNS Resolver Cache** | `dnsapi.dll` (`DnsFlushResolverCache`) / `ipconfig /flushdns` | ✅ Yes |
-| `error_reports` | **Windows Error Reporting (WER)** | `%ProgramData%\Microsoft\Windows\WER` & `%LocalAppData%\Microsoft\Windows\WER` | ✅ Yes |
-| `delivery_opt` | **Delivery Optimization Cache** | `C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache` | ✅ Yes |
-| `clipboard` | **Windows Clipboard** | `System.Windows.Clipboard.Clear()` (STA Thread) | ✅ Yes |
-| `memory_dumps` | **Memory Dumps & BSOD Reports** | `C:\Windows\MEMORY.DMP`, `C:\Windows\Minidump`, `LiveKernelReports` | ⚪ Optional |
-| `mui_cache` | **MUICache** | `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache` | ⚪ Optional |
-| `prefetch` | **Windows Prefetch** | `C:\Windows\Prefetch` | ⚪ Optional |
-| `shellbags` | **Explorer Shellbags** | `BagMRU` & `Bags` registry keys under `Shell` and `ShellNoRoam` | ⚪ Optional |
-| `system_logs` | **System Event Logs** | `wevtutil cl` for `Application`, `System`, `Setup`, and `Security` | ⚪ Optional |
 
 ---
 
