@@ -1,82 +1,68 @@
-# Chapter 07: Add-ons & Modular Plugins Architecture
+# 🧩 Add-ons & Modular DLL Architecture (`Config/Addons`)
 
-OptiAssist includes an extensible, modular architecture designed for high scalability and flexibility. Technicians and developers can package, enable, or disable independent feature modules ("plug-ins") stored portably inside `Config/Addons/`.
-
----
-
-## 🧩 Architectural Overview
-
-The Add-ons system allows OptiAssist to extend beyond its core capabilities without requiring monolithic code modifications or recompilations.
-
-### Core Add-on Characteristics:
-1. **Portable Discovery**: Each plug-in is located in its own directory inside `Config/Addons/<ModuleName>/`.
-2. **Declarative Manifest (`addon.json`)**: Describes the module's identity, version, author, icon, category, and default activation state.
-3. **Seamless In-Window UI**: Modules render directly within the main OptiAssist window via the **Add-ons** (`rbNavAddons`) navigation panel.
-4. **Independent Toggle & Persistence**: Modules can be individually enabled or disabled in the **Manage Add-ons** view; disabled modules are persisted in `Config/settings.json` under `DisabledAddons`.
-5. **Real-Time Hot Reload**: New modules dropped into `Config/Addons` are discovered immediately by clicking **Reload Add-ons** (`🔄 Reload Add-ons`) without restarting the application.
+OptiAssist features a scalable **compiled DLL plugin architecture** that allows modules to integrate as first-class pages in the main application sidebar while keeping their entire UI and business logic isolated inside standalone `.dll` assemblies.
 
 ---
 
-## 🧹 Built-in Module: System Cleaner & Optimizer
+## 1. Architecture Overview
 
-The initial flagship module included with OptiAssist is the **System Cleaner & Optimizer** (`Config/Addons/SystemCleaner/`), which performs deep system garbage collection, cache purging, crash dump cleanup, and privacy trace removal.
+### Plugin Interface (`IOptiAssistAddon` & `IOptiAssistHost`)
+Defined in `src/AddonHelper.cs` inside `OptiAssist.exe`:
 
-### Cleaning Categories & Supported Targets:
+- **`IOptiAssistHost`** (implemented by `MainWindow`):
+  - `void Log(string message)` — Writes real-time execution logs to the OptiAssist **Logs** console.
+  - `string GetLocalizedString(string key, string fallback)` — Retrieves localized strings from the active language dictionary (`Config/Languages/*.json`).
+  - `string CurrentLanguage { get; }` — Returns the active language code (`en-US`, `pt-BR`, etc.).
 
-| Category | Item Name | Cleaning Target & Description | Recommended |
-|---|---|---|:---:|
-| **Temporary Files** | **User Temporary Files** | Deletes application cache files, unreferenced installers, and temp directories in `%TEMP%` and `%LOCALAPPDATA%\Temp`. | ✅ Yes |
-| **Temporary Files** | **Windows System Temp** | Deletes Windows system-wide temp files in `C:\Windows\Temp`. | ✅ Yes |
-| **System Caches** | **Windows Update Cache** | Purges downloaded and staged update packages in `C:\Windows\SoftwareDistribution\Download`. | ✅ Yes |
-| **Explorer & UI** | **Thumbnail Cache** | Deletes Explorer thumbnail databases (`thumbcache_*.db`, `iconcache_*.db`) in `%LOCALAPPDATA%\Microsoft\Windows\Explorer`. | ✅ Yes |
-| **Storage** | **Empty Recycle Bin** | Permanently empties recycle bins across all attached drives using native Win32 `SHEmptyRecycleBin`. | ✅ Yes |
-| **System Dumps** | **Memory Dumps & BSOD Reports** | Removes crash dumps (`MEMORY.DMP`), minidumps (`C:\Windows\Minidump`), and kernel crash reports. | ✅ Yes |
-| **Security** | **Windows Defender Temp & Scans** | Clears detection history caches, operational support logs, and engine cache in `C:\ProgramData\Microsoft\Windows Defender`. | ✅ Yes |
-| **Network** | **DNS Resolver Cache** | Flushes the local DNS client cache (`DnsFlushResolverCache` API and `ipconfig /flushdns`) to resolve stale host resolutions. | ✅ Yes |
-| **System Logs** | **Windows Error Reporting (WER)** | Clears archived crash reports, queues, and telemetry logs in `ProgramData\Microsoft\Windows\WER`. | ✅ Yes |
-| **System Caches** | **Delivery Optimization Cache** | Purges peer-to-peer Windows Update delivery cache files in `SoftwareDistribution\DeliveryOptimization`. | ✅ Yes |
-| **Privacy & Registry** | **Windows Clipboard** | Flushes text, images, and data stored in active memory clipboard buffers. | ⚪ Optional |
-| **Privacy & Registry** | **Explorer Shellbags** | Cleans registry folder view settings, window positions, and explorer browsing history (`Bags` and `BagMRU`). | ⚪ Optional |
-| **Privacy & Registry** | **MUICache** | Clears the registry cache of application names and executable strings from `MuiCache`. | ⚪ Optional |
-| **System Caches** | **Windows Prefetch** | Deletes execution prefetch files in `C:\Windows\Prefetch` to rebuild application load tables. | ⚪ Optional |
-| **System Logs** | **System Event Logs** | Clears native Windows Event Logs (`Application`, `System`, `Security`, `Setup`) via Win32 EventLog API and `wevtutil`. | ⚪ Optional |
+- **`IOptiAssistAddon`** (implemented by each `.dll` plugin):
+  - `string Id { get; }` — Unique module identifier (e.g., `"system-cleaner"`).
+  - `string Name { get; }` — Localized display name shown in the sidebar and Settings manager.
+  - `string Description { get; }` — Localized module description.
+  - `string Version { get; }` — Semantic version (e.g., `"1.1.0"`).
+  - `string Author { get; }` — Module author.
+  - `string Icon { get; }` — Emoji/icon displayed on the sidebar button and in Settings.
+  - `void Initialize(IOptiAssistHost host)` — Called when `OptiAssist.exe` loads the DLL.
+  - `UIElement CreateView()` — Returns the complete WPF UI view hosted inside the main window when the user clicks the module in the sidebar.
+  - `void OnLanguageChanged(string languageCode)` — Updates the module's UI labels dynamically whenever the user switches languages in Settings.
 
----
-
-## 🛠️ System Cleaner Operations
-
-1. **🔍 Scan & Analyze**:
-   * Scans all selected categories asynchronously without locking the UI.
-   * Accurately calculates file count and cleanable disk space (KB, MB, GB).
-   * Displays individual size badges for each category and a global summary.
-
-2. **🧹 Clean Selected**:
-   * Safely deletes unlocked files and resets registries.
-   * In-use files are skipped gracefully without throwing unhandled exceptions.
-   * Reports total disk space freed and logs operations in real time.
-
-3. **Selection Shortcuts**:
-   * **Select All**: Marks all available categories.
-   * **Deselect All**: Unchecks all categories.
-   * **Recommended**: Marks safe, non-invasive daily clean targets (excludes deep registry and prefetch caches).
+### Non-Locking DLL Loader
+`AddonHelper.LoadDiscoveredAddons` reads each `.dll` in `Config/Addons/` using `Assembly.Load(File.ReadAllBytes(dllPath))` and resolves references to `OptiAssist.exe` via `AppDomain.CurrentDomain.AssemblyResolve`. Because the assembly is loaded from memory bytes, the `.dll` file on disk is **never locked**, allowing users to remove or update modules while `OptiAssist.exe` is running.
 
 ---
 
-## 📦 How to Create Custom Add-ons
+## 2. Managing Modules in Settings
 
-To develop a new module:
-1. Create a subdirectory inside `Config/Addons/` (e.g., `Config/Addons/HardwareStress/`).
-2. Add an `addon.json` file defining module properties:
-   ```json
-   {
-     "id": "hardware-stress",
-     "name": "Hardware Stress Tester",
-     "description": "Performs CPU, memory, and disk stress testing routines.",
-     "version": "1.0.0",
-     "author": "IT Workshop",
-     "icon": "⚡",
-     "category": "Diagnostics",
-     "enabled": true
-   }
-   ```
-3. Open OptiAssist and navigate to **🧩 Add-ons** > **⚙️ Manage Add-ons** > **🔄 Reload Add-ons**.
+Inside **Settings (`⚙️ Settings` → `🧩 Modular Add-ons & Plugins`)**, users can:
+1. **➕ Add Module (`.dll`)**: Select any compiled OptiAssist `.dll` plugin; OptiAssist validates that it implements `IOptiAssistAddon`, copies it into `Config/Addons/<ModuleName>/<ModuleName>.dll`, and adds it to the sidebar immediately.
+2. **Enable / Disable (`Active`)**: Toggle whether a module is shown in the sidebar navigation. Disabled module IDs are persisted in `Config/settings.json` (`DisabledAddons`).
+3. **🗑️ Remove**: Deletes the module's `.dll` from `Config/Addons` and removes its entry from the sidebar.
+
+---
+
+## 3. Built-in Module: System Cleaner (`Config/Addons/SystemCleaner/SystemCleaner.dll`)
+
+All code, UI construction, Win32 API calls, and cleaning logic for the **System Cleaner & Optimizer** reside inside `src/Addons/SystemCleaner/SystemCleanerAddon.cs` (`SystemCleaner.csproj`), which compiles directly to:
+
+```text
+Config/Addons/SystemCleaner/SystemCleaner.dll
+```
+
+### Supported Cleanup Categories (15 Items)
+
+| ID | Category | Target Location / Mechanism | Recommended by Default |
+| :--- | :--- | :--- | :---: |
+| `user_temp` | **User Temporary Files** | `%TEMP%` (`Path.GetTempPath()`) | ✅ Yes |
+| `system_temp` | **Windows System Temp** | `C:\Windows\Temp` | ✅ Yes |
+| `win_update` | **Windows Update Cache** | `C:\Windows\SoftwareDistribution\Download` | ✅ Yes |
+| `thumbnails` | **Thumbnail Cache** | `%LocalAppData%\Microsoft\Windows\Explorer\thumbcache_*.db` & `iconcache_*.db` | ✅ Yes |
+| `recycle_bin` | **Empty Recycle Bin** | `shell32.dll` (`SHQueryRecycleBin` / `SHEmptyRecycleBin`) across all drives | ✅ Yes |
+| `defender_temp` | **Windows Defender Temp & Scans** | `C:\ProgramData\Microsoft\Windows Defender\Scans\History\Service` & `Support` | ✅ Yes |
+| `dns_cache` | **DNS Resolver Cache** | `dnsapi.dll` (`DnsFlushResolverCache`) / `ipconfig /flushdns` | ✅ Yes |
+| `error_reports` | **Windows Error Reporting (WER)** | `%ProgramData%\Microsoft\Windows\WER` & `%LocalAppData%\Microsoft\Windows\WER` | ✅ Yes |
+| `delivery_opt` | **Delivery Optimization Cache** | `C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache` | ✅ Yes |
+| `clipboard` | **Windows Clipboard** | `System.Windows.Clipboard.Clear()` (STA Thread) | ✅ Yes |
+| `memory_dumps` | **Memory Dumps & BSOD Reports** | `C:\Windows\MEMORY.DMP`, `C:\Windows\Minidump`, `LiveKernelReports` | ⚪ Optional |
+| `mui_cache` | **MUICache** | `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache` | ⚪ Optional |
+| `prefetch` | **Windows Prefetch** | `C:\Windows\Prefetch` | ⚪ Optional |
+| `shellbags` | **Explorer Shellbags** | `BagMRU` & `Bags` registry keys under `Shell` and `ShellNoRoam` | ⚪ Optional |
+| `system_logs` | **System Event Logs** | `wevtutil cl` for `Application`, `System`, `Setup`, and `Security` | ⚪ Optional |

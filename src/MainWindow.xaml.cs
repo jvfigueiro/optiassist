@@ -13,7 +13,7 @@ using System.Text;
 
 namespace OptiAssist
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, IOptiAssistHost
     {
         private AppSettings _settings;
         private HardwareSummary _hardware;
@@ -21,9 +21,7 @@ namespace OptiAssist
         private ObservableCollection<InstallAppItem> _customEditorApps;
         private ObservableCollection<WingetUpgradeItem> _wingetUpgrades;
         private InstallAppItem _editingAppItem;
-        private ObservableCollection<CleanerItem> _cleanerItems;
-        private ObservableCollection<AddonManifest> _addons;
-        private bool _isCleaningOrScanning = false;
+        private ObservableCollection<AddonEntry> _addons;
         private bool _isLoadingSettings = false;
 
         public MainWindow()
@@ -36,7 +34,7 @@ namespace OptiAssist
         {
             LoadApplicationSettings();
             LoadPostInstallApps();
-            InitAddonsAndCleaner();
+            ReloadAddonsList();
 
             if (_settings != null && _settings.AutoRefreshHardware)
             {
@@ -96,7 +94,7 @@ namespace OptiAssist
             panelPostInstall.Visibility = Visibility.Collapsed;
             panelOptimization.Visibility = Visibility.Collapsed;
             panelShortcuts.Visibility = Visibility.Collapsed;
-            panelAddons.Visibility = Visibility.Collapsed;
+            panelAddonHost.Visibility = Visibility.Collapsed;
             panelReport.Visibility = Visibility.Collapsed;
             panelTerminal.Visibility = Visibility.Collapsed;
             panelSettings.Visibility = Visibility.Collapsed;
@@ -123,11 +121,6 @@ namespace OptiAssist
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelShortcuts.Visibility = Visibility.Visible;
             }
-            else if (rb == rbNavAddons)
-            {
-                scrollViewerContent.Visibility = Visibility.Visible;
-                panelAddons.Visibility = Visibility.Visible;
-            }
             else if (rb == rbNavReport)
             {
                 scrollViewerContent.Visibility = Visibility.Visible;
@@ -146,6 +139,18 @@ namespace OptiAssist
             {
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelAbout.Visibility = Visibility.Visible;
+            }
+            else if (rb.Tag is AddonEntry)
+            {
+                AddonEntry entry = (AddonEntry)rb.Tag;
+                scrollViewerContent.Visibility = Visibility.Visible;
+                panelAddonHost.Visibility = Visibility.Visible;
+                panelAddonHost.Children.Clear();
+                UIElement view = entry.GetOrCreateView();
+                if (view != null)
+                {
+                    panelAddonHost.Children.Add(view);
+                }
             }
         }
         #endregion
@@ -1199,21 +1204,15 @@ namespace OptiAssist
         private void BtnOpenMaintenanceFolder_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenMaintenanceFolder(); }
         #endregion
 
-        #region ADD-ONS & SYSTEM CLEANER
-        private void InitAddonsAndCleaner()
+        #region ADD-ONS & MODULES MANAGEMENT (IOptiAssistHost)
+        public string GetLocalizedString(string key, string fallback)
         {
-            try
-            {
-                _cleanerItems = new ObservableCollection<CleanerItem>(CleanerEngine.GetDefaultCleanerItems());
-                if (icCleanerItems != null) icCleanerItems.ItemsSource = _cleanerItems;
+            return LocalizationHelper.Get(key, fallback);
+        }
 
-                ReloadAddonsList();
-                UpdateCleanerSelectedSummary();
-            }
-            catch (Exception ex)
-            {
-                Log("[ADDONS INIT ERROR] " + ex.Message);
-            }
+        public string CurrentLanguage
+        {
+            get { return _settings != null && !string.IsNullOrEmpty(_settings.Language) ? _settings.Language : "en-US"; }
         }
 
         private void ReloadAddonsList()
@@ -1221,9 +1220,11 @@ namespace OptiAssist
             try
             {
                 List<string> disabled = _settings != null && _settings.DisabledAddons != null ? _settings.DisabledAddons : new List<string>();
-                var list = AddonHelper.LoadDiscoveredAddons(disabled);
-                _addons = new ObservableCollection<AddonManifest>(list);
+                List<AddonEntry> list = AddonHelper.LoadDiscoveredAddons(this, disabled);
+                _addons = new ObservableCollection<AddonEntry>(list);
                 if (icAddonsList != null) icAddonsList.ItemsSource = _addons;
+
+                RebuildSidebarAddonsMenu();
             }
             catch (Exception ex)
             {
@@ -1231,211 +1232,160 @@ namespace OptiAssist
             }
         }
 
-        private void BtnTabCleaner_Click(object sender, RoutedEventArgs e)
+        private void RebuildSidebarAddonsMenu()
         {
-            if (btnTabCleaner != null) btnTabCleaner.Style = (Style)FindResource("BtnAccent");
-            if (btnTabAddonsManager != null) btnTabAddonsManager.Style = (Style)FindResource("BtnDefault");
-            if (panelSubCleaner != null) panelSubCleaner.Visibility = Visibility.Visible;
-            if (panelSubAddonsManager != null) panelSubAddonsManager.Visibility = Visibility.Collapsed;
-        }
+            if (pnlSidebarAddons == null) return;
 
-        private void BtnTabAddonsManager_Click(object sender, RoutedEventArgs e)
-        {
-            if (btnTabCleaner != null) btnTabCleaner.Style = (Style)FindResource("BtnDefault");
-            if (btnTabAddonsManager != null) btnTabAddonsManager.Style = (Style)FindResource("BtnAccent");
-            if (panelSubCleaner != null) panelSubCleaner.Visibility = Visibility.Collapsed;
-            if (panelSubAddonsManager != null) panelSubAddonsManager.Visibility = Visibility.Visible;
-        }
-
-        private void CleanerItemCheckbox_Changed(object sender, RoutedEventArgs e)
-        {
-            UpdateCleanerSelectedSummary();
-        }
-
-        private void UpdateCleanerSelectedSummary()
-        {
-            if (_cleanerItems == null) return;
-            long totalSelectedBytes = 0;
-            int countSelected = 0;
-            foreach (var item in _cleanerItems)
+            string previouslySelectedAddonId = null;
+            foreach (object child in pnlSidebarAddons.Children)
             {
-                if (item.IsSelected)
+                RadioButton existingRb = child as RadioButton;
+                if (existingRb != null && existingRb.IsChecked == true && existingRb.Tag is AddonEntry)
                 {
-                    countSelected++;
-                    totalSelectedBytes += item.SizeBytes;
+                    previouslySelectedAddonId = ((AddonEntry)existingRb.Tag).Id;
+                    break;
                 }
             }
-            if (lblCleanerTotalSize != null)
+
+            pnlSidebarAddons.Children.Clear();
+
+            if (_addons == null) return;
+
+            bool restoredActiveAddon = false;
+            foreach (AddonEntry entry in _addons)
             {
-                lblCleanerTotalSize.Text = string.Format("{0} selected ({1} items)", CleanerEngine.FormatBytes(totalSelectedBytes), countSelected);
-            }
-        }
+                entry.ActiveLabel = LocalizationHelper.Get("Addons_Label_Active", "Active");
+                entry.RemoveLabel = LocalizationHelper.Get("Btn_RemoveAddon", "🗑️ Remove");
 
-        private void BtnCleanerSelectAll_Click(object sender, RoutedEventArgs e)
-        {
-            if (_cleanerItems == null) return;
-            foreach (var item in _cleanerItems) item.IsSelected = true;
-            UpdateCleanerSelectedSummary();
-        }
+                if (!entry.IsEnabled) continue;
 
-        private void BtnCleanerDeselectAll_Click(object sender, RoutedEventArgs e)
-        {
-            if (_cleanerItems == null) return;
-            foreach (var item in _cleanerItems) item.IsSelected = false;
-            UpdateCleanerSelectedSummary();
-        }
+                RadioButton rb = new RadioButton();
+                rb.Style = (Style)FindResource("NavRadioButtonStyle");
+                rb.GroupName = "SidebarNavGroup";
+                rb.Tag = entry;
+                rb.Content = string.Format("{0}  {1}", entry.Icon, entry.Name);
+                rb.Click += NavButton_Click;
 
-        private void BtnCleanerSelectRecommended_Click(object sender, RoutedEventArgs e)
-        {
-            if (_cleanerItems == null) return;
-            foreach (var item in _cleanerItems) item.IsSelected = item.IsRecommended;
-            UpdateCleanerSelectedSummary();
-        }
+                entry.SidebarButton = rb;
+                pnlSidebarAddons.Children.Add(rb);
 
-        private void BtnCleanerAnalyze_Click(object sender, RoutedEventArgs e)
-        {
-            if (_isCleaningOrScanning || _cleanerItems == null) return;
-
-            List<CleanerItem> selected = new List<CleanerItem>();
-            foreach (var item in _cleanerItems)
-            {
-                if (item.IsSelected) selected.Add(item);
-            }
-
-            if (selected.Count == 0)
-            {
-                MessageBox.Show(LocalizationHelper.Get("Msg_NoCleanerItemsSelected", "Please select at least one category to clean."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            _isCleaningOrScanning = true;
-            btnCleanerAnalyze.IsEnabled = false;
-            btnCleanerClean.IsEnabled = false;
-            pbCleanerProgress.Visibility = Visibility.Visible;
-            lblCleanerStatus.Text = LocalizationHelper.Get("Cleaner_Status_Scanning", "Scanning selected categories...");
-
-            ThreadPool.QueueUserWorkItem(state =>
-            {
-                long totalFound = 0;
-                Log("=================================================");
-                Log("   STARTING SYSTEM CLEANER ANALYSIS             ");
-                Log(string.Format("   Selected categories: {0}", selected.Count));
-                Log("=================================================");
-
-                foreach (var item in selected)
+                if (!string.IsNullOrEmpty(previouslySelectedAddonId) &&
+                    string.Equals(entry.Id, previouslySelectedAddonId, StringComparison.OrdinalIgnoreCase))
                 {
-                    Dispatcher.Invoke(new Action(() =>
+                    rb.IsChecked = true;
+                    restoredActiveAddon = true;
+                    if (panelAddonHost != null)
                     {
-                        item.StatusDisplay = "Scanning...";
-                        item.SizeDisplay = "...";
-                    }));
-
-                    long bytes = CleanerEngine.ScanItem(item, msg => Log(msg));
-                    totalFound += bytes;
-
-                    Dispatcher.Invoke(new Action(() =>
-                    {
-                        item.SizeBytes = bytes;
-                        item.StatusDisplay = bytes > 0 ? "Scanned" : "Clean";
-                    }));
+                        panelAddonHost.Children.Clear();
+                        UIElement view = entry.GetOrCreateView();
+                        if (view != null) panelAddonHost.Children.Add(view);
+                    }
                 }
+            }
 
-                Dispatcher.Invoke(new Action(() =>
+            // If an add-on was active in the main view and got disabled or removed, fall back to Settings or Dashboard
+            if (!string.IsNullOrEmpty(previouslySelectedAddonId) && !restoredActiveAddon)
+            {
+                if (panelAddonHost != null)
                 {
-                    _isCleaningOrScanning = false;
-                    btnCleanerAnalyze.IsEnabled = true;
-                    btnCleanerClean.IsEnabled = true;
-                    pbCleanerProgress.Visibility = Visibility.Collapsed;
-
-                    string summaryMsg = string.Format(
-                        LocalizationHelper.Get("Cleaner_Status_Scanned", "Analysis complete: Found {0} of cleanable data across {1} categories."),
-                        CleanerEngine.FormatBytes(totalFound), selected.Count);
-
-                    lblCleanerStatus.Text = summaryMsg;
-                    UpdateCleanerSelectedSummary();
-                    Log("[CLEANER ANALYSIS] " + summaryMsg);
-                }));
-            });
+                    panelAddonHost.Children.Clear();
+                    panelAddonHost.Visibility = Visibility.Collapsed;
+                }
+                if (rbNavSettings != null && panelSettings != null && panelSettings.Visibility == Visibility.Visible)
+                {
+                    rbNavSettings.IsChecked = true;
+                }
+                else if (rbNavDashboard != null)
+                {
+                    rbNavDashboard.IsChecked = true;
+                    scrollViewerContent.Visibility = Visibility.Visible;
+                    panelDashboard.Visibility = Visibility.Visible;
+                }
+            }
         }
 
-        private void BtnCleanerClean_Click(object sender, RoutedEventArgs e)
+        private void BtnAddAddon_Click(object sender, RoutedEventArgs e)
         {
-            if (_isCleaningOrScanning || _cleanerItems == null) return;
-
-            List<CleanerItem> selected = new List<CleanerItem>();
-            long estimatedSpace = 0;
-            foreach (var item in _cleanerItems)
+            try
             {
-                if (item.IsSelected)
+                Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+                dlg.Title = LocalizationHelper.Get("Btn_AddAddon", "➕ Add Module (.dll)");
+                dlg.Filter = "OptiAssist Module DLL (*.dll)|*.dll";
+                dlg.CheckFileExists = true;
+
+                if (dlg.ShowDialog() == true)
                 {
-                    selected.Add(item);
-                    estimatedSpace += item.SizeBytes;
+                    string installedAddonName;
+                    string errorMsg;
+                    bool ok = AddonHelper.InstallAddonFromDll(dlg.FileName, this, out installedAddonName, out errorMsg);
+                    if (ok)
+                    {
+                        Log("[ADDON] Installed module from: " + dlg.FileName);
+                        ReloadAddonsList();
+                        MessageBox.Show(
+                            LocalizationHelper.Get("Msg_AddonAdded", "Module (.dll) successfully added and integrated into OptiAssist!"),
+                            "OptiAssist",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        Log("[ADDON ERROR] Failed to install module: " + errorMsg);
+                        MessageBox.Show(
+                            string.Format(LocalizationHelper.Get("Msg_AddonAddError", "Could not load or install the selected DLL module:\n{0}"), errorMsg),
+                            "OptiAssist",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
                 }
             }
-
-            if (selected.Count == 0)
+            catch (Exception ex)
             {
-                MessageBox.Show(LocalizationHelper.Get("Msg_NoCleanerItemsSelected", "Please select at least one category to clean."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                Log("[ADDON ADD ERROR] " + ex.Message);
             }
+        }
+
+        private void BtnRemoveAddon_Click(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            AddonEntry entry = btn != null ? btn.DataContext as AddonEntry : null;
+            if (entry == null) return;
 
             string confirmMsg = string.Format(
-                LocalizationHelper.Get("Msg_CleanerConfirm", "Do you want to clean the selected items now?\nTotal estimated space to free: {0}"),
-                CleanerEngine.FormatBytes(estimatedSpace));
+                LocalizationHelper.Get("Msg_RemoveAddonConfirm", "Are you sure you want to remove the module '{0}' ({1})?\n\nThis will delete its DLL from Config\\Addons and remove it from the sidebar."),
+                entry.Name,
+                entry.DisplayPath);
 
-            var res = MessageBox.Show(confirmMsg, "OptiAssist - System Cleaner", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            MessageBoxResult res = MessageBox.Show(confirmMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes) return;
 
-            _isCleaningOrScanning = true;
-            btnCleanerAnalyze.IsEnabled = false;
-            btnCleanerClean.IsEnabled = false;
-            pbCleanerProgress.Visibility = Visibility.Visible;
-
-            ThreadPool.QueueUserWorkItem(state =>
+            string errorMsg;
+            if (AddonHelper.RemoveAddon(entry, out errorMsg))
             {
-                long totalFreed = 0;
-                Log("=================================================");
-                Log("   STARTING SYSTEM CLEANING & OPTIMIZATION       ");
-                Log(string.Format("   Categories to clean: {0}", selected.Count));
-                Log("=================================================");
-
-                foreach (var item in selected)
+                if (_settings != null && _settings.DisabledAddons != null && _settings.DisabledAddons.Contains(entry.Id))
                 {
-                    Dispatcher.Invoke(new Action(() =>
-                    {
-                        lblCleanerStatus.Text = string.Format(LocalizationHelper.Get("Cleaner_Status_Cleaning", "Cleaning {0}..."), item.Name);
-                        item.StatusDisplay = "Cleaning...";
-                    }));
-
-                    long freed = CleanerEngine.CleanItem(item, msg => Log(msg));
-                    totalFreed += freed;
-
-                    Dispatcher.Invoke(new Action(() =>
-                    {
-                        item.SizeBytes = 0;
-                        item.SizeDisplay = "Cleaned";
-                        item.StatusDisplay = "Cleaned";
-                    }));
+                    _settings.DisabledAddons.Remove(entry.Id);
+                    SettingsHelper.Save(_settings);
                 }
 
-                Dispatcher.Invoke(new Action(() =>
-                {
-                    _isCleaningOrScanning = false;
-                    btnCleanerAnalyze.IsEnabled = true;
-                    btnCleanerClean.IsEnabled = true;
-                    pbCleanerProgress.Visibility = Visibility.Collapsed;
+                Log(string.Format("[ADDON] Removed module '{0}' ({1}).", entry.Name, entry.Id));
+                ReloadAddonsList();
 
-                    string doneMsg = string.Format(
-                        LocalizationHelper.Get("Cleaner_Status_Cleaned", "Cleaning completed: {0} freed across {1} categories!"),
-                        CleanerEngine.FormatBytes(totalFreed), selected.Count);
-
-                    lblCleanerStatus.Text = doneMsg;
-                    UpdateCleanerSelectedSummary();
-                    Log("[CLEANER COMPLETE] " + doneMsg);
-
-                    MessageBox.Show(doneMsg, "System Cleaner", MessageBoxButton.OK, MessageBoxImage.Information);
-                }));
-            });
+                MessageBox.Show(
+                    LocalizationHelper.Get("Msg_AddonRemoved", "Module removed successfully."),
+                    "OptiAssist",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            else
+            {
+                Log("[ADDON REMOVE ERROR] " + errorMsg);
+                MessageBox.Show(
+                    string.Format(LocalizationHelper.Get("Msg_AddonRemoveError", "Failed to remove module:\n{0}"), errorMsg),
+                    "OptiAssist",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private void BtnOpenAddonsFolder_Click(object sender, RoutedEventArgs e)
@@ -1455,32 +1405,35 @@ namespace OptiAssist
         private void BtnReloadAddons_Click(object sender, RoutedEventArgs e)
         {
             ReloadAddonsList();
-            Log("[ADDON] Add-ons list successfully reloaded.");
+            Log("[ADDON] Add-ons list and sidebar modules reloaded.");
         }
 
         private void AddonEnableCheckbox_Click(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            AddonManifest manifest = cb != null ? cb.DataContext as AddonManifest : null;
-            if (manifest != null && _settings != null)
+            AddonEntry entry = cb != null ? cb.DataContext as AddonEntry : null;
+            if (entry != null && _settings != null)
             {
                 if (_settings.DisabledAddons == null) _settings.DisabledAddons = new List<string>();
                 if (cb.IsChecked == true)
                 {
-                    if (_settings.DisabledAddons.Contains(manifest.Id))
+                    entry.IsEnabled = true;
+                    if (_settings.DisabledAddons.Contains(entry.Id))
                     {
-                        _settings.DisabledAddons.Remove(manifest.Id);
+                        _settings.DisabledAddons.Remove(entry.Id);
                     }
                 }
                 else
                 {
-                    if (!_settings.DisabledAddons.Contains(manifest.Id))
+                    entry.IsEnabled = false;
+                    if (!_settings.DisabledAddons.Contains(entry.Id))
                     {
-                        _settings.DisabledAddons.Add(manifest.Id);
+                        _settings.DisabledAddons.Add(entry.Id);
                     }
                 }
                 SettingsHelper.Save(_settings);
-                Log(string.Format("[ADDON] Module '{0}' ({1}) is now {2}.", manifest.Name, manifest.Id, cb.IsChecked == true ? "Enabled" : "Disabled"));
+                RebuildSidebarAddonsMenu();
+                Log(string.Format("[ADDON] Module '{0}' ({1}) is now {2}.", entry.Name, entry.Id, cb.IsChecked == true ? "Enabled" : "Disabled"));
             }
         }
         #endregion
@@ -1646,7 +1599,6 @@ namespace OptiAssist
             if (rbNavPostInstall != null) rbNavPostInstall.Content = LocalizationHelper.Get("Nav_PostInstall", "📦  App Manager");
             if (rbNavOptimization != null) rbNavOptimization.Content = LocalizationHelper.Get("Nav_Optimization", "⚡  Optimization");
             if (rbNavShortcuts != null) rbNavShortcuts.Content = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
-            if (rbNavAddons != null) rbNavAddons.Content = LocalizationHelper.Get("Nav_Addons", "🧩  Add-ons");
             if (rbNavReport != null) rbNavReport.Content = LocalizationHelper.Get("Nav_Report", "📋  Maintenance Report");
             if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "⬛  Logs");
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
@@ -1831,90 +1783,32 @@ namespace OptiAssist
                 btnOpenMaintenanceFolderTool.ToolTip = LocalizationHelper.Get("Tooltip_OpenMaintenanceFolder", "Access local Maintenance folder containing portable tools");
             }
 
-            // 5.5. Add-ons & Modular Extensions (System Cleaner)
-            if (txtAddonsTitle != null) txtAddonsTitle.Text = LocalizationHelper.Get("Addons_Title", "Add-ons & Modular Extensions");
-            if (txtAddonsSubtitle != null) txtAddonsSubtitle.Text = LocalizationHelper.Get("Addons_Subtitle", "Modular features and extensible tools stored in Config\\Addons");
-            if (btnTabCleaner != null) btnTabCleaner.Content = LocalizationHelper.Get("Addons_Tab_Cleaner", "🧹 System Cleaner");
-            if (btnTabAddonsManager != null) btnTabAddonsManager.Content = LocalizationHelper.Get("Addons_Tab_Manager", "⚙️ Manage Add-ons");
-            if (btnCleanerAnalyze != null) btnCleanerAnalyze.Content = LocalizationHelper.Get("Btn_CleanerAnalyze", "🔍 Scan & Analyze");
-            if (btnCleanerClean != null) btnCleanerClean.Content = LocalizationHelper.Get("Btn_CleanerClean", "🧹 Clean Selected");
-            if (btnCleanerSelectAll != null) btnCleanerSelectAll.Content = LocalizationHelper.Get("Btn_CleanerSelectAll", "Select All");
-            if (btnCleanerDeselectAll != null) btnCleanerDeselectAll.Content = LocalizationHelper.Get("Btn_CleanerDeselectAll", "Deselect All");
-            if (btnCleanerSelectRecommended != null) btnCleanerSelectRecommended.Content = LocalizationHelper.Get("Btn_CleanerSelectRecommended", "Recommended");
-            if (txtAddonsManagerTitle != null) txtAddonsManagerTitle.Text = LocalizationHelper.Get("Addons_Manager_Title", "Installed Modules & Plugins");
-            if (txtAddonsManagerSubtitle != null) txtAddonsManagerSubtitle.Text = LocalizationHelper.Get("Addons_Manager_Subtitle", "Manage extensible components and drop new plugins into Config\\Addons");
+            // 5.5. Add-ons & Modular Plugins Management (in Settings + Dynamic Sidebar Modules)
+            if (txtAddonsManagerTitle != null) txtAddonsManagerTitle.Text = LocalizationHelper.Get("Addons_Manager_Title", "🧩 Modular Add-ons & Plugins");
+            if (txtAddonsManagerSubtitle != null) txtAddonsManagerSubtitle.Text = LocalizationHelper.Get("Addons_Manager_Subtitle", "Add, enable, disable, or remove modular DLL plugins stored in Config\\Addons. Active modules appear directly in the sidebar.");
+            if (btnAddAddon != null) btnAddAddon.Content = LocalizationHelper.Get("Btn_AddAddon", "➕ Add Module (.dll)");
             if (btnOpenAddonsFolder != null) btnOpenAddonsFolder.Content = LocalizationHelper.Get("Btn_OpenAddonsFolder", "📁 Open Add-ons Folder");
-            if (btnReloadAddons != null) btnReloadAddons.Content = LocalizationHelper.Get("Btn_ReloadAddons", "🔄 Reload Add-ons");
-            if (txtAddonsHelpTitle != null) txtAddonsHelpTitle.Text = LocalizationHelper.Get("Addons_Help_Title", "💡 How to install new add-ons");
-            if (txtAddonsHelpText != null) txtAddonsHelpText.Text = LocalizationHelper.Get("Addons_Help_Text", "To install a new add-on, place its folder inside Config\\Addons with an addon.json manifest. OptiAssist discovers and loads active modules automatically.");
+            if (btnReloadAddons != null) btnReloadAddons.Content = LocalizationHelper.Get("Btn_ReloadAddons", "🔄 Reload Modules");
+            if (txtAddonsHelpTitle != null) txtAddonsHelpTitle.Text = LocalizationHelper.Get("Addons_Help_Title", "💡 How Modular DLL Add-ons Work");
+            if (txtAddonsHelpText != null) txtAddonsHelpText.Text = LocalizationHelper.Get("Addons_Help_Text", "Each OptiAssist module is a compiled .NET library (.dll) stored in Config\\Addons\\<ModuleName>\\<ModuleName>.dll implementing IOptiAssistAddon. Enabled modules integrate seamlessly into the sidebar navigation as native pages.");
 
-            if (_cleanerItems != null)
+            if (_addons != null)
             {
-                foreach (var item in _cleanerItems)
+                string activeLbl = LocalizationHelper.Get("Addons_Label_Active", "Active");
+                string removeLbl = LocalizationHelper.Get("Btn_RemoveAddon", "🗑️ Remove");
+                foreach (AddonEntry addon in _addons)
                 {
-                    switch (item.Id)
+                    addon.ActiveLabel = activeLbl;
+                    addon.RemoveLabel = removeLbl;
+                    if (addon.Instance != null)
                     {
-                        case "user_temp":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_UserTemp", "User Temporary Files");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_UserTemp", "Temporary files and app caches in %TEMP% and user temp directories");
-                            break;
-                        case "system_temp":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_SystemTemp", "Windows System Temp");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_SystemTemp", "Temporary system files located in C:\\Windows\\Temp");
-                            break;
-                        case "win_update":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_WinUpdate", "Windows Update Cache");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_WinUpdate", "Downloaded Windows Update installation files in SoftwareDistribution\\Download");
-                            break;
-                        case "thumbnails":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_Thumbnails", "Thumbnail Cache");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_Thumbnails", "Windows Explorer thumbnail cache databases (thumbcache_*.db)");
-                            break;
-                        case "recycle_bin":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_RecycleBin", "Empty Recycle Bin");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_RecycleBin", "Permanently deletes all files from recycle bins on all connected drives");
-                            break;
-                        case "memory_dumps":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_MemoryDumps", "Memory Dumps & BSOD Reports");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_MemoryDumps", "Crash memory dumps (MEMORY.DMP) and minidumps from blue screens");
-                            break;
-                        case "defender_temp":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_DefenderTemp", "Windows Defender Temp & Scans");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_DefenderTemp", "Temporary detection histories, operational support logs, and engine cache");
-                            break;
-                        case "dns_cache":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_DnsCache", "DNS Resolver Cache");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_DnsCache", "Flushes local DNS resolver cache to fix connection issues");
-                            break;
-                        case "error_reports":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_ErrorReports", "Windows Error Reporting (WER)");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_ErrorReports", "Archived crash reports, mini-dumps, and error reporting queues");
-                            break;
-                        case "delivery_opt":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_DeliveryOpt", "Delivery Optimization Cache");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_DeliveryOpt", "Peer-to-peer Windows Update delivery cache files");
-                            break;
-                        case "clipboard":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_Clipboard", "Windows Clipboard");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_Clipboard", "Clears all currently copied text, images, and data from memory clipboard");
-                            break;
-                        case "shellbags":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_Shellbags", "Explorer Shellbags");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_Shellbags", "Registry folder view settings, window positions, and explorer browsing history");
-                            break;
-                        case "mui_cache":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_MuiCache", "MUICache");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_MuiCache", "Registry cache of application names and executable strings");
-                            break;
-                        case "prefetch":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_Prefetch", "Windows Prefetch");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_Prefetch", "Execution cache files in C:\\Windows\\Prefetch");
-                            break;
-                        case "system_logs":
-                            item.Name = LocalizationHelper.Get("Cleaner_Item_SystemLogs", "System Event Logs");
-                            item.Description = LocalizationHelper.Get("Cleaner_Desc_SystemLogs", "Clears Windows event logs (Application, System, Security, Setup)");
-                            break;
+                        try
+                        {
+                            addon.Instance.OnLanguageChanged(langCode);
+                        }
+                        catch { }
                     }
+                    addon.RefreshMetadataFromInstance();
                 }
             }
 

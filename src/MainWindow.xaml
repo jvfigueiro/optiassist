@@ -111,39 +111,45 @@
                     <!-- Navigation Buttons -->
                     <StackPanel VerticalAlignment="Top" Margin="0,8,0,0">
                         <RadioButton x:Name="rbNavDashboard"
+                                     GroupName="SidebarNavGroup"
                                      Content="💻  Dashboard"
                                      Style="{StaticResource BtnNav}"
                                      IsChecked="True"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavPostInstall"
+                                     GroupName="SidebarNavGroup"
                                      Content="📦  App Manager"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavOptimization"
+                                     GroupName="SidebarNavGroup"
                                      Content="⚡  Optimization"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavShortcuts"
+                                     GroupName="SidebarNavGroup"
                                      Content="🛠️  Windows Tools"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
-                        <RadioButton x:Name="rbNavAddons"
-                                     Content="🧩  Add-ons"
-                                     Style="{StaticResource BtnNav}"
-                                     Click="NavButton_Click"/>
+                        <!-- Dynamic Add-on Modules Container -->
+                        <StackPanel x:Name="pnlSidebarAddons" />
                         <RadioButton x:Name="rbNavReport"
+                                     GroupName="SidebarNavGroup"
                                      Content="📋  Maintenance Report"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavTerminal"
+                                     GroupName="SidebarNavGroup"
                                      Content="⬛  Logs"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavSettings"
+                                     GroupName="SidebarNavGroup"
                                      Content="⚙️  Settings"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavAbout"
+                                     GroupName="SidebarNavGroup"
                                      Content="ℹ️  About"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
@@ -1174,327 +1180,9 @@
                     </StackPanel>
 
                     <!-- ================================================ -->
-                    <!-- TAB 4: ADD-ONS & MODULAR EXTENSIONS              -->
+                    <!-- DYNAMIC ADD-ON MODULE VIEW HOST                  -->
                     <!-- ================================================ -->
-                    <StackPanel x:Name="panelAddons" Visibility="Collapsed" Margin="4">
-                        <!-- Main Header -->
-                        <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtAddonsTitle"
-                                       Text="Add-ons &amp; Modular Extensions"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtAddonsSubtitle"
-                                       Text="Modular features and extensible tools stored in Config\Addons"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-
-                        <!-- Sub-tab Navigation (System Cleaner vs Manage Addons) -->
-                        <Border Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="4"
-                                Margin="0,0,0,10">
-                            <StackPanel Orientation="Horizontal">
-                                <Button x:Name="btnTabCleaner"
-                                        Content="🧹 System Cleaner"
-                                        Style="{StaticResource BtnAccent}"
-                                        Height="30"
-                                        Padding="14,0"
-                                        Margin="2,0"
-                                        Click="BtnTabCleaner_Click"/>
-                                <Button x:Name="btnTabAddonsManager"
-                                        Content="⚙️ Manage Add-ons"
-                                        Style="{StaticResource BtnDefault}"
-                                        Height="30"
-                                        Padding="14,0"
-                                        Margin="2,0"
-                                        Click="BtnTabAddonsManager_Click"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- SUB-VIEW 1: SYSTEM CLEANER & OPTIMIZER -->
-                        <StackPanel x:Name="panelSubCleaner" Visibility="Visible">
-                            <!-- Action Bar & Controls -->
-                            <Border Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="10"
-                                    Margin="0,0,0,10">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Main Actions (Scan & Clean) -->
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button x:Name="btnCleanerAnalyze"
-                                                Content="🔍 Scan &amp; Analyze"
-                                                Style="{StaticResource BtnDefault}"
-                                                Padding="14,0"
-                                                Height="32"
-                                                Margin="0,0,8,0"
-                                                Click="BtnCleanerAnalyze_Click"/>
-                                        <Button x:Name="btnCleanerClean"
-                                                Content="🧹 Clean Selected"
-                                                Style="{StaticResource BtnAccent}"
-                                                Padding="16,0"
-                                                Height="32"
-                                                Click="BtnCleanerClean_Click"/>
-                                    </StackPanel>
-
-                                    <!-- Selection Shortcuts -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button x:Name="btnCleanerSelectAll"
-                                                Content="Select All"
-                                                Style="{StaticResource BtnDefault}"
-                                                Padding="10,0"
-                                                Height="30"
-                                                Margin="0,0,4,0"
-                                                FontSize="11"
-                                                Click="BtnCleanerSelectAll_Click"/>
-                                        <Button x:Name="btnCleanerDeselectAll"
-                                                Content="Deselect All"
-                                                Style="{StaticResource BtnDefault}"
-                                                Padding="10,0"
-                                                Height="30"
-                                                Margin="0,0,4,0"
-                                                FontSize="11"
-                                                Click="BtnCleanerDeselectAll_Click"/>
-                                        <Button x:Name="btnCleanerSelectRecommended"
-                                                Content="Recommended"
-                                                Style="{StaticResource BtnDefault}"
-                                                Padding="10,0"
-                                                Height="30"
-                                                FontSize="11"
-                                                Click="BtnCleanerSelectRecommended_Click"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <!-- Status & Progress Summary Card -->
-                            <Border Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12"
-                                    Margin="0,0,0,10">
-                                <StackPanel>
-                                    <Grid Margin="0,0,0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="lblCleanerStatus"
-                                                   Grid.Column="0"
-                                                   Text="Ready to scan or clean. Select desired categories above."
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource BrushTextPrimary}"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBlock x:Name="lblCleanerTotalSize"
-                                                   Grid.Column="1"
-                                                   Text="0 B selected"
-                                                   FontSize="12"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource BrushAccent}"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                    <ProgressBar x:Name="pbCleanerProgress"
-                                                 Height="4"
-                                                 Margin="0,4,0,0"
-                                                 Visibility="Collapsed"
-                                                 IsIndeterminate="True"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Cleaning Categories Checklist (2-Column Grid of Cards) -->
-                            <ItemsControl x:Name="icCleanerItems">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="2"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource BrushBgCard}"
-                                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="10,8"
-                                                Margin="3">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <!-- CheckBox -->
-                                                <CheckBox Grid.Column="0"
-                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                          VerticalAlignment="Top"
-                                                          Margin="0,3,8,0"
-                                                          Checked="CleanerItemCheckbox_Changed"
-                                                          Unchecked="CleanerItemCheckbox_Changed"/>
-
-                                                <!-- Item Details -->
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Icon}" FontSize="12" Margin="0,0,5,0"/>
-                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding Description}"
-                                                               FontSize="10"
-                                                               Foreground="{DynamicResource BrushTextSecondary}"
-                                                               TextWrapping="Wrap"
-                                                               Margin="0,2,0,0"/>
-                                                </StackPanel>
-
-                                                <!-- Size / Status Badge -->
-                                                <Border Grid.Column="2"
-                                                        Background="{DynamicResource BrushBtnBg}"
-                                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="4"
-                                                        Padding="6,2"
-                                                        VerticalAlignment="Center"
-                                                        Margin="6,0,0,0">
-                                                    <TextBlock Text="{Binding SizeDisplay}"
-                                                               FontSize="10"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource BrushAccent}"/>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <!-- SUB-VIEW 2: MANAGE ADD-ONS & PLUGINS -->
-                        <StackPanel x:Name="panelSubAddonsManager" Visibility="Collapsed">
-                            <!-- Management Toolbar -->
-                            <Border Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="10"
-                                    Margin="0,0,0,10">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock x:Name="txtAddonsManagerTitle"
-                                                   Text="Installed Modules &amp; Plugins"
-                                                   FontWeight="Bold"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource BrushAccent}"/>
-                                        <TextBlock x:Name="txtAddonsManagerSubtitle"
-                                                   Text="Manage extensible components and drop new plugins into Config\Addons"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                                   Margin="0,2,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button x:Name="btnOpenAddonsFolder"
-                                                Content="📁 Open Add-ons Folder"
-                                                Style="{StaticResource BtnDefault}"
-                                                Padding="12,0"
-                                                Height="30"
-                                                Margin="0,0,8,0"
-                                                Click="BtnOpenAddonsFolder_Click"/>
-                                        <Button x:Name="btnReloadAddons"
-                                                Content="🔄 Reload Add-ons"
-                                                Style="{StaticResource BtnDefault}"
-                                                Padding="12,0"
-                                                Height="30"
-                                                Click="BtnReloadAddons_Click"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <!-- Addons List -->
-                            <ItemsControl x:Name="icAddonsList" Margin="0,0,0,10">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource BrushBgCard}"
-                                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="12"
-                                                Margin="0,0,0,8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <!-- Icon -->
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{Binding Icon}"
-                                                           FontSize="22"
-                                                           VerticalAlignment="Center"
-                                                           Margin="0,0,12,0"/>
-
-                                                <!-- Info -->
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                                        <TextBlock Text=" • " Foreground="{DynamicResource BrushTextMuted}" Margin="4,0"/>
-                                                        <TextBlock Text="{Binding Version}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                                        <TextBlock Text=" • " Foreground="{DynamicResource BrushTextMuted}" Margin="4,0"/>
-                                                        <TextBlock Text="{Binding Author}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
-                                                    <TextBlock Text="{Binding FolderPath}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}" Margin="0,3,0,0"/>
-                                                </StackPanel>
-
-                                                <!-- Enable/Disable Switch -->
-                                                <CheckBox Grid.Column="2"
-                                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                                          Content="Active"
-                                                          FontSize="11"
-                                                          VerticalAlignment="Center"
-                                                          Click="AddonEnableCheckbox_Click"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <!-- Developer / Technician Guide Card -->
-                            <Border Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12">
-                                <StackPanel>
-                                    <TextBlock x:Name="txtAddonsHelpTitle"
-                                               Text="💡 How to install new add-ons"
-                                               FontWeight="Bold"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource BrushAccent}"
-                                               Margin="0,0,0,4"/>
-                                    <TextBlock x:Name="txtAddonsHelpText"
-                                               Text="To install a new add-on, place its folder inside Config\Addons with an addon.json manifest. OptiAssist discovers and loads active modules automatically."
-                                               FontSize="11"
-                                               Foreground="{DynamicResource BrushTextSecondary}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </StackPanel>
+                    <Grid x:Name="panelAddonHost" Visibility="Collapsed" Margin="4" />
 
                     <!-- ================================================ -->
                     <!-- TAB 5: MAINTENANCE REPORT                      -->
@@ -1834,6 +1522,130 @@
                                     <Button x:Name="btnPresetYellow" Content="🟡 Yellow" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                     <Button x:Name="btnPresetPink" Content="🌸 Pink" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                 </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Section: Modular Add-ons & Plugins Management -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,8,0,0"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="txtAddonsManagerTitle"
+                                                   Text="🧩 Installed Modules &amp; Plugins"
+                                                   FontWeight="Bold"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource BrushAccent}"/>
+                                        <TextBlock x:Name="txtAddonsManagerSubtitle"
+                                                   Text="Manage external .dll modules stored in Config\Addons. Active modules appear directly in the sidebar menu."
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,2,0,0"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                        <Button x:Name="btnAddAddon"
+                                                Content="➕ Add Module"
+                                                Style="{StaticResource BtnAccent}"
+                                                Padding="12,0"
+                                                Height="30"
+                                                Margin="0,0,6,0"
+                                                Click="BtnAddAddon_Click"/>
+                                        <Button x:Name="btnOpenAddonsFolder"
+                                                Content="📁 Open Add-ons Folder"
+                                                Style="{StaticResource BtnDefault}"
+                                                Padding="12,0"
+                                                Height="30"
+                                                Margin="0,0,6,0"
+                                                Click="BtnOpenAddonsFolder_Click"/>
+                                        <Button x:Name="btnReloadAddons"
+                                                Content="🔄 Reload Add-ons"
+                                                Style="{StaticResource BtnDefault}"
+                                                Padding="12,0"
+                                                Height="30"
+                                                Click="BtnReloadAddons_Click"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Discovered Addon DLLs List -->
+                                <ItemsControl x:Name="icAddonsList" Margin="0,0,0,8">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource BrushBgPrimary}"
+                                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="6"
+                                                    Padding="12,10"
+                                                    Margin="0,0,0,6">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Icon -->
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding Icon}"
+                                                               FontSize="22"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,12,0"/>
+
+                                                    <!-- Info -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                            <TextBlock Text=" • v" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0"/>
+                                                            <TextBlock Text="{Binding Version}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                            <TextBlock Text=" • " Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0"/>
+                                                            <TextBlock Text="{Binding Author}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                                        <TextBlock Text="{Binding DisplayPath}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}" Margin="0,3,0,0"/>
+                                                    </StackPanel>
+
+                                                    <!-- Enable/Disable Switch + Remove Button -->
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                  Content="{Binding ActiveLabel}"
+                                                                  FontSize="11"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="0,0,12,0"
+                                                                  Click="AddonEnableCheckbox_Click"/>
+                                                        <Button Content="{Binding RemoveLabel}"
+                                                                Style="{StaticResource BtnDanger}"
+                                                                Height="26"
+                                                                Padding="10,0"
+                                                                FontSize="10"
+                                                                VerticalAlignment="Center"
+                                                                Click="BtnRemoveAddon_Click"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock x:Name="txtAddonsHelpTitle"
+                                           Text="💡 How to install new add-ons"
+                                           FontWeight="Bold"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,2,0,2"/>
+                                <TextBlock x:Name="txtAddonsHelpText"
+                                           Text="Modules are compiled .NET assemblies (.dll) located in Config\Addons\&lt;ModuleName&gt;\&lt;ModuleName&gt;.dll. Enabled modules integrate directly into the sidebar navigation."
+                                           FontSize="10"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
