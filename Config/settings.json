@@ -8,5 +8,6 @@
   "Theme": "Dark",
   "AccentColor": "#0EA5E9",
   "ServiceProviderMode": false,
-  "EnableMaintenanceReport": false
+  "EnableMaintenanceReport": false,
+  "DisabledAddons": ""
 }

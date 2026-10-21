@@ -30,3 +30,4 @@
     <Delete Files="$(OutputPath)mscorlib.dll;$(OutputPath)normidna.nlp;$(OutputPath)normnfc.nlp;$(OutputPath)normnfd.nlp;$(OutputPath)normnfkc.nlp;$(OutputPath)normnfkd.nlp" />
   </Target>
 </Project>
+

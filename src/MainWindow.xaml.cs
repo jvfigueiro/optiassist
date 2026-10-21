@@ -1260,7 +1260,7 @@ namespace OptiAssist
                 if (!entry.IsEnabled) continue;
 
                 RadioButton rb = new RadioButton();
-                rb.Style = (Style)FindResource("NavRadioButtonStyle");
+                rb.Style = (Style)FindResource("BtnNav");
                 rb.GroupName = "SidebarNavGroup";
                 rb.Tag = entry;
                 rb.Content = string.Format("{0}  {1}", entry.Icon, entry.Name);
