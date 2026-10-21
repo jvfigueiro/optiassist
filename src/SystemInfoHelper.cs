@@ -397,45 +397,188 @@ namespace OptiAssist
                 }
             }
 
-            // 10. BitLocker
+            // 10. BitLocker & Device Encryption
+            DetectBitLockerStatus(summary);
+
+            return summary;
+        }
+
+        private static void DetectBitLockerStatus(HardwareSummary summary)
+        {
+            string sysDrive = "C:";
             try
             {
-                ManagementScope scope = new ManagementScope(@"\\.\root\cimv2\Security\MicrosoftVolumeEncryption");
+                string sysDir = Environment.SystemDirectory;
+                if (!string.IsNullOrEmpty(sysDir))
+                {
+                    string root = Path.GetPathRoot(sysDir);
+                    if (!string.IsNullOrEmpty(root))
+                        sysDrive = root.TrimEnd('\\');
+                }
+            }
+            catch { }
+
+            // Method 1: WMI query to MicrosoftVolumeEncryption with PacketPrivacy
+            try
+            {
+                ConnectionOptions options = new ConnectionOptions
+                {
+                    Impersonation = ImpersonationLevel.Impersonate,
+                    Authentication = AuthenticationLevel.PacketPrivacy,
+                    EnablePrivileges = true,
+                    Timeout = TimeSpan.FromSeconds(3)
+                };
+
+                ManagementScope scope = new ManagementScope(@"\\.\root\cimv2\Security\MicrosoftVolumeEncryption", options);
                 scope.Connect();
-                ObjectQuery query = new ObjectQuery("SELECT DriveLetter, ProtectionStatus FROM Win32_EncryptableVolume WHERE DriveLetter = 'C:'");
+
+                ObjectQuery query = new ObjectQuery("SELECT DeviceID, DriveLetter, ProtectionStatus, ConversionStatus, EncryptionMethod, VolumeType FROM Win32_EncryptableVolume");
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query))
                 {
-                    bool found = false;
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        int prot = mo["ProtectionStatus"] != null ? Convert.ToInt32(mo["ProtectionStatus"]) : 0;
-                        if (prot == 1)
+                        string dl = mo["DriveLetter"] != null ? mo["DriveLetter"].ToString() : "";
+                        int volType = mo["VolumeType"] != null ? Convert.ToInt32(mo["VolumeType"]) : -1;
+
+                        // Match system drive letter or OS volume (VolumeType == 0)
+                        bool isTargetVolume = string.Equals(dl, sysDrive, StringComparison.OrdinalIgnoreCase) ||
+                                              string.Equals(dl, "C:", StringComparison.OrdinalIgnoreCase) ||
+                                              volType == 0;
+
+                        if (isTargetVolume)
                         {
-                            summary.BitLockerStatus = "Active";
-                            summary.BitLockerActive = true;
+                            int protectionStatus = 0;
+                            int conversionStatus = 0;
+                            int encryptionMethod = 0;
+
+                            // Check ProtectionStatus (property or method call)
+                            if (mo["ProtectionStatus"] != null)
+                            {
+                                int.TryParse(mo["ProtectionStatus"].ToString(), out protectionStatus);
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    ManagementBaseObject outParams = mo.InvokeMethod("GetProtectionStatus", null, null);
+                                    if (outParams != null && outParams["ProtectionStatus"] != null)
+                                    {
+                                        int.TryParse(outParams["ProtectionStatus"].ToString(), out protectionStatus);
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            // Check ConversionStatus (property or method call)
+                            if (mo["ConversionStatus"] != null)
+                            {
+                                int.TryParse(mo["ConversionStatus"].ToString(), out conversionStatus);
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    ManagementBaseObject outParams = mo.InvokeMethod("GetConversionStatus", null, null);
+                                    if (outParams != null && outParams["ConversionStatus"] != null)
+                                    {
+                                        int.TryParse(outParams["ConversionStatus"].ToString(), out conversionStatus);
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            // Check EncryptionMethod (0 = None, 1..7 = AES/XTS-AES)
+                            if (mo["EncryptionMethod"] != null)
+                            {
+                                int.TryParse(mo["EncryptionMethod"].ToString(), out encryptionMethod);
+                            }
+
+                            // Active if: Protection is ON (1), or volume is Encrypted/Encrypting (1, 2), or Method is active
+                            // On clean Windows 11 installs, Device Encryption pre-provisions the drive (ConversionStatus = 1, ProtectionStatus = 0)
+                            if (protectionStatus == 1 || conversionStatus == 1 || conversionStatus == 2 || encryptionMethod > 0)
+                            {
+                                summary.BitLockerStatus = "Active";
+                                summary.BitLockerActive = true;
+                                return;
+                            }
+                            else if (protectionStatus == 0 && conversionStatus == 0 && encryptionMethod == 0)
+                            {
+                                summary.BitLockerStatus = "Inactive";
+                                summary.BitLockerActive = false;
+                                return;
+                            }
                         }
-                        else
-                        {
-                            summary.BitLockerStatus = "Inactive";
-                            summary.BitLockerActive = false;
-                        }
-                        found = true;
-                        break;
-                    }
-                    if (!found)
-                    {
-                        summary.BitLockerStatus = "Inactive";
-                        summary.BitLockerActive = false;
                     }
                 }
             }
             catch
             {
-                summary.BitLockerStatus = "Unavailable / Not supported";
-                summary.BitLockerActive = false;
+                // Proceed to manage-bde fallback
             }
 
-            return summary;
+            // Method 2: Native manage-bde.exe status fallback
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(Environment.SystemDirectory, "manage-bde.exe"),
+                    Arguments = string.Format("-status {0}", sysDrive),
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (Process proc = Process.Start(psi))
+                {
+                    if (proc != null)
+                    {
+                        string output = proc.StandardOutput.ReadToEnd();
+                        proc.WaitForExit(3000);
+
+                        if (!string.IsNullOrWhiteSpace(output))
+                        {
+                            string lower = output.ToLowerInvariant();
+
+                            // Look for encryption markers in English and Portuguese
+                            bool isEncrypted = lower.Contains("fully encrypted") ||
+                                               lower.Contains("totalmente criptografado") ||
+                                               lower.Contains("encryption in progress") ||
+                                               lower.Contains("criptografia em andamento") ||
+                                               lower.Contains("protection on") ||
+                                               lower.Contains("proteção ativada") ||
+                                               lower.Contains("percentage encrypted: 100") ||
+                                               lower.Contains("percentual criptografado: 100") ||
+                                               lower.Contains("xts-aes") ||
+                                               lower.Contains("aes-");
+
+                            bool isDecrypted = (lower.Contains("fully decrypted") || lower.Contains("totalmente descriptografado")) &&
+                                               (lower.Contains("protection off") || lower.Contains("proteção desativada"));
+
+                            if (isEncrypted)
+                            {
+                                summary.BitLockerStatus = "Active";
+                                summary.BitLockerActive = true;
+                                return;
+                            }
+                            else if (isDecrypted)
+                            {
+                                summary.BitLockerStatus = "Inactive";
+                                summary.BitLockerActive = false;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback failed
+            }
+
+            // Default fallback if BitLocker is unavailable or not supported
+            summary.BitLockerStatus = "Unavailable / Not supported";
+            summary.BitLockerActive = false;
         }
 
         public static WinSatScores GetWinSatScores()
