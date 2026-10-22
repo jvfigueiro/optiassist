@@ -29,3 +29,4 @@
   "Msg_ReportSaved": "Report saved successfully!\n\nFile: {0}\n\nDo you want to open the report file now?",
   "Msg_ReportCopied": "Full maintenance report copied to clipboard!\nYou can paste it into WhatsApp, email, or your management system."
 }
+

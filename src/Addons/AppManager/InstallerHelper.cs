@@ -980,3 +980,4 @@ namespace OptiAssist.Addons.AppManager
         }
     }
 }
+

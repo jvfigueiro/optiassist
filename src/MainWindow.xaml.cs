@@ -776,35 +776,7 @@ namespace OptiAssist
                 }
             }
 
-            if (pnlSidebarAppManager != null && string.IsNullOrEmpty(previouslySelectedAddonId))
-            {
-                foreach (object child in pnlSidebarAppManager.Children)
-                {
-                    RadioButton existingRb = child as RadioButton;
-                    if (existingRb != null && existingRb.IsChecked == true && existingRb.Tag is AddonEntry)
-                    {
-                        previouslySelectedAddonId = ((AddonEntry)existingRb.Tag).Id;
-                        break;
-                    }
-                }
-            }
-
-            if (pnlSidebarToolbox != null && string.IsNullOrEmpty(previouslySelectedAddonId))
-            {
-                foreach (object child in pnlSidebarToolbox.Children)
-                {
-                    RadioButton existingRb = child as RadioButton;
-                    if (existingRb != null && existingRb.IsChecked == true && existingRb.Tag is AddonEntry)
-                    {
-                        previouslySelectedAddonId = ((AddonEntry)existingRb.Tag).Id;
-                        break;
-                    }
-                }
-            }
-
             pnlSidebarAddons.Children.Clear();
-            if (pnlSidebarAppManager != null) pnlSidebarAppManager.Children.Clear();
-            if (pnlSidebarToolbox != null) pnlSidebarToolbox.Children.Clear();
 
             if (_addons == null) return;
 
@@ -824,19 +796,7 @@ namespace OptiAssist
                 rb.Click += NavButton_Click;
 
                 entry.SidebarButton = rb;
-
-                if (pnlSidebarAppManager != null && string.Equals(entry.Id, "app-manager", StringComparison.OrdinalIgnoreCase))
-                {
-                    pnlSidebarAppManager.Children.Add(rb);
-                }
-                else if (pnlSidebarToolbox != null && string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
-                {
-                    pnlSidebarToolbox.Children.Add(rb);
-                }
-                else
-                {
-                    pnlSidebarAddons.Children.Add(rb);
-                }
+                pnlSidebarAddons.Children.Add(rb);
 
                 if (!string.IsNullOrEmpty(previouslySelectedAddonId) &&
                     string.Equals(entry.Id, previouslySelectedAddonId, StringComparison.OrdinalIgnoreCase))

@@ -130,22 +130,30 @@
                                      Style="{StaticResource BtnNav}"
                                      IsChecked="True"
                                      Click="NavButton_Click"/>
-                        <!-- Dynamic App Manager Container -->
-                        <StackPanel x:Name="pnlSidebarAppManager" />
-                        <!-- Dynamic Toolbox Container (Between App Manager and Windows Tools) -->
-                        <StackPanel x:Name="pnlSidebarToolbox" />
                         <RadioButton x:Name="rbNavShortcuts"
                                      GroupName="SidebarNavGroup"
                                      Content="🛠️  Windows Tools"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
-                        <!-- Dynamic Add-on Modules Container -->
-                        <StackPanel x:Name="pnlSidebarAddons" />
                         <RadioButton x:Name="rbNavTerminal"
                                      GroupName="SidebarNavGroup"
                                      Content="⬛  Logs"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
+
+                        <!-- Separator -->
+                        <Border Height="1"
+                                Background="{DynamicResource BrushBorderCard}"
+                                Margin="12,6"/>
+
+                        <!-- Dynamic Add-on Modules Container -->
+                        <StackPanel x:Name="pnlSidebarAddons" />
+
+                        <!-- Separator -->
+                        <Border Height="1"
+                                Background="{DynamicResource BrushBorderCard}"
+                                Margin="12,6"/>
+
                         <RadioButton x:Name="rbNavSettings"
                                      GroupName="SidebarNavGroup"
                                      Content="⚙️  Settings"

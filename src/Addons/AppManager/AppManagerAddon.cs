@@ -1592,3 +1592,4 @@ namespace OptiAssist.Addons.AppManager
         }
     }
 }
+

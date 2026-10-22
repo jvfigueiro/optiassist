@@ -5,11 +5,11 @@
   "ReportSavePath": "C:\\MaintenanceReport.txt",
   "AutoRefreshHardware": true,
   "EnableWingetFallback": true,
-  "Theme": "Light",
+  "Theme": "Dark",
   "AccentColor": "#0EA5E9",
   "ServiceProviderMode": true,
   "EnableMaintenanceReport": false,
   "OpenExternalLogsByDefault": false,
   "CustomLogoPath": "",
-  "DisabledAddons": ""
+  "DisabledAddons": "app-manager"
 }

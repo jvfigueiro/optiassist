@@ -46,3 +46,4 @@
   "Msg_CategoryDeleted": "Category '{0}' and {1} action(s) deleted successfully.",
   "Msg_CategoryAdded": "Category '{0}' created! Fill in the first action to save it."
 }
+
