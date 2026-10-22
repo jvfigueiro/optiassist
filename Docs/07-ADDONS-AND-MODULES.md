@@ -128,3 +128,15 @@ Config/Addons/MaintenanceReport/MaintenanceReport.dll
 - **Service Provider Branding**: Reads `CustomerName` and `ContactInfo` from `IOptiAssistHost.Settings` when Service Provider Mode is enabled.
 - **8-Point Maintenance Checklist**: Disk SMART check, internal cleaning & thermal paste, clean Windows format, driver/BIOS update, essential apps installation, temporary file cleanup, DISM/SFC repair, and network/printer setup.
 - **Technical Observations & Report Generation**: Issues timestamped `.txt` reports into `Reports/`, optionally saves a copy on the customer's machine (`ReportSavePath`), or copies the full formatted report directly to the Windows Clipboard.
+
+---
+
+## 5. Built-in Module: Toolbox (`Config/Addons/Toolbox/Toolbox.dll`)
+
+The **Toolbox** module (`src/Addons/Toolbox/`) allows users to create, categorize, persist, and execute custom system commands (`cmd`, `powershell`, or standalone `binary` executables) with real-time `stdout`/`stderr` streaming and exit-code reporting.
+
+### Clean Layered Architecture
+- **[`ToolboxModels.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxModels.cs)**: Data model (`ToolboxCommandItem`) with field validation (`Validate()`) and execution result container (`ToolboxExecutionResult`).
+- **[`ToolboxStorageManager.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxStorageManager.cs)**: RFC-8259 JSON persistence manager storing commands in `Config/Addons/Toolbox/toolbox.json` and providing default factory presets (`chkdsk C:`, `sfc /scannow`, `DISM /Online /Cleanup-Image /RestoreHealth`, `ipconfig /flushdns`, `netsh winsock reset`, PowerShell port listener inspection, `compact.exe /CompactOS:query`, `powercfg.exe /list`).
+- **[`ToolboxProcessRunner.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxProcessRunner.cs)**: Asynchronous worker-thread process runner supporting live line-by-line `stdout`/`stderr` streaming, process tree termination (`taskkill /T /F`), timeout enforcement (`timeout_seconds`), UAC elevation cancellation handling (`Win32Exception` 1223), and missing binary detection (`Win32Exception` 2/3 & exit code 9009).
+- **[`ToolboxAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxAddon.cs)**: WPF view with dynamic collapsible category accordions (`Expander`), search filter, full CRUD editor form, `🛡️ Admin` shield badges, and a docked real-time output console.

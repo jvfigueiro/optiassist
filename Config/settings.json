@@ -7,7 +7,7 @@
   "EnableWingetFallback": true,
   "Theme": "Dark",
   "AccentColor": "#0EA5E9",
-  "ServiceProviderMode": true,
+  "ServiceProviderMode": false,
   "EnableMaintenanceReport": true,
   "DisabledAddons": ""
 }

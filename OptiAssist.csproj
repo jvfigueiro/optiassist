@@ -63,5 +63,6 @@
     <Delete Files="mscorlib.dll;normidna.nlp;normnfc.nlp;normnfd.nlp;normnfkc.nlp;normnfkd.nlp" />
     <MSBuild Projects="src\Addons\SystemCleaner\SystemCleaner.csproj" Properties="Configuration=$(Configuration);Platform=$(Platform)" />
     <MSBuild Projects="src\Addons\MaintenanceReport\MaintenanceReport.csproj" Properties="Configuration=$(Configuration);Platform=$(Platform)" />
+    <MSBuild Projects="src\Addons\Toolbox\Toolbox.csproj" Properties="Configuration=$(Configuration);Platform=$(Platform)" />
   </Target>
 </Project>

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "preset-chkdsk-c",
+    "title": "Verificar Integridade do Disco (CHKDSK C:)",
+    "description": "Executa verificação somente-leitura de erros lógicos no sistema de arquivos da unidade C:",
+    "command": "chkdsk C:",
+    "category": "Correção de Erros",
+    "shell": "cmd",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": true,
+    "timeout_seconds": 600
+  },
+  {
+    "id": "preset-sfc-scannow",
+    "title": "Verificar Arquivos do Sistema (SFC /scannow)",
+    "description": "Escaneia e repara arquivos protegidos corrompidos do Windows usando o System File Checker",
+    "command": "sfc /scannow",
+    "category": "Correção de Erros",
+    "shell": "cmd",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": true,
+    "timeout_seconds": 1800
+  },
+  {
+    "id": "preset-dism-restorehealth",
+    "title": "Reparar Imagem do Windows (DISM RestoreHealth)",
+    "description": "Verifica e repara a loja de componentes do Windows (WinSxS) via DISM",
+    "command": "DISM /Online /Cleanup-Image /RestoreHealth",
+    "category": "Correção de Erros",
+    "shell": "cmd",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": true,
+    "timeout_seconds": 1800
+  },
+  {
+    "id": "preset-ipconfig-flushdns",
+    "title": "Limpar Cache DNS (Flush DNS)",
+    "description": "Esvazia o cache de resolução de nomes DNS do Windows",
+    "command": "ipconfig /flushdns",
+    "category": "Rede",
+    "shell": "cmd",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": false,
+    "timeout_seconds": 30
+  },
+  {
+    "id": "preset-netsh-winsock-reset",
+    "title": "Redefinir Catálogo Winsock e TCP/IP",
+    "description": "Restaura o catálogo Winsock e a pilha TCP/IP para corrigir falhas de conectividade",
+    "command": "netsh winsock reset && netsh int ip reset",
+    "category": "Rede",
+    "shell": "cmd",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": true,
+    "timeout_seconds": 60
+  },
+  {
+    "id": "preset-ps-listening-ports",
+    "title": "Listar Portas TCP Abertas (Listening)",
+    "description": "Consulta via PowerShell todas as portas TCP em estado Listen e os respectivos PIDs",
+    "command": "Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort | Format-Table -AutoSize",
+    "category": "Rede",
+    "shell": "powershell",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": false,
+    "timeout_seconds": 30
+  },
+  {
+    "id": "preset-compactos-query",
+    "title": "Consultar Estado de Compactação (CompactOS)",
+    "description": "Verifica se os binários do sistema operacional estão compactados via compact.exe",
+    "command": "compact.exe /CompactOS:query",
+    "category": "Otimização",
+    "shell": "binary",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": true,
+    "timeout_seconds": 60
+  },
+  {
+    "id": "preset-powercfg-list",
+    "title": "Listar Planos de Energia Ativos (PowerCfg)",
+    "description": "Exibe todos os esquemas de energia disponíveis e destaca o plano ativo no sistema",
+    "command": "powercfg.exe /list",
+    "category": "Otimização",
+    "shell": "binary",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": false,
+    "timeout_seconds": 30
+  }
+]
