@@ -116,11 +116,14 @@
 - **Collapsible Category Accordions & Category Manager**:
   - Commands are dynamically grouped into expandable category sections (`Expander`).
   - Integrated Category Manager modal: Add new categories, Rename existing categories (with automatic cascading update across all member commands), and Delete categories.
-- **Pre-Configured System Repair & Optimization Presets**:
-  - **System Integrity**: SFC (`sfc /scannow`), DISM (`DISM /Online /Cleanup-Image /RestoreHealth`), Disk Check (`chkdsk C:`).
-  - **Network & Connectivity**: Full Network Reset (`flushdns`, `winsock reset`, `int ip reset`), Network Printer RPC 0x11b/0x709 registry fix, TCP Port Listener inspection.
-  - **Windows Performance & Tuning**: Dual Boot UTC Clock fix (`RealTimeIsUniversal`), CompactOS filesystem compression (`compact.exe /CompactOS:always`), WinSAT Benchmark, Microsoft Store Repair (`wsreset -i`), Visual Effects optimization, and Telemetry service disabling.
-  - **Custom Scripts**: Integrated with `Config/Addons/Toolbox/Scripts/` (`tweaks_interface.ps1`, `fix_printer_rpc.reg`, `reset_network.bat`).
+- **40+ Pre-Configured System Repair & Optimization Presets**:
+  - **Ferramentas da Comunidade**: Integrated launcher for Chris Titus Tech WinUtil utility.
+  - **Integridade e Reparos**: SFC scannow, DISM RestoreHealth, DISM+SFC combo, Chkdsk C:, Network Printer RPC fix (0x11b/0x709), Dual Boot UTC Clock fix, Microsoft Store Repair (`wsreset -i`), WinGet Package Manager recovery, Windows Update Full Service & Cache Reset.
+  - **Rede e Conectividade**: Flush DNS, Winsock & TCP/IP stack reset, Full DHCP & IP reset, TCP Listening Port audit.
+  - **Tweaks Essenciais**: Disable Consumer Features & sponsored apps, Disable Delivery Optimization P2P, Disable BitLocker encryption on C:, Enable Taskbar "End Task" on right click, Disable Hibernation (`hiberfil.sys`), Comprehensive Windows Telemetry & Diagnostic disablement, Remove Widgets / WebExperience, Disable OEM BIOS WPBT execution, Background service optimization & SvcHost Split Threshold RAM tuning, Disable Activity History feed.
+  - **Tweaks Avançados**: Globally Disable Background Apps, Remove & Disable Windows AI (Copilot, Recall, Notepad AI), Disable Storage Sense auto-purge, Disable Reserved Storage (freeing 7-10 GB), Brave Browser Debloat (Crypto, VPN, Leo AI), Microsoft Edge Debloat (Shopping, Telemetry, Promos).
+  - **Preferências e Interface**: Maximize Visual FX Performance (50ms menu delay, disable animations), Disable Bing Search in Start Menu, Disable Mouse Pointer Acceleration (raw 1:1 input).
+  - **Otimização e Desempenho**: Clean %TEMP% & Windows Temp, Clean Windows Update Download Cache, Disable Diagnostic Telemetry services, Query & Apply CompactOS binary compression, WinSAT Formal hardware benchmark, PowerCfg active schemes audit.
 - **Options Drawer & Edit Mode**:
   - **➕ New Toolbox**: Modal dialog with field validation, shell picker, execution settings, and external log pop-out preference.
   - **🔄 Restore Presets**: Restores factory default commands and categories.

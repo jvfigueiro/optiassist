@@ -10,5 +10,6 @@
   "ServiceProviderMode": true,
   "EnableMaintenanceReport": false,
   "OpenExternalLogsByDefault": false,
+  "CustomLogoPath": "",
   "DisabledAddons": ""
 }
