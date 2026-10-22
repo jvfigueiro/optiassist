@@ -26,6 +26,11 @@ namespace OptiAssist
         public static string GetScriptsDirectory()
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string toolboxScripts = Path.Combine(baseDir, "Config", "Addons", "Toolbox", "Scripts");
+            if (Directory.Exists(toolboxScripts))
+            {
+                return toolboxScripts;
+            }
             string scriptsDir = Path.Combine(baseDir, "Scripts");
             if (!Directory.Exists(scriptsDir))
             {

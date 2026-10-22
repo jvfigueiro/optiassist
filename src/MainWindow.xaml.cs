@@ -123,6 +123,10 @@ namespace OptiAssist
             else if (rb == rbNavTerminal)
             {
                 panelTerminal.Visibility = Visibility.Visible;
+                if (_settings != null && _settings.OpenExternalLogsByDefault)
+                {
+                    OpenExternalLogWindow();
+                }
             }
             else if (rb == rbNavSettings)
             {
@@ -150,6 +154,49 @@ namespace OptiAssist
         #endregion
 
         #region CONSOLE & TERMINAL LOGGING
+        private LogWindow _externalLogWindow;
+
+        public void OpenExternalLogWindow()
+        {
+            if (_externalLogWindow == null)
+            {
+                _externalLogWindow = new LogWindow(this);
+                _externalLogWindow.SetLogText(txtConsoleLog != null ? txtConsoleLog.Text : "");
+                _externalLogWindow.Show();
+            }
+            else
+            {
+                if (_externalLogWindow.WindowState == WindowState.Minimized)
+                {
+                    _externalLogWindow.WindowState = WindowState.Normal;
+                }
+                _externalLogWindow.Activate();
+            }
+        }
+
+        public void OnExternalLogWindowClosed()
+        {
+            _externalLogWindow = null;
+        }
+
+        public void ClearMainLogConsole()
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(new Action(ClearMainLogConsole));
+                return;
+            }
+            if (txtConsoleLog != null)
+            {
+                txtConsoleLog.Clear();
+            }
+        }
+
+        private void BtnPopoutLog_Click(object sender, RoutedEventArgs e)
+        {
+            OpenExternalLogWindow();
+        }
+
         public void Log(string message)
         {
             if (!Dispatcher.CheckAccess())
@@ -161,11 +208,20 @@ namespace OptiAssist
             txtConsoleLog.AppendText(message + Environment.NewLine);
             txtConsoleLog.CaretIndex = txtConsoleLog.Text.Length;
             txtConsoleLog.ScrollToEnd();
+
+            if (_externalLogWindow != null)
+            {
+                _externalLogWindow.AppendLog(message);
+            }
         }
 
         private void BtnClearLog_Click(object sender, RoutedEventArgs e)
         {
             txtConsoleLog.Clear();
+            if (_externalLogWindow != null)
+            {
+                _externalLogWindow.ClearLog();
+            }
         }
 
         private void BtnCopyLog_Click(object sender, RoutedEventArgs e)
@@ -219,6 +275,7 @@ namespace OptiAssist
                 txtSettingPhone.Text = _settings.ContactInfo;
                 if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
                 if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
+                if (chkSettingExternalLogs != null) chkSettingExternalLogs.IsChecked = _settings.OpenExternalLogsByDefault;
 
                 string currentLang = string.IsNullOrEmpty(_settings.Language) ? "en-US" : _settings.Language;
                 ApplyLanguage(currentLang);
@@ -1285,6 +1342,32 @@ namespace OptiAssist
             }
         }
 
+        public bool NavigateToAddon(string addonId)
+        {
+            if (_addons == null) return false;
+            foreach (AddonEntry entry in _addons)
+            {
+                if (entry != null && string.Equals(entry.Id, addonId, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (entry.SidebarButton != null)
+                    {
+                        entry.SidebarButton.IsChecked = true;
+                        NavButton_Click(entry.SidebarButton, new RoutedEventArgs());
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private void BtnTaskToolbox_Click(object sender, RoutedEventArgs e)
+        {
+            if (!NavigateToAddon("toolbox"))
+            {
+                Log("[Toolbox] Module not loaded or disabled in Settings.");
+            }
+        }
+
         private void BtnAddAddon_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1510,6 +1593,11 @@ namespace OptiAssist
                 btnRebootBios.Content = LocalizationHelper.Get("Task_RebootBios", "⚡ Reboot to UEFI");
                 btnRebootBios.ToolTip = LocalizationHelper.Get("Tooltip_TaskRebootBios", "Restart computer directly into BIOS / UEFI");
             }
+            if (btnTaskToolbox != null)
+            {
+                btnTaskToolbox.Content = LocalizationHelper.Get("Task_Toolbox", "🧰 Toolbox");
+                btnTaskToolbox.ToolTip = LocalizationHelper.Get("Tooltip_TaskToolbox", "Open Toolbox custom actions and tools");
+            }
 
             // 3. App Manager (PostInstall)
             if (txtPostInstallTitle != null) txtPostInstallTitle.Text = LocalizationHelper.Get("PostInstall_Title", "App Manager");
@@ -1661,6 +1749,11 @@ namespace OptiAssist
             // 7. Logs
             if (txtLogsTitle != null) txtLogsTitle.Text = LocalizationHelper.Get("Logs_Title", "⬛ Logs");
             if (txtLogsSub != null) txtLogsSub.Text = LocalizationHelper.Get("Logs_Subtitle", "Real-time log of diagnostics, scripts, and system executions");
+            if (btnPopoutLog != null)
+            {
+                btnPopoutLog.Content = LocalizationHelper.Get("Btn_PopoutLog", "🗗 Pop-out Logs");
+                btnPopoutLog.ToolTip = LocalizationHelper.Get("Tooltip_PopoutLog", "Open Logs in a separate floating window");
+            }
             if (btnExportLog != null) btnExportLog.Content = LocalizationHelper.Get("Btn_ExportLog", "💾 Export Log");
             if (btnCopyAllLog != null) btnCopyAllLog.Content = LocalizationHelper.Get("Btn_CopyAllLog", "📋 Copy All");
             if (btnClearLog != null) btnClearLog.Content = LocalizationHelper.Get("Btn_ClearLog", "🗑️ Clear Console");
@@ -1681,6 +1774,7 @@ namespace OptiAssist
 
             if (chkSettingWinget != null) chkSettingWinget.Content = LocalizationHelper.Get("Settings_Chk_WingetFallback", "Enable Winget download fallback when program is not in PostInstall folder");
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.Content = LocalizationHelper.Get("Settings_Chk_AutoRefresh", "Automatically refresh hardware specs on startup");
+            if (chkSettingExternalLogs != null) chkSettingExternalLogs.Content = LocalizationHelper.Get("Settings_Chk_ExternalLogs", "Open external Logs window by default");
             if (btnSaveSettings != null) btnSaveSettings.Content = LocalizationHelper.Get("Btn_SaveSettings", "💾 Save Settings");
             if (btnResetSettings != null) btnResetSettings.Content = LocalizationHelper.Get("Btn_ResetSettings", "🔄 Restore Defaults");
             if (btnCreateAutorun != null)
@@ -1877,6 +1971,17 @@ namespace OptiAssist
             Log(string.Format("[CONFIG] AutoRefreshHardware updated to {0} and saved to settings.json.", _settings.AutoRefreshHardware));
         }
 
+        private void ChkSettingExternalLogs_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings) return;
+
+            if (_settings == null) _settings = SettingsHelper.Load();
+            _settings.OpenExternalLogsByDefault = chkSettingExternalLogs.IsChecked == true;
+            SettingsHelper.Save(_settings);
+
+            Log(string.Format("[CONFIG] OpenExternalLogsByDefault updated to {0} and saved to settings.json.", _settings.OpenExternalLogsByDefault));
+        }
+
         private void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
         {
             if (_settings == null) _settings = new AppSettings();
@@ -1885,6 +1990,7 @@ namespace OptiAssist
             _settings.ContactInfo = txtSettingPhone.Text.Trim();
             _settings.EnableWingetFallback = chkSettingWinget.IsChecked == true;
             _settings.AutoRefreshHardware = chkSettingAutoRefresh.IsChecked == true;
+            _settings.OpenExternalLogsByDefault = chkSettingExternalLogs != null && chkSettingExternalLogs.IsChecked == true;
             _settings.AccentColor = txtSettingAccentColor.Text.Trim();
 
             SettingsHelper.Save(_settings);

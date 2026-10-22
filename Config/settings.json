@@ -1,13 +1,13 @@
 ﻿{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
-  "Language": "pt-BR",
+  "Language": "en-US",
   "ReportSavePath": "C:\\MaintenanceReport.txt",
   "AutoRefreshHardware": true,
   "EnableWingetFallback": true,
   "Theme": "Dark",
   "AccentColor": "#0EA5E9",
   "ServiceProviderMode": false,
-  "EnableMaintenanceReport": true,
+  "EnableMaintenanceReport": false,
   "DisabledAddons": ""
 }

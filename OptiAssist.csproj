@@ -55,6 +55,7 @@
     <Compile Include="src\ShortcutsHelper.cs" />
     <Compile Include="src\LocalizationHelper.cs" />
     <Compile Include="src\AddonHelper.cs" />
+    <Compile Include="src\LogWindow.cs" />
     <Resource Include="src\app.ico" />
     <Resource Include="src\app.png" />
   </ItemGroup>

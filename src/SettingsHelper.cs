@@ -17,6 +17,7 @@ namespace OptiAssist
         public string AccentColor { get; set; }
         public bool ServiceProviderMode { get; set; }
         public bool EnableMaintenanceReport { get; set; }
+        public bool OpenExternalLogsByDefault { get; set; }
         public List<string> DisabledAddons { get; set; }
 
         // A new instance always holds the factory default values
@@ -32,6 +33,7 @@ namespace OptiAssist
             AccentColor = "#0EA5E9";
             ServiceProviderMode = false;
             EnableMaintenanceReport = false;
+            OpenExternalLogsByDefault = false;
             DisabledAddons = new List<string>();
         }
     }
@@ -97,6 +99,11 @@ namespace OptiAssist
                     bool b;
                     if (bool.TryParse(dict["EnableMaintenanceReport"], out b)) settings.EnableMaintenanceReport = b;
                 }
+                if (dict.ContainsKey("OpenExternalLogsByDefault"))
+                {
+                    bool b;
+                    if (bool.TryParse(dict["OpenExternalLogsByDefault"], out b)) settings.OpenExternalLogsByDefault = b;
+                }
                 if (dict.ContainsKey("DisabledAddons"))
                 {
                     string val = dict["DisabledAddons"];
@@ -139,6 +146,7 @@ namespace OptiAssist
                 sb.AppendLine(string.Format("  \"AccentColor\": \"{0}\",", EscapeJson(settings.AccentColor)));
                 sb.AppendLine(string.Format("  \"ServiceProviderMode\": {0},", settings.ServiceProviderMode ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"EnableMaintenanceReport\": {0},", settings.EnableMaintenanceReport ? "true" : "false"));
+                sb.AppendLine(string.Format("  \"OpenExternalLogsByDefault\": {0},", settings.OpenExternalLogsByDefault ? "true" : "false"));
                 string disabledStr = settings.DisabledAddons != null ? string.Join(",", settings.DisabledAddons.ToArray()) : "";
                 sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\"", EscapeJson(disabledStr)));
                 sb.AppendLine("}");

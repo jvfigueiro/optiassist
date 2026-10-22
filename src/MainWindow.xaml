@@ -388,6 +388,12 @@
                                             Height="34" Margin="3" FontSize="11"
                                             ToolTip="Open System Properties (sysdm.cpl)"
                                             Click="BtnSysDm_Click"/>
+                                    <Button x:Name="btnTaskToolbox"
+                                            Content="🧰 Toolbox"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Open Toolbox custom actions and tools"
+                                            Click="BtnTaskToolbox_Click"/>
                                     <Button x:Name="btnRebootBios"
                                             Content="⚡ Reboot to UEFI"
                                             Style="{StaticResource BtnDanger}"
@@ -1260,6 +1266,11 @@
                                           Checked="ChkSettingAutoRefresh_Changed"
                                           Unchecked="ChkSettingAutoRefresh_Changed"
                                           Content="Automatically refresh hardware specs on startup"
+                                          Margin="0,2,0,4"/>
+                                <CheckBox x:Name="chkSettingExternalLogs"
+                                          Checked="ChkSettingExternalLogs_Changed"
+                                          Unchecked="ChkSettingExternalLogs_Changed"
+                                          Content="Open external Logs window by default"
                                           Margin="0,2,0,12"/>
 
                                 <StackPanel Orientation="Horizontal">
@@ -1686,6 +1697,14 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="btnPopoutLog"
+                                    Content="🗗 Pop-out Logs"
+                                    Style="{StaticResource BtnDefault}"
+                                    Height="28"
+                                    Padding="10,0"
+                                    Margin="0,0,6,0"
+                                    ToolTip="Open Logs in a separate floating window"
+                                    Click="BtnPopoutLog_Click"/>
                             <Button x:Name="btnExportLog"
                                     Content="💾 Export Log"
                                     Style="{StaticResource BtnDefault}"

@@ -150,27 +150,29 @@ namespace OptiAssist.Addons.Toolbox
         {
             List<ToolboxCommandItem> presets = new List<ToolboxCommandItem>();
 
+            // 1. Ferramentas da Comunidade
             presets.Add(new ToolboxCommandItem()
             {
-                id = "preset-chkdsk-c",
-                title = "Verificar Integridade do Disco (CHKDSK C:)",
-                description = "Executa verificação somente-leitura de erros lógicos no sistema de arquivos da unidade C:",
-                command = "chkdsk C:",
-                category = "Correção de Erros",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
+                id = "preset-christitus-winutil",
+                title = "Chris Titus WinUtil (Ferramenta de Otimização)",
+                description = "Utilitário open-source Chris Titus Tech para ajustes rápidos, tweaks e configurações essenciais do Windows",
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"irm https://christitus.com/win | iex\"",
+                category = "Ferramentas da Comunidade",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = false,
+                capture_output = false,
                 requires_admin = true,
-                timeout_seconds = 600
+                timeout_seconds = 0
             });
 
+            // 2. Integridade e Reparos do Sistema
             presets.Add(new ToolboxCommandItem()
             {
                 id = "preset-sfc-scannow",
-                title = "Verificar Arquivos do Sistema (SFC /scannow)",
+                title = "Verificar e Reparar Arquivos do Sistema (SFC /scannow)",
                 description = "Escaneia e repara arquivos protegidos corrompidos do Windows usando o System File Checker",
                 command = "sfc /scannow",
-                category = "Correção de Erros",
+                category = "Integridade e Reparos",
                 shell = ToolboxShellType.Cmd,
                 wait_for_exit = true,
                 capture_output = true,
@@ -182,9 +184,9 @@ namespace OptiAssist.Addons.Toolbox
             {
                 id = "preset-dism-restorehealth",
                 title = "Reparar Imagem do Windows (DISM RestoreHealth)",
-                description = "Verifica e repara a loja de componentes do Windows (WinSxS) via DISM",
+                description = "Verifica e repara a integridade da loja de componentes do Windows (WinSxS) via DISM",
                 command = "DISM /Online /Cleanup-Image /RestoreHealth",
-                category = "Correção de Erros",
+                category = "Integridade e Reparos",
                 shell = ToolboxShellType.Cmd,
                 wait_for_exit = true,
                 capture_output = true,
@@ -194,11 +196,82 @@ namespace OptiAssist.Addons.Toolbox
 
             presets.Add(new ToolboxCommandItem()
             {
+                id = "preset-dism-sfc-combo",
+                title = "Reparação Completa do Sistema (DISM + SFC)",
+                description = "Executa DISM RestoreHealth seguido de SFC /scannow para verificação e reparo aprofundados",
+                command = "DISM /Online /Cleanup-Image /RestoreHealth && sfc /scannow",
+                category = "Integridade e Reparos",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 3600
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-chkdsk-c",
+                title = "Verificar Integridade do Disco (CHKDSK C:)",
+                description = "Executa verificação somente-leitura de erros lógicos no sistema de arquivos da unidade C:",
+                command = "chkdsk C:",
+                category = "Integridade e Reparos",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 600
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-fix-printer-rpc",
+                title = "Corrigir Erro de Impressora em Rede (RPC 0x11b / 0x709)",
+                description = "Ajusta a chave RpcAuthnLevelPrivacyEnabled no Spooler para restaurar impressoras em rede após atualizações do Windows",
+                command = "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Print\" /v RpcAuthnLevelPrivacyEnabled /t REG_DWORD /d 0 /f && net stop Spooler && net start Spooler",
+                category = "Integridade e Reparos",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 60
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-dualboot-clock",
+                title = "Corrigir Relógio do Windows em Dual Boot (UTC / Linux)",
+                description = "Configura o relógio de hardware do Windows em UTC (RealTimeIsUniversal) para evitar dessincronização de horário com Linux",
+                command = "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation\" /v RealTimeIsUniversal /t REG_DWORD /d 1 /f",
+                category = "Integridade e Reparos",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 30
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-wsreset-store",
+                title = "Instalar ou Reparar Microsoft Store (wsreset -i)",
+                description = "Reinstala e reseta os componentes e caches corrompidos da Microsoft Store",
+                command = "wsreset.exe -i",
+                category = "Integridade e Reparos",
+                shell = ToolboxShellType.Binary,
+                wait_for_exit = false,
+                capture_output = false,
+                requires_admin = true,
+                timeout_seconds = 0
+            });
+
+            // 3. Rede e Conectividade
+            presets.Add(new ToolboxCommandItem()
+            {
                 id = "preset-ipconfig-flushdns",
                 title = "Limpar Cache DNS (Flush DNS)",
                 description = "Esvazia o cache de resolução de nomes DNS do Windows",
                 command = "ipconfig /flushdns",
-                category = "Rede",
+                category = "Rede e Conectividade",
                 shell = ToolboxShellType.Cmd,
                 wait_for_exit = true,
                 capture_output = true,
@@ -209,10 +282,10 @@ namespace OptiAssist.Addons.Toolbox
             presets.Add(new ToolboxCommandItem()
             {
                 id = "preset-netsh-winsock-reset",
-                title = "Redefinir Catálogo Winsock e TCP/IP",
+                title = "Redefinir Catálogo Winsock e Pilha TCP/IP",
                 description = "Restaura o catálogo Winsock e a pilha TCP/IP para corrigir falhas de conectividade",
                 command = "netsh winsock reset && netsh int ip reset",
-                category = "Rede",
+                category = "Rede e Conectividade",
                 shell = ToolboxShellType.Cmd,
                 wait_for_exit = true,
                 capture_output = true,
@@ -222,11 +295,68 @@ namespace OptiAssist.Addons.Toolbox
 
             presets.Add(new ToolboxCommandItem()
             {
+                id = "preset-net-reset-full",
+                title = "Redefinição Completa de Conectividade e DHCP",
+                description = "Libera e renova concessões DHCP, esvazia DNS e redefine pilha TCP/IP e Winsock",
+                command = "ipconfig /release && ipconfig /flushdns && netsh winsock reset && netsh int ip reset && ipconfig /renew",
+                category = "Rede e Conectividade",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 90
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
                 id = "preset-ps-listening-ports",
                 title = "Listar Portas TCP Abertas (Listening)",
                 description = "Consulta via PowerShell todas as portas TCP em estado Listen e os respectivos PIDs",
                 command = "Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort | Format-Table -AutoSize",
-                category = "Rede",
+                category = "Rede e Conectividade",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = false,
+                timeout_seconds = 30
+            });
+
+            // 4. Otimização e Desempenho
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-clean-temp-files",
+                title = "Limpar Pastas de Arquivos Temporários",
+                description = "Remove arquivos temporários residuais em %TEMP% e C:\\Windows\\Temp",
+                command = "cmd.exe /c \"del /q /f /s \\\"%TEMP%\\*.*\\\" 2>nul & del /q /f /s \\\"C:\\Windows\\Temp\\*.*\\\" 2>nul & echo Limpeza de temporarios concluida!\"",
+                category = "Otimização e Desempenho",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 120
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-clean-update-cache",
+                title = "Limpar Cache de Download do Windows Update",
+                description = "Para serviços wuauserv e bits, limpa a pasta SoftwareDistribution\\Download e reinicia os serviços",
+                command = "net stop wuauserv && net stop bits && cmd /c \"rd /s /q \\\"%windir%\\SoftwareDistribution\\Download\\\" 2>nul & md \\\"%windir%\\SoftwareDistribution\\Download\\\" 2>nul\" && net start wuauserv && net start bits",
+                category = "Otimização e Desempenho",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 120
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-optimize-visual-fx",
+                title = "Otimizar Efeitos Visuais para Máximo Desempenho",
+                description = "Configura animações para melhor desempenho, reduz MenuShowDelay para 50ms e melhora a resposta do sistema",
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop\\WindowMetrics' -Name MinAnimate -Value 0; Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name MenuShowDelay -Value 50; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name VisualFXSetting -Value 2; Write-Host 'Efeitos visuais otimizados com sucesso!'\"",
+                category = "Otimização e Desempenho",
                 shell = ToolboxShellType.PowerShell,
                 wait_for_exit = true,
                 capture_output = true,
@@ -236,11 +366,25 @@ namespace OptiAssist.Addons.Toolbox
 
             presets.Add(new ToolboxCommandItem()
             {
+                id = "preset-optimize-telemetry-services",
+                title = "Desativar Telemetria e Otimizar Serviços Não Essenciais",
+                description = "Desativa serviços DiagTrack, dmwappushservice e telemetria para reduzir consumo em segundo plano",
+                command = "sc config DiagTrack start= disabled && sc stop DiagTrack && sc config dmwappushservice start= disabled && sc stop dmwappushservice && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection\" /v AllowTelemetry /t REG_DWORD /d 0 /f",
+                category = "Otimização e Desempenho",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 60
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
                 id = "preset-compactos-query",
-                title = "Consultar Estado de Compactação (CompactOS)",
+                title = "Consultar Estado de Compactação do Sistema (CompactOS)",
                 description = "Verifica se os binários do sistema operacional estão compactados via compact.exe",
                 command = "compact.exe /CompactOS:query",
-                category = "Otimização",
+                category = "Otimização e Desempenho",
                 shell = ToolboxShellType.Binary,
                 wait_for_exit = true,
                 capture_output = true,
@@ -250,11 +394,39 @@ namespace OptiAssist.Addons.Toolbox
 
             presets.Add(new ToolboxCommandItem()
             {
+                id = "preset-compactos-always",
+                title = "Compactar Binários do Windows (CompactOS)",
+                description = "Reduz o tamanho em disco da instalação do Windows compactando binários do sistema sem perda de performance",
+                command = "compact.exe /CompactOS:always",
+                category = "Otimização e Desempenho",
+                shell = ToolboxShellType.Binary,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 1800
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-winsat-formal",
+                title = "Executar Benchmark de Desempenho do Sistema (WinSAT Formal)",
+                description = "Executa a avaliação completa do Windows System Assessment Tool para CPU, memória, gráficos e disco",
+                command = "winsat.exe formal",
+                category = "Otimização e Desempenho",
+                shell = ToolboxShellType.Binary,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                timeout_seconds = 900
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
                 id = "preset-powercfg-list",
                 title = "Listar Planos de Energia Ativos (PowerCfg)",
                 description = "Exibe todos os esquemas de energia disponíveis e destaca o plano ativo no sistema",
                 command = "powercfg.exe /list",
-                category = "Otimização",
+                category = "Otimização e Desempenho",
                 shell = ToolboxShellType.Binary,
                 wait_for_exit = true,
                 capture_output = true,
