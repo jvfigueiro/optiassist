@@ -1,61 +1,81 @@
-# 🧩 Add-ons & Modular DLL Architecture (`Config/Addons`)
+# Chapter 07: Add-ons & Modular DLL Architecture
 
-OptiAssist features a scalable **compiled DLL plugin architecture** that allows modules to integrate as first-class pages in the main application sidebar while keeping their entire UI and business logic isolated inside standalone `.dll` assemblies.
+OptiAssist features a high-performance **compiled DLL plugin architecture** that allows modules to integrate as first-class pages in the main application sidebar while keeping their entire UI and business logic isolated inside standalone `.dll` assemblies.
 
 ---
 
 ## 1. Architecture Overview
 
-### Plugin Interface (`IOptiAssistAddon` & `IOptiAssistHost`)
+### Plugin Contracts (`IOptiAssistAddon` & `IOptiAssistHost`)
 Defined in `src/AddonHelper.cs` inside `OptiAssist.exe`:
 
-- **`IOptiAssistHost`** (implemented by `MainWindow`):
-  - `void Log(string message)` — Writes real-time execution logs to the OptiAssist **Logs** console.
-  - `string GetLocalizedString(string key, string fallback)` — Retrieves localized strings from the active language dictionary (`Config/Languages/*.json`).
-  - `string CurrentLanguage { get; }` — Returns the active language code (`en-US`, `pt-BR`, etc.).
+#### `IOptiAssistHost` (Implemented by `MainWindow`):
+- `void Log(string message)` — Pushes real-time messages to the central console and pop-out `LogWindow`.
+- `string GetLocalizedString(string key, string defaultValue)` — Retrieves localized strings from the active dictionary.
+- `string CurrentLanguage { get; }` — Returns the active language code (`en-US`, `pt-BR`, etc.).
+- `AppSettings Settings { get; }` — Grants access to global application settings.
+- `HardwareSummary Hardware { get; }` — Grants access to the machine's detected WMI hardware specs.
+- `void SaveSettings()` — Persists modifications to `Config/settings.json`.
+- `void OpenLogWindow()` — Automatically surfaces the floating `LogWindow` during long-running tasks.
 
-- **`IOptiAssistAddon`** (implemented by each `.dll` plugin):
-  - `string Id { get; }` — Unique module identifier (e.g., `"system-cleaner"`).
-  - `string Name { get; }` — Localized display name shown in the sidebar and Settings manager.
-  - `string Description { get; }` — Localized module description.
-  - `string Version { get; }` — Semantic version (e.g., `"1.1.0"`).
-  - `string Author { get; }` — Module author.
-  - `string Icon { get; }` — Emoji/icon displayed on the sidebar button and in Settings.
-  - `void Initialize(IOptiAssistHost host)` — Called when `OptiAssist.exe` loads the DLL.
-  - `UIElement CreateView()` — Returns the complete WPF UI view hosted inside the main window when the user clicks the module in the sidebar.
-  - `void OnLanguageChanged(string languageCode)` — Updates the module's UI labels dynamically whenever the user switches languages in Settings.
+#### `IOptiAssistAddon` (Implemented by each `.dll` plugin):
+- `string Id { get; }` — Unique module identifier (e.g., `"system-cleaner"`, `"maintenance-report"`, `"toolbox"`).
+- `string Name { get; }` — Localized display name shown in the sidebar and Settings manager.
+- `string Description { get; }` — Localized module description.
+- `string Version { get; }` — Semantic version string (e.g., `"1.1.0.0"`).
+- `string Author { get; }` — Module author (e.g., `"João Figueiró"`).
+- `string Icon { get; }` — Emoji/symbol rendered on the sidebar button and in Settings.
+- `void Initialize(IOptiAssistHost host)` — Lifecycle hook invoked when `OptiAssist.exe` loads the DLL.
+- `FrameworkElement CreateView()` — Returns the complete WPF UI view rendered inside the main workspace when selected.
+- `void OnLanguageChanged(string langCode)` — Updates UI strings dynamically whenever the language changes.
 
 ### Non-Locking DLL Loader
-`AddonHelper.LoadDiscoveredAddons` reads each `.dll` in `Config/Addons/` using `Assembly.Load(File.ReadAllBytes(dllPath))` and resolves references to `OptiAssist.exe` via `AppDomain.CurrentDomain.AssemblyResolve`. Because the assembly is loaded from memory bytes, the `.dll` file on disk is **never locked**, allowing users to remove or update modules while `OptiAssist.exe` is running.
+`AddonHelper.LoadDiscoveredAddons` reads each `.dll` in `Config/Addons/` using `Assembly.Load(File.ReadAllBytes(dllPath))` and resolves references back to `OptiAssist.exe` via `AppDomain.CurrentDomain.AssemblyResolve`.
+
+Because the assembly is loaded from memory bytes, the `.dll` file on disk is **never locked**. Users can overwrite, update, replace, or remove modules while `OptiAssist.exe` is running without triggering Windows file-lock errors.
 
 ---
 
 ## 2. Managing Modules in Settings
 
-Inside **Settings (`⚙️ Settings` → `🧩 Modular Add-ons & Plugins`)**, users can:
-1. **➕ Add Module (`.dll`)**: Select any compiled OptiAssist `.dll` plugin; OptiAssist validates that it implements `IOptiAssistAddon`, copies it into `Config/Addons/<ModuleName>/<ModuleName>.dll`, and adds it to the sidebar immediately.
-2. **Enable / Disable (`Active`)**: Toggle whether a module is shown in the sidebar navigation. Disabled module IDs are persisted in `Config/settings.json` (`DisabledAddons`).
-3. **🗑️ Remove**: Deletes the module's `.dll` from `Config/Addons` and removes its entry from the sidebar.
+Inside **Settings (`⚙️ Settings` → `🧩 Modular Add-ons & Plugins`)**, users can manage extensions visually:
+1. **➕ Add Module (`.dll`)**: Select any compiled OptiAssist `.dll` plugin file. OptiAssist validates that it implements `IOptiAssistAddon`, copies it into `Config/Addons/<ModuleName>/<ModuleName>.dll`, and adds it to the sidebar immediately.
+2. **Active Checkbox (Enable / Disable)**: Toggles whether a module appears in the sidebar navigation. Disabled module IDs are persisted in `Config/settings.json` under `DisabledAddons`.
+3. **🗑️ Remove**: Deletes the module's DLL from `Config/Addons` and purges its entry from the sidebar.
+4. **Reload Modules**: Rescans `Config/Addons` to detect any manual filesystem additions or removals.
 
 ---
 
-## 3. Built-in Module: System Cleaner v2.0 (`Config/Addons/SystemCleaner/SystemCleaner.dll`)
+## 3. Official Assembly Metadata
 
-Inspired by **BleachBit**, the **System Cleaner & Optimizer** (`src/Addons/SystemCleaner/SystemCleanerAddon.cs`) implements an extensible, object-oriented `BaseCleaner` architecture supporting non-destructive **Dry-Run (`Scan()`)** analysis and safe **Execution (`Clean()`)** with strict path sanitization and locked-file resilience.
+All official OptiAssist modules are compiled with standard assembly attributes:
+- **Title**: `OptiAssist Module - <ModuleName>`
+- **Description**: Module description
+- **Company**: João Figueiró
+- **Product**: OptiAssist Modules
+- **Copyright**: Copyright (C) 2026 João Figueiró. Licensed under GNU GPLv3.
+- **Assembly Version**: `1.1.0.0`
+- **File Version**: `1.1.0.0`
 
-### `BaseCleaner` Architecture
+---
+
+## 4. Built-in Module: System Cleaner v2.0 (`SystemCleaner.dll`)
+
+Inspired by **BleachBit**, the **System Cleaner & Optimizer** (`src/Addons/SystemCleaner/`) implements an extensible, object-oriented `BaseCleaner` architecture supporting non-destructive **Dry-Run (`Scan()`)** analysis and safe **Execution (`Clean()`)** with strict path sanitization and locked-file resilience.
+
+### Architecture Highlights
 - **`BaseCleaner` (Abstract Base Class)**:
-  - Metadata properties: `Id`, `CategoryId`, `Category`, `Name`, `Description`, `Icon`, `RequiresAdmin` (`bool`), `IsDangerous` (`bool`), `WarningMessage` (`string`), and `IsRecommended` (`bool`).
+  - Properties: `Id`, `CategoryId`, `Category`, `Name`, `Description`, `Icon`, `RequiresAdmin` (`bool`), `IsDangerous` (`bool`), `WarningMessage` (`string`), and `IsRecommended` (`bool`).
   - `ScanResult Scan(CleanerContext context)` — Performs a 100% non-destructive dry-run scan, returning `FoundItems` (`List<string>`), `EstimatedBytes` (`long`), and `SkippedOrLockedCount` (`int`).
   - `CleanResult Clean(CleanerContext context)` — Executes cleanup/maintenance, returning `FreedBytes` (`long`), `DeletedCount` (`int`), and `ErrorOrLockedCount` (`int`) while gracefully skipping locked (`EBUSY` / `IOException`) or permission-denied (`UnauthorizedAccessException`) files.
 - **`PathSanitizer` (Strict Scope Protection)**:
-  - Blocks accidental deletion of root drives (`C:\`), `C:\Windows` (except explicitly whitelisted temp/prefetch/update subpaths), `Program Files`, user profile roots, and the OptiAssist installation directory.
+  - Blocks accidental deletion of root drives (`C:\`), `C:\Windows` (except explicitly whitelisted temp/prefetch/update subpaths), `Program Files`, user profile roots, and the OptiAssist application directory.
   - Excludes reparse points/symlinks (`FileAttributes.ReparsePoint`) and critical system folders during recursive Deep Scans.
 
-### Supported Cleanup Modules (23 Cleaners Across 5 Categories)
+### 23 Cleaners across 5 Categories
 
-#### 🪟 Category 1: Windows Core (`win_core`)
-| ID | Name | Target Location / Mechanism | Admin | Caution |
+#### 🪟 1. Windows Core (`win_core`)
+| ID | Cleaner Name | Target Location / Mechanism | Admin | Caution |
 | :--- | :--- | :--- | :---: | :---: |
 | `user_temp` | **User Temporary Files (`%TEMP%`)** | `%TEMP%` and `%LOCALAPPDATA%\Temp` | No | No |
 | `system_temp` | **Windows System Temp** | `C:\Windows\Temp` | 🛡️ Yes | No |
@@ -69,74 +89,72 @@ Inspired by **BleachBit**, the **System Cleaner & Optimizer** (`src/Addons/Syste
 | `mui_cache` | **Registry MUICache** | `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache` | No | No |
 | `system_logs` | **System Event & Setup Logs** | `EventLog` / `wevtutil cl` (`Application`, `System`, `Setup`, `Security`) + `CBS` & `Panther` logs | 🛡️ Yes | ⚠️ Yes |
 
-#### 🗂️ Category 2: Windows Explorer & Shell (`explorer_shell`)
-| ID | Name | Target Location / Mechanism | Admin | Caution |
+#### 🗂️ 2. Windows Explorer & Shell (`explorer_shell`)
+| ID | Cleaner Name | Target Location / Mechanism | Admin | Caution |
 | :--- | :--- | :--- | :---: | :---: |
 | `thumbnails` | **Thumbnail Cache (`thumbcache_*.db`)** | `%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*.db` | No | No |
 | `run_mru` | **Run Dialog MRU History** | `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU` | No | No |
 | `recent_docs` | **Recent Documents & Jump Lists** | `%APPDATA%\Microsoft\Windows\Recent`, `AutomaticDestinations`, `CustomDestinations`, `RecentDocs` | No | No |
 | `shellbags` | **Explorer Shellbags & Search History** | `BagMRU`, `Bags`, and `WordWheelQuery` registry keys | No | ⚠️ Yes |
 
-#### 🌐 Category 3: Chromium Browsers — Google Chrome & Microsoft Edge (`chromium`)
-Automatically discovers all profiles (`Default`, `Profile 1`, `Profile 2`, `Guest Profile`, `System Profile`) in `%LOCALAPPDATA%\Google\Chrome\User Data` and `%LOCALAPPDATA%\Microsoft\Edge\User Data`, and detects running `chrome.exe` / `msedge.exe` processes before accessing locked databases.
+#### 🌐 3. Chromium Browsers (`chromium`)
+Discovers all profiles (`Default`, `Profile 1`, etc.) in Google Chrome and Microsoft Edge `%LOCALAPPDATA%` paths, and checks running `chrome.exe` / `msedge.exe` processes before accessing locked databases.
 
-| ID | Name | Target Location / Mechanism | Admin | Caution |
+| ID | Cleaner Name | Target Location / Mechanism | Admin | Caution |
 | :--- | :--- | :--- | :---: | :---: |
 | `chromium_cache` | **Network, GPU & Code Cache** | `Cache\Cache_Data`, `Code Cache`, `GPUCache`, `Service Worker`, `ShaderCache` | No | No |
 | `chromium_crash_reports` | **Crashpad & Crash Reports** | `Crashpad\reports`, `Crashpad\completed`, `Crashpad\pending` | No | No |
 | `chromium_ai_models` | **Local AI Models (Gemini Nano)** | `OptGuideOnDeviceModel`, `optimization_guide_model_store` | No | No |
-| `chromium_vacuum` | **SQLite Database Vacuum** | Executes native `VACUUM;` via `winsqlite3.dll` on `History`, `Web Data`, `Favicons`, `Top Sites`, `Cookies` | No | No |
+| `chromium_vacuum` | **SQLite Database Vacuum** | Executes native `VACUUM;` via `winsqlite3.dll` on `History`, `Web Data`, `Favicons`, `Cookies` | No | No |
 | `chromium_cookies` | **Browser Cookies** | `Cookies`, `Network\Cookies` across all profiles | No | ⚠️ Yes |
 | `chromium_history` | **Browsing & Download History** | `History`, `Visited Links`, `Top Sites` across all profiles | No | ⚠️ Yes |
 | `chromium_form_data` | **Autofill Form Data** | `Web Data` across all profiles | No | ⚠️ Yes |
 | `chromium_site_data` | **Site Data (LocalStorage & IndexedDB)** | `Local Storage\leveldb`, `IndexedDB`, `Session Storage`, `File System` | No | ⚠️ Yes |
 | `chromium_sessions` | **Saved Sessions & Open Tabs** | `Sessions`, `Current Session`, `Current Tabs`, `Last Session` | No | ⚠️ Yes |
 
-#### 🛡️ Category 4: Windows Defender (`defender`)
-| ID | Name | Target Location / Mechanism | Admin | Caution |
+#### 🛡️ 4. Windows Defender (`defender`)
+| ID | Cleaner Name | Target Location / Mechanism | Admin | Caution |
 | :--- | :--- | :--- | :---: | :---: |
 | `defender_temp` | **Scan Logs & Support Temp** | `C:\ProgramData\Microsoft\Windows Defender\Scans\History` & `Support` | 🛡️ Yes | No |
 | `defender_quarantine` | **Quarantine Files** | `C:\ProgramData\Microsoft\Windows Defender\Quarantine` | 🛡️ Yes | ⚠️ Yes |
 
-#### 🔎 Category 5: Deep Scan — Developer & Orphaned Files (`deep_scan`)
-Supports configurable root directory (`DeepScanRootPath`, defaulting to `C:\Users\<user>`) and recursion depth limit (`DeepScanMaxDepth`) while skipping critical OS and hidden `.git` directories.
+#### 🔎 5. Deep Scan — Developer & Orphaned Files (`deep_scan`)
+Configurable root path (`DeepScanRootPath`, defaulting to `C:\Users\<user>`) and recursion depth limit (`DeepScanMaxDepth`) while excluding critical OS folders and `.git` repositories.
 
-| ID | Name | Target Location / Mechanism | Admin | Caution |
+| ID | Cleaner Name | Target Location / Mechanism | Admin | Caution |
 | :--- | :--- | :--- | :---: | :---: |
 | `deep_junk_files` | **Orphaned Metadata & Editor Swap Files** | `.DS_Store`, `Thumbs.db`, `*.swp`, `*.swo`, `*.tmp` | No | No |
 | `deep_node_modules` | **Node.js & Angular Cache** | `node_modules`, `.angular` directories | No | ⚠️ Yes |
 | `deep_python_cache` | **Python Bytecode & VirtualEnvs** | `__pycache__`, `venv`, `.venv` directories | No | ⚠️ Yes |
 
-### Automated Unit Tests & Dry-Run Simulation Script
-Run `Tests/Run-SystemCleanerTests.ps1` in PowerShell to execute unit tests for `PathSanitizer`, sandboxed `DeepScan` (`Scan()`, `Clean()`, and `EBUSY` locked-file skipping), SQLite `VACUUM;` defragmentation, and a live non-destructive dry-run report across all modules:
-```powershell
-.\Tests\Run-SystemCleanerTests.ps1
-```
-
 ---
 
-## 4. Built-in Module: Maintenance Report (`Config/Addons/MaintenanceReport/MaintenanceReport.dll`)
+## 5. Built-in Module: Maintenance Report (`MaintenanceReport.dll`)
 
-All code, UI construction, and report generation logic (`MaintenanceRecord` and `ReportHelper`) for the **Maintenance Service Record** reside inside `src/Addons/MaintenanceReport/MaintenanceReportAddon.cs` (`MaintenanceReport.csproj`), which compiles directly to:
-
+Compiled from `src/Addons/MaintenanceReport/`, this module isolates the service order generator into:
 ```text
 Config/Addons/MaintenanceReport/MaintenanceReport.dll
 ```
-
-### Features
-- **Service & Customer Details**: Captures Service Order (SO) number, Client Name, and auto-fills the machine's detected Serial Number / Service Tag via `IOptiAssistHost.Hardware`.
-- **Service Provider Branding**: Reads `CustomerName` and `ContactInfo` from `IOptiAssistHost.Settings` when Service Provider Mode is enabled.
-- **8-Point Maintenance Checklist**: Disk SMART check, internal cleaning & thermal paste, clean Windows format, driver/BIOS update, essential apps installation, temporary file cleanup, DISM/SFC repair, and network/printer setup.
-- **Technical Observations & Report Generation**: Issues timestamped `.txt` reports into `Reports/`, optionally saves a copy on the customer's machine (`ReportSavePath`), or copies the full formatted report directly to the Windows Clipboard.
+- **Service & Customer Details**: Captures Service Order (SO) number, Client Name, and machine serial number via `IOptiAssistHost.Hardware`.
+- **Branding**: Reads `CustomerName` and `ContactInfo` from `IOptiAssistHost.Settings`.
+- **8-Point Checklist**: SMART check, thermal paste, format, drivers, essential apps, temp cleanup, DISM/SFC, and network/printer setup.
+- **Multi-Destination Export**: Saves `.txt` files to `Reports/`, client PC (`ReportSavePath`), and the Windows Clipboard.
 
 ---
 
-## 5. Built-in Module: Toolbox (`Config/Addons/Toolbox/Toolbox.dll`)
+## 6. Built-in Module: Toolbox (`Toolbox.dll`)
 
-The **Toolbox** module (`src/Addons/Toolbox/`) allows users to create, categorize, persist, and execute custom system commands (`cmd`, `powershell`, or standalone `binary` executables) with real-time `stdout`/`stderr` streaming and exit-code reporting.
-
-### Clean Layered Architecture
-- **[`ToolboxModels.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxModels.cs)**: Data model (`ToolboxCommandItem`) with field validation (`Validate()`) and execution result container (`ToolboxExecutionResult`).
-- **[`ToolboxStorageManager.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxStorageManager.cs)**: RFC-8259 JSON persistence manager storing commands in `Config/Addons/Toolbox/toolbox.json` and providing default factory presets (`chkdsk C:`, `sfc /scannow`, `DISM /Online /Cleanup-Image /RestoreHealth`, `ipconfig /flushdns`, `netsh winsock reset`, PowerShell port listener inspection, `compact.exe /CompactOS:query`, `powercfg.exe /list`).
-- **[`ToolboxProcessRunner.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxProcessRunner.cs)**: Asynchronous worker-thread process runner supporting live line-by-line `stdout`/`stderr` streaming, process tree termination (`taskkill /T /F`), timeout enforcement (`timeout_seconds`), UAC elevation cancellation handling (`Win32Exception` 1223), and missing binary detection (`Win32Exception` 2/3 & exit code 9009).
-- **[`ToolboxAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/Toolbox/ToolboxAddon.cs)**: WPF view with dynamic collapsible category accordions (`Expander`), search filter, full CRUD editor form with embedded Delete action, clean native action cards (raw command lines hidden until editing), and real-time execution streaming routed directly to the application's central Logs console.
+Compiled from `src/Addons/Toolbox/`, this module implements OptiAssist's custom command runner and unified optimization hub:
+```text
+Config/Addons/Toolbox/
+├── Toolbox.dll
+├── toolbox.json
+└── Scripts/
+    ├── tweaks_interface.ps1
+    ├── fix_printer_rpc.reg
+    └── reset_network.bat
+```
+- **Execution Engine**: Asynchronous execution of `cmd`, `PowerShell`, and standalone `binary` executables with live line-by-line streaming to `IOptiAssistHost.Log` and the pop-out `LogWindow`.
+- **Category Manager**: Integrated modal to add, rename (with cascading updates across commands), and delete categories.
+- **Bundled Optimization Presets**: Includes 16+ verified system repair and performance presets replacing the legacy static Optimization tab.
+- **Options & Edit Mode**: Options drawer containing New Toolbox, Restore Presets, Open JSON, Category Manager, and an Edit Mode toggle to lock down or customize action cards.

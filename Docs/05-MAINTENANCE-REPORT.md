@@ -1,62 +1,70 @@
 # Chapter 05: Maintenance Service Report
 
-The **Maintenance Report** module enables technicians and IT service providers to generate polished, standardized technical records of the services performed on a client's computer.
+The **Maintenance Report** module (`Config/Addons/MaintenanceReport/MaintenanceReport.dll`) enables technicians, repair shops, and IT service providers to generate standardized, professional technical records of the services performed on a client's computer.
+
+Compiled as an independent, non-locking modular DLL add-on, it integrates seamlessly into the OptiAssist sidebar and reads global hardware telemetry directly through the host interface (`IOptiAssistHost`).
 
 ---
 
 ## 💼 Service Provider Mode Branding
 
-When **Service Provider Mode** is enabled in Settings, the report header and footer dynamically brand themselves with your business details:
-* **Customer / Company Name (`CustomerName`)**: Displayed prominently at the top header and footer of every generated report.
-* **Contact Information (`ContactInfo`)**: Phone number, website, or email displayed below the company title.
+When **Service Provider Mode** is enabled in Settings, the report dynamically brands itself with your business credentials:
+* **Company / Technician Name (`CustomerName`)**: Displayed prominently in the top header and footer of every generated report.
+* **Contact Information (`ContactInfo`)**: Phone number, website, or email displayed directly below the company title.
+
+> [!TIP]
+> If Service Provider Mode is turned off, the report defaults to clean, neutral `OptiAssist` branding.
 
 ---
 
 ## 📋 Report Structure & Data Flow
 
-When generating a report, OptiAssist compiles the following structured sections:
+When generating a report, OptiAssist compiles the following structured document:
 
-```
+```text
 =============================================================
-		    {CustomerName}
-		    {ContactInfo}
-		   Maintenance Report                                                
+                    ACME TECH REPAIRS
+               support@acmetech.com • (555) 0199
+                      Maintenance Report                                                
 =============================================================
 
 SERVICE DETAILS
 -------------------------------------------------------------
-Client:		{clientname}
-Order No.:	{ordernumber}
-Date:		{dateandtime}
+Client:        John Doe
+Order No.:     OS-2026-1042
+Date:          22/10/2026 14:35:10
 
 DEVICE SPECS
 -------------------------------------------------------------
-Device Name:	{devicename}
-BIOS:		{biosvendor} {version} {date}
-OS:		{osname}
-MB:		{mbmanufacturer}{mbmodel}
-CPU:     	{cpumodel}
-RAM:		{ramcapacity}
-GPU:		{gpumodel}
-Main Storage:	{letter} {freespace} {capacity} {filesystem}
-Secure Boot:	{securebootstate}
-TPM:		{tpmstate}
-BitLocker:	{bitlockerstate}
-Serial Number:	{serialnumber}
+Device Name:   DESKTOP-PC01
+BIOS:          American Megatrends Inc. 2.10 15/01/2024
+OS:            Windows 11 Pro 64-bit (Build 22631)
+MB:            ASUSTeK COMPUTER INC. PRIME B550M-A
+CPU:           AMD Ryzen 5 5600X 6-Core Processor
+RAM:           32.0 GB
+GPU:           NVIDIA GeForce RTX 3070
+Main Storage:  C: (420.5 GB free of 931.5 GB, NTFS)
+Secure Boot:   Active
+TPM:           Available (v2.0)
+BitLocker:     Active
+Serial Number: SN98421094821
 
 SERVICES AND PROCEDURES PERFORMED
 -------------------------------------------------------------
  [X] Disk diagnostic and SMART health check
+ [X] Preventive internal cleaning & thermal paste replacement
  [X] Full driver and BIOS update
  [X] Essential application installation
+ [X] Deep temporary file cleanup
+ [X] System integrity repair (DISM / SFC)
 
 OBSERVATIONS
 -------------------------------------------------------------
 Replaced thermal paste on CPU. Tested stress loads for 30 minutes;
-temperatures remained below 68°C under full load.
+temperatures remained stable below 68°C under full synthetic load.
 
 =============================================================
-		Report generated via OptiAssist
+             Report generated via ACME TECH REPAIRS
 =============================================================
 ```
 
@@ -64,20 +72,28 @@ temperatures remained below 68°C under full load.
 
 ## 🛠️ Interactive Checklist of Performed Procedures
 
-Technicians can check off the relevant procedures executed during the service:
-* `[X]` Disk diagnostic and SMART health check
-* `[X]` Preventive internal cleaning & thermal paste replacement
-* `[X]` Clean Windows format and reinstallation
-* `[X]` Full driver and BIOS update
-* `[X]` Essential application installation
-* `[X]` Deep temporary file cleanup
-* `[X]` System integrity repair (DISM / SFC)
-* `[X]` Network and printer setup
+The module features an 8-point interactive checklist of standard service workshop operations:
+* `[X]` **Disk diagnostic and SMART health check**: Verification of NVMe/SSD wear levels and HDD sector integrity.
+* `[X]` **Preventive internal cleaning & thermal paste replacement**: Dust removal, fan lubrication, and thermal compound re-application.
+* `[X]` **Clean Windows format and reinstallation**: Fresh OS installation with driver provisioning.
+* `[X]` **Full driver and BIOS update**: Flashing motherboard firmware and installing certified vendor chipset/GPU drivers.
+* `[X]` **Essential application installation**: Automated software deployment via App Manager.
+* `[X]` **Deep temporary file cleanup**: Cache, temp, and junk purge via System Cleaner.
+* `[X]` **System integrity repair (DISM / SFC)**: Verification of component store and protected OS binaries.
+* `[X]` **Network and printer setup**: Configuration of local IP, DNS, and network printer shares.
 
 ---
 
-## 💾 Export & Copy Actions
+## 💾 Multi-Destination Export Pipeline
 
-* **📄 Generate Maintenance Report**: Automatically formats and saves the report as a `.txt` file to the directory configured in `settings.json` (defaults to `C:\MaintenanceReport.txt` or `Reports/<OrderNo>_<Date>.txt`).
-* **📋 Copy Technical Report**: Copies the full formatted report to the Windows clipboard for instant pasting into WhatsApp, email, or ticketing systems.
-* **📂 Open Reports Folder**: Opens the local `Reports/` directory in Windows Explorer.
+OptiAssist ensures reports are never lost or misplaced:
+
+1. **Automatic Portable Archiving (`Reports/`)**:
+   * Reports are always saved automatically into the portable `Reports/` directory located on the root of the OptiAssist drive:
+     `Reports/MaintenanceReport_<OrderNo>_<Timestamp>.txt`
+2. **Client Machine Copy Prompt**:
+   * Upon saving, the user is prompted whether to save an extra local copy on the client's computer at the path defined in `settings.json` (`ReportSavePath`, defaulting to `C:\MaintenanceReport.txt`).
+3. **`📋 Copy Technical Report` Button**:
+   * Copies the full formatted report to the Windows clipboard with a single click, ready for immediate pasting into ticketing systems, client WhatsApp chats, or invoices.
+4. **`📂 Open Reports Folder` Button**:
+   * Opens the local `Reports/` directory in Windows Explorer for rapid file management.
