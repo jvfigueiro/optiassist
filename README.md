@@ -54,7 +54,7 @@ The user interface was built following a modern, responsive layout that eliminat
        6. Storage (primary drive and free space)
        7. **Equipment Serial Number** with a dedicated **`📋 Copy`** button.
      - **Operating System (Right Block)**: Windows edition, version, OS build, architecture, and **Device Name** aligned at the exact same height as the Serial Number in the adjacent block.
-   - **Common Tasks (Bottom Block)**: Quick grid with 8 one-click essential shortcuts (App Manager, Maintenance Folder, Chris Titus WinUtil, Massgrave MAS, Memory Diagnostic, Device Manager, System Properties, and Reboot to UEFI).
+   - **Common Tasks (Bottom Block)**: Quick grid with essential one-click shortcuts (Run Post-Install, App Manager, Maintenance Folder, Chris Titus WinUtil, Memory Diagnostic, Device Manager, System Properties, and Reboot to UEFI).
 - **App Manager**:
    - **Application Updates (Always Visible)**: Permanent top panel with update scanning via Winget. Displays a real-time progress bar during updates and a centered **`⬛ View Logs`** button to jump directly to the Logs tab.
      - **Update Actions**: **`🚀 Update All`** on the left (default style) and **`🔄 Update Selected`** highlighted on the right with the accent color (`BrushAccent`).
@@ -68,7 +68,7 @@ The user interface was built following a modern, responsive layout that eliminat
        5. Optional silent arguments for custom installers.
    - **Intelligent Fallback**: If `Local` mode is chosen but the installer is not found, it automatically falls back to Winget when enabled.
 - **Optimization**:
-   - **Community Tools**: Direct access to community utilities: **Chris Titus Tool (WinUtil)** and **Massgrave Activation (MAS)**.
+   - **Community Tools**: Direct access to community utilities: **Chris Titus Tool (WinUtil)**.
    - **System Integrity & Repairs (Left Column)**: Dedicated repair utilities:
      - **Check & Repair Windows Integrity via SFC** (`sfc /scannow`)
      - **Check & Repair Windows Integrity via DISM** (`Dism /Online /Cleanup-Image /RestoreHealth`)

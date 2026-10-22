@@ -990,12 +990,6 @@ namespace OptiAssist
             ShortcutsHelper.OpenChrisTitusTool();
         }
 
-        private void BtnMassgrave_Click(object sender, RoutedEventArgs e)
-        {
-            Log("[TOOL] Launching Massgrave (irm https://get.activated.win | iex)...");
-            ShortcutsHelper.OpenMassgrave();
-        }
-
         private void BtnWinSatBenchmark_Click(object sender, RoutedEventArgs e)
         {
             // Check if WinSAT scores already exist
@@ -1496,11 +1490,6 @@ namespace OptiAssist
                 btnTaskChrisTitus.Content = LocalizationHelper.Get("Task_ChrisTitus", "🚀 Chris Titus WinUtil");
                 btnTaskChrisTitus.ToolTip = LocalizationHelper.Get("Tooltip_TaskChrisTitus", "Run Chris Titus Tech utility (PowerShell)");
             }
-            if (btnTaskMassgrave != null)
-            {
-                btnTaskMassgrave.Content = LocalizationHelper.Get("Task_Massgrave", "🔑 Massgrave (MAS)");
-                btnTaskMassgrave.ToolTip = LocalizationHelper.Get("Tooltip_TaskMassgrave", "Run Microsoft MAS activator via PowerShell");
-            }
             if (btnTaskMemoryDiag != null)
             {
                 btnTaskMemoryDiag.Content = LocalizationHelper.Get("Task_MemoryDiag", "🧠 Memory Diagnostic");
@@ -1592,7 +1581,6 @@ namespace OptiAssist
             if (txtOptSubtitle != null) txtOptSubtitle.Text = LocalizationHelper.Get("Opt_Subtitle", "Advanced performance tweaks, integrity repairs, and quick utilities");
             if (txtCommSectionTitle != null) txtCommSectionTitle.Text = LocalizationHelper.Get("Opt_Community_Title", "🌐 Community Tools");
             if (btnChrisTitusOpt != null) btnChrisTitusOpt.Content = LocalizationHelper.Get("Btn_ChrisTitus", "🚀 Chris Titus Tool (WinUtil)");
-            if (btnMassgraveOpt != null) btnMassgraveOpt.Content = LocalizationHelper.Get("Btn_Massgrave", "🔑 Massgrave Activation (MAS)");
             if (txtIntegrityTitle != null) txtIntegrityTitle.Text = LocalizationHelper.Get("Opt_Integrity_Title", "🛡️ System Integrity & Repairs");
             if (txtBtnSfcText != null) txtBtnSfcText.Text = LocalizationHelper.Get("Btn_Sfc", "Check & Repair Windows Integrity via SFC");
             if (btnSfc != null) btnSfc.ToolTip = LocalizationHelper.Get("Tooltip_Sfc", "Check and Repair Windows Integrity via SFC (sfc /scannow)");

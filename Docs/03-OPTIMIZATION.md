@@ -11,11 +11,6 @@ The **Optimization** module houses a curated collection of system integrity repa
 * **Command Executed**: `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://christitus.com/win | iex"`
 * **Use Cases**: Advanced debloating of pre-installed UWP apps, comprehensive system tweaks, feature disabling, and DNS/network optimizations.
 
-### Massgrave Activation (MAS)
-* **Description**: Launches the open-source Microsoft Activation Scripts suite.
-* **Command Executed**: `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://get.activated.win | iex"`
-* **Use Cases**: Resolving Windows and Microsoft Office activation errors, troubleshooting corrupted license states, and managing genuine licenses.
-
 ---
 
 ## 🛡️ 2. System Integrity & Repairs

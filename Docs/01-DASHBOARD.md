@@ -65,7 +65,6 @@ The bottom section of the Dashboard features direct shortcuts to the most freque
 * **📦 App Manager**: Quick jump to batch application and installer management.
 * **📁 Maintenance Folder**: Opens the portable `Maintenance/` folder containing standalone tools.
 * **🚀 Chris Titus WinUtil**: Launches the community PowerShell optimization script.
-* **🔑 Massgrave (MAS)**: Launches Microsoft Activation Scripts.
 * **🧠 Memory Diagnostic**: Schedules Windows Memory Diagnostic (`mdsched.exe`).
 * **🖥️ Device Manager**: Opens native device console (`devmgmt.msc`).
 * **⚙️ System Properties**: Opens system properties dialog (`sysdm.cpl`).

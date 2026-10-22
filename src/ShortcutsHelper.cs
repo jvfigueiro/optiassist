@@ -198,23 +198,6 @@ namespace OptiAssist
             }
         }
 
-        public static void OpenMassgrave()
-        {
-            try
-            {
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = "powershell.exe";
-                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"irm https://get.activated.win | iex\"";
-                psi.UseShellExecute = true;
-                psi.Verb = "runas";
-                Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_MassgraveError", "Error launching Massgrave (MAS): {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
         public static void OpenCrystalDiskInfo()
         {
             string maintDir = GetMaintenanceDirectory();

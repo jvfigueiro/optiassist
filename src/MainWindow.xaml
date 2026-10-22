@@ -370,12 +370,6 @@
                                             Height="34" Margin="3" FontSize="11"
                                             ToolTip="Run Chris Titus Tech utility (PowerShell)"
                                             Click="BtnChrisTitus_Click"/>
-                                    <Button x:Name="btnTaskMassgrave"
-                                            Content="🔑 Massgrave (MAS)"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Run Microsoft MAS activator via PowerShell"
-                                            Click="BtnMassgrave_Click"/>
                                     <Button x:Name="btnTaskMemoryDiag"
                                             Content="🧠 Memory Diagnostic"
                                             Style="{StaticResource BtnDefault}"
@@ -941,17 +935,12 @@
                                            Foreground="{DynamicResource BrushAccent}"
                                            Margin="0,0,0,8"
                                            TextTrimming="CharacterEllipsis"/>
-                                <UniformGrid Columns="2" Margin="0,0,0,0">
+                                <UniformGrid Columns="1" Margin="0,0,0,0">
                                     <Button x:Name="btnChrisTitusOpt"
                                             Content="🚀 Chris Titus Tool (WinUtil)"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="3"
                                             Click="BtnChrisTitus_Click"/>
-                                    <Button x:Name="btnMassgraveOpt"
-                                            Content="🔑 Massgrave Activation (MAS)"
-                                            Style="{StaticResource BtnDefault}"
-                                            Margin="3"
-                                            Click="BtnMassgrave_Click"/>
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
