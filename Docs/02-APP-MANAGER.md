@@ -12,7 +12,7 @@ OptiAssist implements an intelligent hybrid installation pipeline:
 [Target Program Selected for Installation]
                    │
                    ▼
-  Does offline installer exist in "PostInstall/"?
+  Does offline installer exist in "Installers/"?
                  /      \
                YES       NO
                /          \
@@ -28,12 +28,12 @@ OptiAssist implements an intelligent hybrid installation pipeline:
 ```
 
 ### 1. Local Offline Engine
-* Scans the portable `PostInstall/` directory for executables (`.exe`, `.msi`, `.msixbundle`).
+* Scans the portable `Installers/` directory for executables (`.exe`, `.msi`, `.msixbundle`).
 * Executes installers using verified silent command-line arguments (e.g., `/S`, `/silent`, `/qn`, `/norestart`).
 * Operates completely offline at maximum USB 3.0 / NVMe SSD read speeds, drastically cutting deployment time across multiple machines.
 
 ### 2. Winget Repository Fallback Engine
-* When an installer is not present in `PostInstall/` and the setting `EnableWingetFallback` is active, OptiAssist queries the official Microsoft Windows Package Manager (Winget).
+* When an installer is not present in `Installers/` and the setting `EnableWingetFallback` is active, OptiAssist queries the official Microsoft Windows Package Manager (Winget).
 * Automatically invokes:
   ```cmd
   winget install --id <AppId> --silent --accept-package-agreements --accept-source-agreements
@@ -72,16 +72,16 @@ All applications listed in the automated catalog are persisted in `Config/autoin
 
 ### Visual App Catalog Editor
 Clicking **`⚙️ Customize Automated Installation`** unlocks an in-app visual management dialog:
-* **Add New Programs**: Specify visual Name, Type (`Local` vs. `Winget`), installer filename in `PostInstall/` or Winget Package ID, Category, and default selection state.
+* **Add New Programs**: Specify visual Name, Type (`Local` vs. `Winget`), installer filename in `Installers/` or Winget Package ID, Category, and default selection state.
 * **Reorder Packages**: Move items up or down with **`▲`** / **`▼`** controls to enforce strict execution sequences (e.g., install Visual C++ runtimes and .NET prerequisites before user applications).
 * **Edit or Delete**: Fine-tune custom silent argument strings, update package IDs, or delete unnecessary programs.
-* **Direct File Picking**: When choosing `Local`, a file picker lets you select any installer directly inside the `PostInstall/` folder.
+* **Direct File Picking**: When choosing `Local`, a file picker lets you select any installer directly inside the `Installers/` folder.
 * **Persist & Reset**: Changes are immediately saved to `Config/autoinstall.json`. A **Reset Defaults** option restores factory presets at any time.
 
 ### Footer Quick Actions
 - **`Select Essentials`**: Quickly checks all items flagged as `PreSelected = true`.
 - **`Deselect All`**: Clears all checkboxes with one click.
-- **`📂 Installers Folder`**: Opens the local `PostInstall/` directory in Windows Explorer.
+- **`📂 Installers Folder`**: Opens the local `Installers/` directory in Windows Explorer.
 - **`🚀 Install Selected`**: Launches unattended silent installation of all checked applications sequentially, streaming live status to the central Logs console.
 - **Integration with Dashboard**: Clicking **`🚀 Run Post-Install`** on the Dashboard switches to App Manager and automatically triggers `Install Selected` without extra clicks.
 

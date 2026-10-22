@@ -9,11 +9,11 @@ Welcome to the official technical documentation for **OptiAssist**, the portable
 | Chapter | Topic | Description |
 |---|---|---|
 | [**01. Dashboard & Hardware Inspection**](01-DASHBOARD.md) | System Overview | Hardware telemetry, WMI specs, Serial Tag copy, BitLocker, TPM, Secure Boot, and 3x3 Common Tasks. |
-| [**02. App Manager & Post-Install**](02-APP-MANAGER.md) | Software Automation | Offline installer deployment (`PostInstall/`), Winget fallback, batch upgrades scanner, and `autoinstall.json`. |
-| [**03. Toolbox & System Optimization Hub**](03-TOOLBOX.md) | Command Runner & Fixes | Custom command engine (CMD, PowerShell, Binary), category manager, options drawer, and 16+ built-in optimization presets. |
-| [**04. Windows Administrative Tools**](04-WINDOWS-TOOLS.md) | Native Consoles | Quick access to 17 MMC management consoles, GPEDIT Home edition handling, and the portable `Maintenance/` folder. |
-| [**05. Maintenance Service Report**](05-MAINTENANCE-REPORT.md) | Client Deliverables | Modular DLL add-on, Service Provider Mode, hardware logging, 8-point checklist, and multi-destination report export. |
-| [**06. Settings, Logs & Personalization**](06-SETTINGS-AND-LOCALIZATION.md) | Configuration & Theming | Central logs & floating LogWindow, dynamic zero-restart i18n, dark/light themes, accent colors, and USB AutoRun. |
+| [**02. App Manager & Post-Install**](02-APP-MANAGER.md) | Software Automation | Offline installer deployment (`Installers/`), Winget fallback, batch upgrades scanner, and `autoinstall.json`. |
+| [**03. Toolbox & System Optimization Hub**](03-TOOLBOX.md) | Command Runner & Fixes | Custom command engine (CMD, PowerShell, Binary), category manager, options drawer, external log popup setting, and 16+ built-in presets. |
+| [**04. Windows Administrative Tools**](04-WINDOWS-TOOLS.md) | Native Consoles | Quick access to 18 MMC management consoles (including services.msc), GPEDIT Home edition handling, and the portable `Maintenance/` folder. |
+| [**05. Maintenance Service Report**](05-MAINTENANCE-REPORT.md) | Client Deliverables | Modular DLL add-on, in-module options drawer for contact info, hardware logging, 8-point checklist, and multi-destination report export. |
+| [**06. Settings, Logs & Personalization**](06-SETTINGS-AND-LOCALIZATION.md) | Configuration & Theming | Central logs & floating LogWindow, dynamic zero-restart i18n, custom app logo, themes, accent colors, USB AutoRun, and 1-click install/uninstall. |
 | [**07. Add-ons & Modular DLL Architecture**](07-ADDONS-AND-MODULES.md) | Extensibility & Plugins | Non-locking assembly loader (`Config/Addons`), BleachBit-style System Cleaner v2.0, Maintenance Report, and Toolbox DLL. |
 
 ---
@@ -44,9 +44,10 @@ Welcome to the official technical documentation for **OptiAssist**, the portable
 ├── 📁 Config/                       # Configuration, translation dictionaries & plugins
 │   ├── settings.json                # User preferences, branding, themes, active add-ons
 │   ├── autoinstall.json             # Automated software installation catalog (Local/Winget)
+│   ├── custom_logo.png              # Custom application logo image (optional)
 │   ├── 📁 Languages/                # Dynamic multi-language JSON dictionaries
-│   │   ├── en-US.json               # English (United States) [441 keys]
-│   │   └── pt-BR.json               # Português (Brasil) [441 keys]
+│   │   ├── en-US.json               # English (United States) [472 keys]
+│   │   └── pt-BR.json               # Português (Brasil) [472 keys]
 │   └── 📁 Addons/                   # Modular plugin assemblies
 │       ├── README.md                # Add-on developer guide
 │       ├── 📁 SystemCleaner/
@@ -61,7 +62,7 @@ Welcome to the official technical documentation for **OptiAssist**, the portable
 │               ├── fix_printer_rpc.reg
 │               └── reset_network.bat
 │
-├── 📁 PostInstall/                  # Offline software installers (.exe, .msi, etc.)
+├── 📁 Installers/                   # Offline software installers (.exe, .msi, etc.)
 │   └── README.txt
 │
 ├── 📁 Maintenance/                  # Portable third-party tools (CPU-Z, CrystalDiskInfo)

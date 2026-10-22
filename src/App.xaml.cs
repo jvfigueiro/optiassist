@@ -46,6 +46,28 @@ namespace OptiAssist
                 this.Shutdown();
                 return;
             }
+
+            // Check for command-line arguments (e.g. uninstaller registration in Windows Programs & Features)
+            if (e.Args != null && e.Args.Length > 0)
+            {
+                foreach (string arg in e.Args)
+                {
+                    if (string.Equals(arg, "--uninstall", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            AppSettings settings = SettingsHelper.Load();
+                            string lang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : "en-US";
+                            LocalizationHelper.LoadLanguage(lang);
+                        }
+                        catch { }
+
+                        AppDeploymentHelper.UninstallOptiAssist();
+                        this.Shutdown();
+                        return;
+                    }
+                }
+            }
         }
 
         private static bool IsRunningAsAdministrator()

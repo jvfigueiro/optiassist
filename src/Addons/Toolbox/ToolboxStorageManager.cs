@@ -537,6 +537,7 @@ namespace OptiAssist.Addons.Toolbox
                 sb.AppendFormat("    \"wait_for_exit\": {0},\r\n", item.wait_for_exit ? "true" : "false");
                 sb.AppendFormat("    \"capture_output\": {0},\r\n", item.capture_output ? "true" : "false");
                 sb.AppendFormat("    \"requires_admin\": {0},\r\n", item.requires_admin ? "true" : "false");
+                sb.AppendFormat("    \"open_external_logs\": {0},\r\n", item.open_external_logs ? "true" : "false");
                 sb.AppendFormat("    \"timeout_seconds\": {0}\r\n", item.timeout_seconds);
                 sb.Append("  }");
                 if (i < list.Count - 1) sb.Append(",");
@@ -589,6 +590,11 @@ namespace OptiAssist.Addons.Toolbox
                     item.requires_admin = ParseBool(fields["requires_admin"], false);
                 else
                     item.requires_admin = ToolboxCommandItem.InferRequiresAdmin(item.command);
+
+                if (fields.ContainsKey("open_external_logs"))
+                    item.open_external_logs = ParseBool(fields["open_external_logs"], true);
+                else
+                    item.open_external_logs = true;
 
                 if (fields.ContainsKey("timeout_seconds"))
                 {

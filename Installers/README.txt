@@ -1,5 +1,5 @@
 ========================================================================
-OptiAssist - Offline Installers Folder (PostInstall)
+OptiAssist - Offline Installers Folder (Installers)
 ========================================================================
 
 Place offline application installers (.exe / .msi / .msixbundle) here

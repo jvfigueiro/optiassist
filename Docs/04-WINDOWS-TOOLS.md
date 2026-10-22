@@ -26,6 +26,7 @@ All native utilities are launched with inherited 64-bit elevated privileges:
 | **Memory Diagnostic** | `mdsched.exe` | Schedules a reboot memory test to detect faulty RAM modules. |
 | **Reliability Monitor** | `perfmon /rel` | Historical timeline chart of software crashes, Windows updates, and hardware errors. |
 | **Event Viewer** | `eventvwr.msc` | System, Application, and Security event logs for troubleshooting critical faults. |
+| **Windows Services** | `services.msc` | Inspect, start, stop, pause, and configure startup types for background system services. |
 | **GPEDIT Tool** | `gpedit.msc` | Group Policy Editor (available natively in Windows Pro, Enterprise, and Education). |
 
 > [!NOTE]

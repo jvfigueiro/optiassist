@@ -70,6 +70,7 @@ namespace OptiAssist.Addons.Toolbox
         private TextBox _txtFieldTimeout;
         private CheckBox _chkWaitForExit;
         private CheckBox _chkCaptureOutput;
+        private CheckBox _chkOpenExternalLogs;
         private Button _btnDeleteFromEditor;
         private Button _btnSaveCommand;
         private Button _btnCancelEdit;
@@ -777,6 +778,16 @@ namespace OptiAssist.Addons.Toolbox
             _chkCaptureOutput.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
             wpChecks.Children.Add(_chkCaptureOutput);
 
+            _chkOpenExternalLogs = new CheckBox()
+            {
+                Content = T("Toolbox_Chk_OpenExternalLogs", "Open external logs window"),
+                IsChecked = true,
+                FontSize = 11.5,
+                Margin = new Thickness(0, 2, 14, 2)
+            };
+            _chkOpenExternalLogs.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            wpChecks.Children.Add(_chkOpenExternalLogs);
+
             Grid.SetColumn(wpChecks, 0);
             rowD.Children.Add(wpChecks);
 
@@ -1141,6 +1152,7 @@ namespace OptiAssist.Addons.Toolbox
             _txtFieldTimeout.Text = "0";
             _chkWaitForExit.IsChecked = true;
             _chkCaptureOutput.IsChecked = true;
+            _chkOpenExternalLogs.IsChecked = true;
 
             if (_btnDeleteFromEditor != null)
             {
@@ -1171,6 +1183,7 @@ namespace OptiAssist.Addons.Toolbox
             _txtFieldTimeout.Text = item.timeout_seconds.ToString();
             _chkWaitForExit.IsChecked = item.wait_for_exit;
             _chkCaptureOutput.IsChecked = item.capture_output;
+            _chkOpenExternalLogs.IsChecked = item.open_external_logs;
 
             if (_btnDeleteFromEditor != null)
             {
@@ -1216,6 +1229,7 @@ namespace OptiAssist.Addons.Toolbox
                 timeout_seconds = timeoutSec,
                 wait_for_exit = _chkWaitForExit.IsChecked == true,
                 capture_output = _chkCaptureOutput.IsChecked == true,
+                open_external_logs = _chkOpenExternalLogs.IsChecked == true,
                 requires_admin = true
             };
 
@@ -1326,7 +1340,7 @@ namespace OptiAssist.Addons.Toolbox
                 return;
             }
 
-            if (_host != null)
+            if (_host != null && item.open_external_logs)
             {
                 _host.OpenLogWindow();
             }
@@ -1410,6 +1424,7 @@ namespace OptiAssist.Addons.Toolbox
             if (_lblFieldDescription != null) _lblFieldDescription.Text = T("Toolbox_Field_Description", "Description (optional):");
             if (_chkWaitForExit != null) _chkWaitForExit.Content = T("Toolbox_Chk_WaitForExit", "Wait for exit (Synchronous)");
             if (_chkCaptureOutput != null) _chkCaptureOutput.Content = T("Toolbox_Chk_CaptureOutput", "Stream output to application Logs");
+            if (_chkOpenExternalLogs != null) _chkOpenExternalLogs.Content = T("Toolbox_Chk_OpenExternalLogs", "Open external logs window");
             if (_btnDeleteFromEditor != null) _btnDeleteFromEditor.Content = T("Btn_ToolboxDelete", "🗑️ Delete");
             if (_btnSaveCommand != null) _btnSaveCommand.Content = T("Btn_ToolboxSave", "💾 Save");
             if (_btnCancelEdit != null) _btnCancelEdit.Content = T("Btn_Cancel", "✕ Cancel");

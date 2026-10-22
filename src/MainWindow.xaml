@@ -38,7 +38,20 @@
 
                 <!-- Top Left: Application Branding (Logo + Title) -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="app.png"
+                    <Button x:Name="btnToggleSidebar"
+                            Content="☰"
+                            Style="{StaticResource BtnDefault}"
+                            Width="30"
+                            Height="30"
+                            Padding="0"
+                            FontSize="14"
+                            FontWeight="Bold"
+                            Margin="0,0,10,0"
+                            VerticalAlignment="Center"
+                            ToolTip="Toggle Sidebar"
+                            Click="BtnToggleSidebar_Click"/>
+                    <Image x:Name="imgAppHeaderLogo"
+                           Source="app.png"
                            Width="28"
                            Height="28"
                            RenderOptions.BitmapScalingMode="HighQuality"
@@ -94,14 +107,15 @@
         <!-- ROW 1: WORKSPACE (Sidebar + Content Area) -->
         <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="200" /> <!-- Column 0: Fixed Sidebar -->
+                <ColumnDefinition x:Name="colSidebar" Width="200" /> <!-- Column 0: Fixed Sidebar -->
                 <ColumnDefinition Width="*" />   <!-- Column 1: Dynamic Content Area -->
             </Grid.ColumnDefinitions>
 
             <!-- ========================================== -->
             <!-- COLUMN 0: SIDEBAR (Width="200")            -->
             <!-- ========================================== -->
-            <Border Grid.Column="0"
+            <Border x:Name="borderSidebar"
+                    Grid.Column="0"
                     Background="{DynamicResource BrushBgSidebar}"
                     BorderBrush="{DynamicResource BrushBorderCard}"
                     BorderThickness="0,0,1,0"
@@ -121,6 +135,8 @@
                                      Content="📦  App Manager"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
+                        <!-- Dynamic Toolbox Container (Between App Manager and Windows Tools) -->
+                        <StackPanel x:Name="pnlSidebarToolbox" />
                         <RadioButton x:Name="rbNavShortcuts"
                                      GroupName="SidebarNavGroup"
                                      Content="🛠️  Windows Tools"
@@ -959,6 +975,12 @@
                                                    Text="📜 GPEDIT Tool (Pro/Enterprise)"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Button>
+                                    <Button x:Name="btnServicesTool"
+                                            Content="⚙️ Windows Services (services.msc)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnServices_Click"
+                                            ToolTip="Windows Services console (services.msc)"/>
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
@@ -1005,39 +1027,6 @@
                                 Padding="12"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
-                                <!-- Service Provider Mode -->
-                                <Border Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="10"
-                                        Margin="0,0,0,10">
-                                    <StackPanel>
-                                        <CheckBox x:Name="chkServiceProviderMode"
-                                                  Content="Service provider mode"
-                                                  FontWeight="SemiBold"
-                                                  FontSize="12"
-                                                  Checked="ChkServiceProviderMode_Changed"
-                                                  Unchecked="ChkServiceProviderMode_Changed"/>
-                                        <TextBlock x:Name="txtServiceProviderDesc"
-                                                   Text="Enables branding customization and options for service orders and technical reports"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                                   Margin="24,2,0,0"/>
-
-                                        <!-- Section with Custom App Name and Contact Info -->
-                                        <StackPanel x:Name="pnlServiceProviderFields" Margin="0,10,0,0" Visibility="Collapsed">
-                                            <TextBlock x:Name="txtStoreNameLabel" Text="Custom application name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox x:Name="txtSettingStore" Height="26" TextChanged="TxtSettingStore_TextChanged" ToolTip="Customize the application according to the name you prefer."/>
-                                            <TextBlock x:Name="txtStoreNameHint" Text="💡 Customize the application according to the name you prefer." FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,8"/>
-
-                                            <TextBlock x:Name="txtPhoneLabel" Text="Contact Information:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox x:Name="txtSettingPhone" Height="26" ToolTip="Provide an email, phone number, or social media link of your choice"/>
-                                            <TextBlock x:Name="txtPhoneHint" Text="💡 Provide an email, phone number, or social media link of your choice" FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
                                 <!-- Language Selection Buttons -->
                                 <TextBlock x:Name="txtLangLabel" Text="Application Language:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <StackPanel x:Name="pnlLanguageButtons" Orientation="Horizontal" Margin="0,0,0,10">
@@ -1065,7 +1054,7 @@
                                 <CheckBox x:Name="chkSettingWinget"
                                           Checked="ChkSettingWinget_Changed"
                                           Unchecked="ChkSettingWinget_Changed"
-                                          Content="Enable Winget download fallback when program is not in PostInstall folder"
+                                          Content="Enable Winget download fallback when program is not in Installers folder"
                                           Margin="0,2,0,4"/>
                                 <CheckBox x:Name="chkSettingAutoRefresh"
                                           Checked="ChkSettingAutoRefresh_Changed"
@@ -1091,15 +1080,7 @@
                                             Style="{StaticResource BtnDefault}"
                                             Padding="14,0"
                                             HorizontalAlignment="Left"
-                                            Margin="0,0,8,0"
                                             Click="BtnResetSettings_Click"/>
-                                    <Button x:Name="btnCreateAutorun"
-                                            Content="💿 Create USB AutoRun"
-                                            Style="{StaticResource BtnDefault}"
-                                            Padding="14,0"
-                                            HorizontalAlignment="Left"
-                                            ToolTip="Create autorun.inf on drive root to display application icon and AutoPlay entry"
-                                            Click="BtnCreateAutorun_Click"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1120,11 +1101,30 @@
                                            Foreground="{DynamicResource BrushAccent}"
                                            Margin="0,0,0,4"/>
                                 <TextBlock x:Name="txtPersonalizeSub"
-                                           Text="Customize the visual theme, button accent colors, and styling of OptiAssist:"
+                                           Text="Customize the visual theme, button accent colors, branding, and styling of OptiAssist:"
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextSecondary}"
                                            Margin="0,0,0,10"
                                            TextWrapping="Wrap"/>
+
+                                <!-- Custom Application Name -->
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock x:Name="txtStoreNameLabel" Text="Custom application name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                    <TextBox x:Name="txtSettingStore" Height="26" TextChanged="TxtSettingStore_TextChanged" ToolTip="Customize the application according to the name you prefer."/>
+                                    <TextBlock x:Name="txtStoreNameHint" Text="💡 Customize the application according to the name you prefer." FontSize="10" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <!-- Change App Logo Button -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <Button x:Name="btnChangeAppLogo"
+                                            Content="🖼️ Change App Logo"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="30"
+                                            Padding="14,0"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Select a custom logo image (.png, .jpg, .ico) for the application"
+                                            Click="BtnChangeAppLogo_Click"/>
+                                </StackPanel>
 
                                 <!-- Light Mode / Dark Mode Toggle -->
                                 <StackPanel Margin="0,0,0,12">
@@ -1209,6 +1209,57 @@
                                     <Button x:Name="btnPresetRed" Content="🔴 Red" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                     <Button x:Name="btnPresetYellow" Content="🟡 Yellow" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                     <Button x:Name="btnPresetPink" Content="🌸 Pink" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Section: Additional Settings (Device Integration & Portable Tools) -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,8,0,0"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtAdditionalSettingsTitle"
+                                           Text="🛠️ Additional Settings"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock x:Name="txtAdditionalSettingsSub"
+                                           Text="Device integration, system installation, and portable drive options:"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,0,0,10"
+                                           TextWrapping="Wrap"/>
+
+                                <WrapPanel>
+                                    <Button x:Name="btnCreateAutorun"
+                                            Content="💿 Create USB AutoRun"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            ToolTip="Create autorun.inf on drive root to display application icon and AutoPlay entry"
+                                            Click="BtnCreateAutorun_Click"/>
+                                    <Button x:Name="btnInstallApp"
+                                            Content="📥 Install OptiAssist"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            ToolTip="Install OptiAssist to C:\Program Files\OptiAssist with Desktop and Start Menu shortcuts"
+                                            Click="BtnInstallApp_Click"/>
+                                    <Button x:Name="btnUninstallApp"
+                                            Content="🗑️ Uninstall OptiAssist"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            ToolTip="Uninstall OptiAssist from this device and remove all shortcuts"
+                                            Click="BtnUninstallApp_Click"/>
                                 </WrapPanel>
                             </StackPanel>
                         </Border>
@@ -1367,16 +1418,27 @@
                                 Margin="0,0,0,10"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
-                                <TextBlock Text="OptiAssist v1.0.0"
-                                           FontSize="15"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource BrushAccent}"
-                                           Margin="0,0,0,2"/>
-                                <TextBlock Text="Copyright (C) 2026 João Figueiró"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrushTextPrimary}"
-                                           Margin="0,0,0,10"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <Image x:Name="imgAboutLogo"
+                                           Source="app.png"
+                                           Width="48"
+                                           Height="48"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,14,0"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock x:Name="txtAboutVersion"
+                                                   Text="OptiAssist v1.1.0"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrushAccent}"
+                                                   Margin="0,0,0,2"/>
+                                        <TextBlock Text="Copyright (C) 2026 João Figueiró"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    </StackPanel>
+                                </StackPanel>
 
                                 <!-- GNU GPLv3 Explicit License Badge -->
                                 <Border Background="{DynamicResource BrushBgInput}"
@@ -1459,6 +1521,13 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                                             Padding="14,0"
                                             Margin="0,0,8,8"
                                             Click="BtnAboutWebsite_Click"/>
+                                    <Button x:Name="btnAboutDocumentation"
+                                            Content="📖 Documentation"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            Click="BtnAboutDocumentation_Click"/>
                                 </WrapPanel>
                             </StackPanel>
                         </Border>

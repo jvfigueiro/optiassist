@@ -17,14 +17,14 @@
 - 🛡️ **Strict Administrator Privilege Enforcement**: Runs in 64-bit native mode (`Prefer32Bit = false`) with an elevation manifest. Verifies administrator rights on startup and alerts the user if elevation is denied, ensuring direct, unredirected access to `System32`, the Windows Registry, and WMI.
 - ⚖️ **100% Clean & Legal**: Strictly free of unauthorized activation tools or illicit utilities. Engineered for legitimate corporate and workshop compliance.
 - 🖥️ **Asynchronous Hardware & OS Telemetry**: Queries WMI in background threads to present CPU, RAM, GPU, Motherboard, BIOS, primary storage, serial number (with a 1-click clipboard copy button), and real-time security badges (**BitLocker**, **TPM 2.0**, **Secure Boot**) with clickable shortcuts.
-- 📦 **Dual-Engine Post-Install App Deployment**: Deploys essential software packages offline from `PostInstall/` at maximum USB 3.0/SSD speed, with automatic silent fallback to Microsoft's official **Winget** repository when connected to the internet. Features a visual in-app catalog editor (`Config/autoinstall.json`) and batch updates scanner.
-- 🧰 **Toolbox Command & Optimization Hub**: Replaces static optimization buttons with an extensible command execution engine supporting `cmd`, `PowerShell`, and standalone `binary` executables. Features collapsible category accordions, dynamic Category Management (add, rename, delete), live streaming of standard output/error, process termination, and 16+ pre-configured system repair presets (SFC, DISM, Chkdsk, Network Printer RPC fix, Dual Boot RTC clock, CompactOS, WinSAT, etc.).
+- 📦 **Dual-Engine Post-Install App Deployment**: Deploys essential software packages offline from `Installers/` at maximum USB 3.0/SSD speed, with automatic silent fallback to Microsoft's official **Winget** repository when connected to the internet. Features a visual in-app catalog editor (`Config/autoinstall.json`) and batch updates scanner.
+- 🧰 **Toolbox Command & Optimization Hub**: Replaces static optimization buttons with an extensible command execution engine supporting `cmd`, `PowerShell`, and standalone `binary` executables. Positioned right in the core sidebar between App Manager and Windows Tools. Features collapsible category accordions, dynamic Category Management (add, rename, delete), live streaming of standard output/error, customizable external log popup per action, process termination, and 16+ pre-configured system repair presets (SFC, DISM, Chkdsk, Network Printer RPC fix, Dual Boot RTC clock, CompactOS, WinSAT, etc.).
 - 🧹 **BleachBit-Inspired System Cleaner v2.0 (`SystemCleaner.dll`)**: Modular `BaseCleaner` architecture supporting non-destructive **Dry-Run (`Scan()`)** and safe **Execution (`Clean()`)**. Features `PathSanitizer` scope protection, locked-file resilience (`EBUSY` skipping), and 23 cleaning routines across 5 categories (Windows Core, Explorer Shell, Chromium multi-profile + SQLite `VACUUM;`, Windows Defender, and recursive Deep Scan for developer artifacts like `node_modules`, `venv`, and `__pycache__`).
-- 📋 **Professional Maintenance Service Report (`MaintenanceReport.dll`)**: Generates standardized technical service orders with customer info, auto-captured hardware specs, and an 8-point procedure checklist. Saves reports to `Reports/`, optionally prompts to save a client copy, and supports 1-click clipboard copying.
+- 📋 **Professional Maintenance Service Report (`MaintenanceReport.dll`)**: Generates standardized technical service orders with customer info, auto-captured hardware specs, dedicated in-module **Options** drawer for contact information, and an 8-point procedure checklist. Saves reports to `Reports/`, optionally prompts to save a client copy, and supports 1-click clipboard copying.
 - 📊 **Centralized Logs & Independent Floating LogWindow**: Real-time timestamped event stream with keyword search, clipboard copy, and `.txt` export. Includes an independent, floating `LogWindow` that auto-opens during command runs, synchronizes with Dark/Light themes, and can be set to open by default.
 - 🧩 **Modular Non-Locking Add-ons Architecture**: Standalone DLL plugins reside in `Config/Addons/<Module>/<Module>.dll` and integrate seamlessly as native sidebar navigation pages. Assemblies are loaded directly from memory bytes, preventing disk file locking and allowing on-the-fly updates, additions, or removals via **Settings**.
-- 🌐 **Dynamic Zero-Restart Localization (i18n)**: Instant in-memory switching between **English (US - `en-US`)** and **Portuguese (Brazil - `pt-BR`)** with 100% key parity across all 441 localization keys. New languages can be added simply by dropping a JSON file into `Config/Languages/`.
-- 🎨 **Fluent Personalization & USB AutoRun**: High-contrast Dark and Light modes, custom hex accent color selection with Windows Color Picker and 7 curated presets, Service Provider business branding, and 1-click `autorun.inf` generation for bootable USB drives.
+- 🌐 **Dynamic Zero-Restart Localization (i18n)**: Instant in-memory switching between **English (US - `en-US`)** and **Portuguese (Brazil - `pt-BR`)** with 100% key parity across all 472 localization keys. New languages can be added simply by dropping a JSON file into `Config/Languages/`.
+- 🎨 **Fluent Personalization & Deployment**: High-contrast Dark and Light modes, collapsible sidebar button (`☰`), custom application name, custom logo selector (`Change app logo`), hex accent color picker with 7 curated presets, 1-click `autorun.inf` generation for bootable USB drives, and complete 1-click **Install / Uninstall OptiAssist** deployment to `C:\Program Files\OptiAssist` with Start Menu and Desktop shortcuts.
 
 ---
 
@@ -32,14 +32,14 @@
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [Title] OptiAssist                          [Header Telemetry] Motherboard | CPU | RAM │
+│ [☰] [Logo] OptiAssist                       [Header Telemetry] Motherboard | CPU | RAM │
 ├───────────────┬────────────────────────────────────────────────────────────────────────┤
 │ 🏠 Dashboard  │                                                                        │
 │ 📦 App Manager│                                                                        │
 │ 🧰 Toolbox    │                          WORKSPACE AREA                                │
-│ 🧹 Cleaner    │                                                                        │
-│ 📋 Report     │                  (Dynamic Tab Content / Add-on View)                   │
 │ 🛠️ Win Tools  │                                                                        │
+│ 🧹 Cleaner    │                  (Dynamic Tab Content / Add-on View)                   │
+│ 📋 Report     │                                                                        │
 │ 📄 Logs       │                                                                        │
 │ ⚙️ Settings   │                                                                        │
 │ ℹ️ About      │                                                                        │
@@ -51,12 +51,13 @@
 ```
 
 1. **Top Header Bar**:
-   - Left: Prominent application branding.
+   - Left: **Sidebar Toggle Button (`☰`)**, Customizable Application Logo (`Config/custom_logo.<ext>`), and Application Title.
    - Right: Real-time hardware telemetry:
      - Line 1: Motherboard Manufacturer and Model.
      - Line 2: Processor (CPU) Model • Total Physical RAM.
 2. **Left Navigation Sidebar**:
-   - Quick-access tabs: **Dashboard**, **App Manager**, **Toolbox**, **Windows Tools**, **Logs**, **Settings**, and **About**.
+   - Quick-access tabs: **Dashboard**, **App Manager**, **Toolbox** (anchored right between App Manager and Windows Tools), **Windows Tools**, **Logs**, **Settings**, and **About**.
+   - Collapsible: Click the `☰` header button to collapse or expand the sidebar on demand.
    - Dynamic Add-on Navigation: Installed and enabled add-ons (`SystemCleaner`, `MaintenanceReport`, etc.) seamlessly appear as first-class sidebar navigation items with native styling and icons.
    - Bottom Toggle: 1-click switch between **Light Mode** and **Dark Mode**.
 3. **Workspace Area**:
@@ -89,7 +90,7 @@
 
 ### 2. App Manager (Automated Software Deployment)
 - **Hybrid Deployment Engine**:
-  - **Local Offline Engine**: Checks `PostInstall/` for offline installers (`.exe`, `.msi`, `.msixbundle`) and runs them silently without internet overhead.
+  - **Local Offline Engine**: Checks `Installers/` for offline installers (`.exe`, `.msi`, `.msixbundle`) and runs them silently without internet overhead.
   - **Winget Fallback Engine**: If an installer is missing and fallback is enabled, executes silent installation via Microsoft's official Windows Package Manager (`winget install --id <AppId> --silent --accept-package-agreements --accept-source-agreements`).
 - **Visual Catalog Editor (`Config/autoinstall.json`)**:
   - Add, edit, or remove software items directly from the interface.
@@ -105,8 +106,10 @@
 ### 3. Toolbox Hub (`Config/Addons/Toolbox/Toolbox.dll`)
 - **Custom System Command Engine**:
   - Execute commands via `cmd`, `PowerShell`, or direct `binary` executables.
+  - Positioned directly in the main sidebar between App Manager and Windows Tools.
   - Asynchronous execution on detached worker threads; zero UI freezing.
   - Real-time line-by-line `stdout` and `stderr` streaming directly into the central Logs console and the pop-out LogWindow.
+  - Individual action setting to toggle opening the external Logs window per command (`open_external_logs`).
   - Accurate exit-code detection with visual success and error indicators.
   - Process tree termination (`taskkill /T /F`) to halt long-running tasks safely.
   - Robust exception handling for UAC elevation cancellation (Win32 1223) and missing binaries (Win32 2/3 / exit 9009).
@@ -119,11 +122,10 @@
   - **Windows Performance & Tuning**: Dual Boot UTC Clock fix (`RealTimeIsUniversal`), CompactOS filesystem compression (`compact.exe /CompactOS:always`), WinSAT Benchmark, Microsoft Store Repair (`wsreset -i`), Visual Effects optimization, and Telemetry service disabling.
   - **Custom Scripts**: Integrated with `Config/Addons/Toolbox/Scripts/` (`tweaks_interface.ps1`, `fix_printer_rpc.reg`, `reset_network.bat`).
 - **Options Drawer & Edit Mode**:
-  - **➕ New Toolbox**: Modal dialog with field validation, shell picker, and execution settings.
+  - **➕ New Toolbox**: Modal dialog with field validation, shell picker, execution settings, and external log pop-out preference.
   - **🔄 Restore Presets**: Restores factory default commands and categories.
   - **📂 Open toolbox.json**: Opens the raw configuration file in the default text editor.
   - **✏️ Enable Edit Mode**: Toggles the visibility of "Edit" buttons on command cards, locking down the interface to prevent accidental modifications or unlocking it for customization.
-  - Automatic External LogWindow trigger on command execution.
 
 ### 4. System Cleaner & Optimizer (`Config/Addons/SystemCleaner/SystemCleaner.dll`)
 - **BleachBit-Inspired Architecture**:
@@ -139,7 +141,9 @@
 - **Telemetry Summary Bar**: Displays selected cleaners count, total scanned items, estimated reclaimable space, bytes freed, and skipped/locked item count.
 
 ### 5. Maintenance Service Report (`Config/Addons/MaintenanceReport/MaintenanceReport.dll`)
-- **Service Provider Branding**: Headers and footers dynamically incorporate your company name (`CustomerName`) and contact information (`ContactInfo`) when Service Provider Mode is enabled.
+- **Dedicated In-Module Options Drawer**:
+  - Dedicated `⚙️ Options` button revealing the Contact Information configuration card right inside the module, keeping global Settings uncluttered.
+  - Contact info entered here automatically binds and saves to `settings.json` and renders in the service order header.
 - **Comprehensive Hardware & Service Capture**: Records Client Name, Service Order (SO) number, timestamp, auto-detected Serial Number / Service Tag, Motherboard, CPU, RAM, GPU, Storage, BIOS, OS, Secure Boot, TPM, and BitLocker states.
 - **8-Point Interactive Procedure Checklist**:
   - `[X]` Disk diagnostic and SMART health check
@@ -156,30 +160,38 @@
   - **`📋 Copy Technical Report`** copies the full formatted report to the Windows clipboard for instant sharing via email, WhatsApp, or ticketing portals.
 
 ### 6. Windows Administrative Tools
-- **17 Native Management Consoles**: Single-click access to Device Manager, User Accounts (`netplwiz`), Disk Management, Classic Control Panel, System Information (`msinfo32`), About Windows (`winver`), MSCONFIG, System Properties (`sysdm.cpl`), Network Connections (`ncpa.cpl`), Windows Features, Registry Editor, Task Manager, Resource Monitor, Memory Diagnostic, Reliability Monitor, Event Viewer, and GPEDIT Group Policy Editor (with edition detection for Windows Home).
+- **18 Native Management Consoles**: Single-click access to Device Manager, User Accounts (`netplwiz`), Disk Management, Classic Control Panel, System Information (`msinfo32`), About Windows (`winver`), MSCONFIG, System Properties (`sysdm.cpl`), Network Connections (`ncpa.cpl`), Windows Features, Registry Editor, Task Manager, Resource Monitor, Memory Diagnostic, Reliability Monitor, Event Viewer, Windows Services console (`services.msc`), and GPEDIT Group Policy Editor (with edition detection for Windows Home).
 - **Maintenance Tools Folder**: Quick shortcut to the portable `Maintenance/` directory to run portable tools like CPU-Z, CrystalDiskInfo, HWMonitor, or offline scanners.
 
 ### 7. Centralized Logs & Floating LogWindow
 - **In-App Logs Tab**: Real-time timestamped event stream with text filtering, clipboard copy, export to `.txt`, clear logs, and automatic scroll-to-bottom.
 - **Independent Floating `LogWindow` (`LogWindow.cs`)**:
   - Standalone pop-out window for multi-monitor setups or floating over other windows.
-  - Auto-opens upon executing any Toolbox command or repair action.
+  - Auto-opens upon executing any Toolbox command or repair action (if enabled per command or globally).
   - Fully synchronized with Dark and Light themes.
   - Dedicated search filter, clear, copy, and export capabilities.
   - Configurable in Settings: **"Open external logs window by default"** (`OpenExternalLogsByDefault`).
 
 ### 8. Settings & Personalization
-- **Service Provider Mode**: Custom technician branding, contact info, and toggle to show/hide the Maintenance Report tab.
+- **Customize Application**:
+  - **Custom application name**: Set your business or preferred application brand without confusing mode toggles.
+  - **Change app logo**: Select any custom image (`.png`, `.jpg`, `.ico`, `.bmp`), automatically copied to `Config/custom_logo.<ext>` and reflected across the top bar and About screen.
 - **Dynamic Localization Engine (i18n)**:
   - English (US - `en-US`) and Portuguese (Brazil - `pt-BR`) dictionaries in `Config/Languages/`.
-  - 100% key parity (441 keys matched with 0 diff).
+  - 100% key parity (472 keys matched with 0 diff).
   - Instant zero-restart translation across every element in memory.
   - Extensible: drop any `<locale>.json` (e.g. `es-ES.json`) into the folder to add language support instantly.
 - **Fluent Styling & Accent Colors**:
   - Dark Mode (`#0F172A`) & Light Mode (`#FFFFFF` / `#F8FAFC`).
   - Custom Hex color code input or Windows Color Dialog picker.
   - 7 quick preset colors: Blue (Default), Green, Purple, Orange, Red, Yellow, and Pink.
-- **Portable USB AutoRun**: Generates or updates `autorun.inf` at the drive root with relative application path and icon while preserving existing volume metadata.
+- **Additional Settings (Configurações Adicionais)**:
+  - **💿 Create USB AutoRun**: Generates or updates `autorun.inf` at the drive root with relative application path and icon.
+  - **📥 Install OptiAssist**: Installs OptiAssist directly to `C:\Program Files\OptiAssist`, creating Start Menu and Desktop shortcuts and registering the uninstaller in Windows Programs & Features.
+  - **🗑️ Uninstall OptiAssist**: Uninstalls OptiAssist, cleans shortcuts, and removes registry entries (also supports native Windows Settings uninstall via `--uninstall`).
+- **About Screen**:
+  - Displays application logo alongside version tag `v1.1.0`.
+  - Includes **📖 Documentation** button for direct access to official docs.
 - **Add-ons Manager**: View installed `.dll` plugins, enable/disable them on the fly, import new plugin DLLs, or remove modules.
 
 ---
@@ -197,9 +209,10 @@
 ├── 📁 Config/                       <-- Portable configuration & modules
 │   ├── settings.json                <-- User preferences, branding, themes, active add-ons
 │   ├── autoinstall.json             <-- Automated software installation catalog (Local/Winget)
+│   ├── custom_logo.png              <-- Custom user-selected application logo (optional)
 │   ├── 📁 Languages/                <-- Dynamic i18n translation dictionaries
-│   │   ├── en-US.json               <-- English (United States) [441 keys]
-│   │   └── pt-BR.json               <-- Português (Brasil) [441 keys]
+│   │   ├── en-US.json               <-- English (United States) [472 keys]
+│   │   └── pt-BR.json               <-- Português (Brasil) [472 keys]
 │   └── 📁 Addons/                   <-- Standalone compiled plugin assemblies
 │       ├── README.md                <-- Add-ons developer guide
 │       ├── 📁 SystemCleaner/
@@ -214,7 +227,7 @@
 │               ├── fix_printer_rpc.reg
 │               └── reset_network.bat
 │
-├── 📁 PostInstall/                  <-- Offline software installers (.exe, .msi, .msix)
+├── 📁 Installers/                   <-- Offline software installers (.exe, .msi, .msix)
 │   └── README.txt
 │
 ├── 📁 Maintenance/                  <-- Portable third-party tools (CPU-Z, CrystalDiskInfo)
@@ -228,19 +241,19 @@
 │   ├── 01-DASHBOARD.md              <-- Hardware telemetry, WMI queries, security badges
 │   ├── 02-APP-MANAGER.md            <-- Offline installer deployment, Winget engine
 │   ├── 03-TOOLBOX.md                <-- Command runner, categories, repair presets
-│   ├── 04-WINDOWS-TOOLS.md          <-- 17 administrative consoles, GPEDIT handling
+│   ├── 04-WINDOWS-TOOLS.md          <-- 18 administrative consoles, GPEDIT handling
 │   ├── 05-MAINTENANCE-REPORT.md     <-- Service orders, checklist, report exports
-│   ├── 06-SETTINGS-AND-LOCALIZATION.md <-- Dynamic i18n, themes, logs, USB AutoRun
+│   ├── 06-SETTINGS-AND-LOCALIZATION.md <-- Dynamic i18n, themes, logs, USB AutoRun, Deployment
 │   └── 07-ADDONS-AND-MODULES.md     <-- Plugin architecture, BaseCleaner, specs
 │
 └── 📁 src/                          <-- Full modular source code (.NET 4.8 / WPF)
-    ├── App.xaml / App.xaml.cs       <-- Application entry, elevation check, themes
-    ├── MainWindow.xaml / .cs        <-- Main UI grid, navigation, status bar
+    ├── App.xaml / App.xaml.cs       <-- Application entry, elevation check, themes, uninstaller
+    ├── MainWindow.xaml / .cs        <-- Main UI grid, navigation, status bar, branding
     ├── LogWindow.cs                 <-- Pop-out independent floating log window
     ├── AddonHelper.cs               <-- Non-locking assembly loader & contracts
     ├── SystemInfoHelper.cs          <-- WMI hardware, OS, and security queries
     ├── InstallerHelper.cs           <-- Offline installer & Winget upgrade runner
-    ├── ShortcutsHelper.cs           <-- Windows administrative tool launchers
+    ├── ShortcutsHelper.cs           <-- Windows administrative tool launchers & AppDeploymentHelper
     ├── SettingsHelper.cs            <-- settings.json serialization & persistence
     ├── LocalizationHelper.cs        <-- Dynamic i18n JSON translation engine
     └── 📁 Addons/                   <-- Standalone add-on project sources

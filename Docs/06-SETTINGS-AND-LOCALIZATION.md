@@ -23,6 +23,7 @@ All configuration parameters are stored portably in `Config/settings.json`. Pref
 | `ServiceProviderMode` | Boolean | `false` | Enables custom branding, Service Order inputs, and technical reports. |
 | `EnableMaintenanceReport` | Boolean | `false` | Controls whether the Maintenance Report tab is rendered in the sidebar. |
 | `OpenExternalLogsByDefault` | Boolean | `false` | Automatically opens the floating `LogWindow` whenever OptiAssist launches. |
+| `CustomLogoPath` | String | `""` | Relative path to custom application logo image stored in `Config/`. |
 | `DisabledAddons` | Array | `[]` | List of module IDs (`string[]`) that are currently disabled by the user. |
 
 ---
@@ -64,7 +65,7 @@ OptiAssist implements a zero-restart internationalization architecture:
 
 1. **Flat JSON Dictionaries**:
    * Stored in `Config/Languages/<locale>.json` (`en-US.json`, `pt-BR.json`).
-   * Exactly 441 keys per file, with 100% key parity between English and Brazilian Portuguese.
+   * Exactly 472 keys per file, with 100% key parity between English and Brazilian Portuguese.
 2. **Instant In-Memory Translation**:
    * Changing the language in Settings instantly updates every title, tab, button, card, tooltip, and dialog in memory without requiring an application restart.
 3. **Extensibility**:
@@ -72,11 +73,15 @@ OptiAssist implements a zero-restart internationalization architecture:
 
 ---
 
-## 🎨 Themes & Accent Personalization
+## 🎨 Themes, Branding & Personalization
 
 ### Fluent Themes
 * **Dark Mode (Default)**: Deep slate palette (`#0F172A`, `#1E293B`, `#334155`) engineered for low eye strain in dimly lit workshops.
 * **Light Mode**: High-contrast, clean modern interface (`#F8FAFC`, `#FFFFFF`, `#E2E8F0`) for brightly lit retail or office environments.
+
+### Custom Branding & Logo
+* **Custom Application Name**: Allows setting a personalized business name (e.g. your repair shop name) that seamlessly replaces "OptiAssist" across the top bar.
+* **Change App Logo**: Clicking **`🖼️ Change App Logo`** allows selecting an image (`.png`, `.jpg`, `.ico`, `.bmp`) that is automatically copied to `Config/custom_logo.<ext>` and loaded into both the top header and About screen.
 
 ### Custom Accent Colors
 * **Hex Input**: Enter any custom 6-digit hex color code (e.g., `#0EA5E9`, `#10B981`, `#8B5CF6`).
@@ -86,17 +91,31 @@ OptiAssist implements a zero-restart internationalization architecture:
 
 ---
 
-## 💿 Portable USB AutoRun Integration
+## 📦 Additional Settings & System Deployment
 
-The **Create USB AutoRun** button configures the portable drive for immediate execution upon insertion into a computer:
+Located under the **Configurações Adicionais (Additional Settings)** card:
 
+### 1. Portable USB AutoRun Integration
+The **`💿 Create USB AutoRun`** button configures the portable drive for immediate execution upon insertion into a computer:
 ```ini
 [AutoRun]
 open={relative_exe_path}
 action=Executar o OptiAssist
 icon={relative_exe_path},0
 ```
-
 * **Preserves Drive Metadata**: Does not alter or wipe the existing drive label.
 * **Native Windows Icon**: Links the USB drive icon in Windows Explorer directly to the embedded high-resolution OptiAssist icon.
 * **Safe Attributes**: Automatically strips read-only or hidden flags on existing `autorun.inf` files before updating.
+
+### 2. Install OptiAssist (`InstallOptiAssist`)
+Installs the full OptiAssist application suite to the host computer:
+* Copies the application, configuration, modules, and icons to `C:\Program Files\OptiAssist`.
+* Generates native Windows shell shortcuts (`.lnk`) on the **Common Desktop** and **Start Menu**.
+* Registers OptiAssist in the Windows Registry under `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\OptiAssist` with full metadata (Publisher, DisplayVersion, DisplayIcon, and UninstallString).
+
+### 3. Uninstall OptiAssist (`UninstallOptiAssist`)
+Safely removes OptiAssist from the system:
+* Removes Desktop and Start Menu `.lnk` shortcuts.
+* Deletes the uninstallation registry key from `HKLM`.
+* Cleans up the installation directory in `Program Files`.
+* **Native Windows Settings Integration**: Supports uninstallation via Windows "Installed Apps" / Control Panel using the command line flag `OptiAssist.exe --uninstall`.

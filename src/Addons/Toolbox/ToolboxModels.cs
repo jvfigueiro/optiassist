@@ -44,6 +44,7 @@ namespace OptiAssist.Addons.Toolbox
         private bool _waitForExit;
         private bool _captureOutput;
         private bool _requiresAdmin;
+        private bool _openExternalLogs;
         private int _timeoutSeconds;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -152,6 +153,19 @@ namespace OptiAssist.Addons.Toolbox
         }
 
         /// <summary>
+        /// Indicates whether the external pop-out Logs window should automatically open upon execution.
+        /// </summary>
+        public bool open_external_logs
+        {
+            get { return _openExternalLogs; }
+            set
+            {
+                _openExternalLogs = value;
+                OnPropertyChanged("open_external_logs");
+            }
+        }
+
+        /// <summary>
         /// Optional execution timeout in seconds (0 = no timeout limit).
         /// </summary>
         public int timeout_seconds
@@ -191,6 +205,7 @@ namespace OptiAssist.Addons.Toolbox
             _waitForExit = true;
             _captureOutput = true;
             _requiresAdmin = false;
+            _openExternalLogs = true;
             _timeoutSeconds = 0;
         }
 
@@ -207,6 +222,7 @@ namespace OptiAssist.Addons.Toolbox
                 wait_for_exit = this.wait_for_exit,
                 capture_output = this.capture_output,
                 requires_admin = this.requires_admin,
+                open_external_logs = this.open_external_logs,
                 timeout_seconds = this.timeout_seconds
             };
         }

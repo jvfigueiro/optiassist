@@ -381,6 +381,12 @@ namespace OptiAssist.Addons.MaintenanceReport
         private Button _btnSaveReport;
         private Button _btnCopyReport;
         private Button _btnOpenReportFolder;
+        private Button _btnOptions;
+        private Border _borderOptionsCard;
+        private TextBlock _txtOptionsTitle;
+        private TextBlock _lblContactInfo;
+        private TextBox _txtContactInfo;
+        private TextBlock _lblContactInfoHint;
 
         public string Id
         {
@@ -441,9 +447,12 @@ namespace OptiAssist.Addons.MaintenanceReport
             root.Loaded += (s, e) => RefreshSerialFromHardware();
 
             // 1. Header Section
-            StackPanel headerPanel = new StackPanel();
-            headerPanel.Margin = new Thickness(0, 0, 0, 10);
+            Grid headerGrid = new Grid();
+            headerGrid.Margin = new Thickness(0, 0, 0, 10);
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
 
+            StackPanel titlePanel = new StackPanel();
             _txtTitle = new TextBlock();
             _txtTitle.Text = T("Report_Title", "Maintenance Service Record");
             _txtTitle.FontSize = 15;
@@ -458,9 +467,79 @@ namespace OptiAssist.Addons.MaintenanceReport
             _txtSubtitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             _txtSubtitle.TextTrimming = TextTrimming.CharacterEllipsis;
 
-            headerPanel.Children.Add(_txtTitle);
-            headerPanel.Children.Add(_txtSubtitle);
-            root.Children.Add(headerPanel);
+            titlePanel.Children.Add(_txtTitle);
+            titlePanel.Children.Add(_txtSubtitle);
+            Grid.SetColumn(titlePanel, 0);
+            headerGrid.Children.Add(titlePanel);
+
+            _btnOptions = new Button();
+            _btnOptions.Content = T("Report_Btn_Options", "⚙️ Options");
+            _btnOptions.Height = 30;
+            _btnOptions.Padding = new Thickness(12, 0, 12, 0);
+            _btnOptions.VerticalAlignment = VerticalAlignment.Center;
+            _btnOptions.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnOptions.Click += (s, e) =>
+            {
+                if (_borderOptionsCard != null)
+                {
+                    _borderOptionsCard.Visibility = (_borderOptionsCard.Visibility == Visibility.Visible)
+                        ? Visibility.Collapsed
+                        : Visibility.Visible;
+                }
+            };
+            Grid.SetColumn(_btnOptions, 1);
+            headerGrid.Children.Add(_btnOptions);
+            root.Children.Add(headerGrid);
+
+            // Collapsible Options Card for Contact Information
+            _borderOptionsCard = new Border();
+            _borderOptionsCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            _borderOptionsCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            _borderOptionsCard.BorderThickness = new Thickness(1);
+            _borderOptionsCard.CornerRadius = new CornerRadius(6);
+            _borderOptionsCard.Padding = new Thickness(12);
+            _borderOptionsCard.Margin = new Thickness(0, 0, 0, 10);
+            _borderOptionsCard.Visibility = Visibility.Collapsed;
+
+            StackPanel optionsStack = new StackPanel();
+            _txtOptionsTitle = new TextBlock();
+            _txtOptionsTitle.Text = T("Report_Card_Options", "⚙️ Service Provider & Contact Information");
+            _txtOptionsTitle.FontWeight = FontWeights.Bold;
+            _txtOptionsTitle.FontSize = 12;
+            _txtOptionsTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            _txtOptionsTitle.Margin = new Thickness(0, 0, 0, 8);
+            optionsStack.Children.Add(_txtOptionsTitle);
+
+            _lblContactInfo = new TextBlock();
+            _lblContactInfo.Text = T("Report_Label_ContactInfo", "Contact Information:");
+            _lblContactInfo.FontSize = 10;
+            _lblContactInfo.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            _lblContactInfo.Margin = new Thickness(0, 0, 0, 2);
+            optionsStack.Children.Add(_lblContactInfo);
+
+            _txtContactInfo = new TextBox();
+            _txtContactInfo.Height = 26;
+            _txtContactInfo.Margin = new Thickness(0, 0, 0, 2);
+            string initContact = (_host != null && _host.Settings != null) ? _host.Settings.ContactInfo : "";
+            _txtContactInfo.Text = initContact ?? "";
+            _txtContactInfo.TextChanged += (s, e) =>
+            {
+                if (_host != null && _host.Settings != null)
+                {
+                    _host.Settings.ContactInfo = _txtContactInfo.Text.Trim();
+                    _host.SaveSettings();
+                }
+            };
+            optionsStack.Children.Add(_txtContactInfo);
+
+            _lblContactInfoHint = new TextBlock();
+            _lblContactInfoHint.Text = T("Report_Hint_ContactInfo", "💡 Provide email, phone, address, or website to display in report header");
+            _lblContactInfoHint.FontSize = 10;
+            _lblContactInfoHint.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+            optionsStack.Children.Add(_lblContactInfoHint);
+
+            _borderOptionsCard.Child = optionsStack;
+            root.Children.Add(_borderOptionsCard);
 
             // 2. Main Report Form Card
             Border formCard = new Border();
@@ -691,12 +770,12 @@ namespace OptiAssist.Addons.MaintenanceReport
             MaintenanceRecord rec = new MaintenanceRecord();
             AppSettings settings = _host != null ? _host.Settings : null;
 
-            rec.CustomerName = (settings != null && settings.ServiceProviderMode && !string.IsNullOrWhiteSpace(settings.CustomerName))
+            rec.CustomerName = (settings != null && !string.IsNullOrWhiteSpace(settings.CustomerName))
                 ? settings.CustomerName
                 : "OptiAssist";
-            rec.ContactInfo = (settings != null && settings.ServiceProviderMode && !string.IsNullOrWhiteSpace(settings.ContactInfo))
-                ? settings.ContactInfo
-                : "";
+            rec.ContactInfo = (_txtContactInfo != null && !string.IsNullOrWhiteSpace(_txtContactInfo.Text))
+                ? _txtContactInfo.Text.Trim()
+                : (settings != null && !string.IsNullOrWhiteSpace(settings.ContactInfo) ? settings.ContactInfo : "");
             rec.OrderNumber = _txtOrder != null ? _txtOrder.Text.Trim() : "";
             rec.ClientName = _txtClient != null ? _txtClient.Text.Trim() : "";
             rec.ClientPhone = "";
@@ -810,6 +889,10 @@ namespace OptiAssist.Addons.MaintenanceReport
         {
             if (_txtTitle != null) _txtTitle.Text = T("Report_Title", "Maintenance Service Record");
             if (_txtSubtitle != null) _txtSubtitle.Text = T("Report_Subtitle", "Generates a report with machine specs, motherboard, serial number, and performed services");
+            if (_btnOptions != null) _btnOptions.Content = T("Report_Btn_Options", "⚙️ Options");
+            if (_txtOptionsTitle != null) _txtOptionsTitle.Text = T("Report_Card_Options", "⚙️ Service Provider & Contact Information");
+            if (_lblContactInfo != null) _lblContactInfo.Text = T("Report_Label_ContactInfo", "Contact Information:");
+            if (_lblContactInfoHint != null) _lblContactInfoHint.Text = T("Report_Hint_ContactInfo", "💡 Provide email, phone, address, or website to display in report header");
             if (_txtOrderLabel != null) _txtOrderLabel.Text = T("Report_Label_Order", "Service Order (SO) Number:");
             if (_txtClientLabel != null) _txtClientLabel.Text = T("Report_Label_Client", "Client Name:");
             if (_txtSerialLabel != null) _txtSerialLabel.Text = T("Report_Label_Serial", "Serial Number / Service Tag:");

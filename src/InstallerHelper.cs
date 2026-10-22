@@ -202,15 +202,25 @@ namespace OptiAssist
 
     public static class InstallerHelper
     {
-        public static string GetPostInstallDirectory()
+        public static string GetInstallersDirectory()
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string postDir = Path.Combine(baseDir, "PostInstall");
-            if (!Directory.Exists(postDir))
+            string dir = Path.Combine(baseDir, "Installers");
+            if (!Directory.Exists(dir))
             {
-                try { Directory.CreateDirectory(postDir); } catch { }
+                string legacy = Path.Combine(baseDir, "PostInstall");
+                if (Directory.Exists(legacy))
+                {
+                    return legacy;
+                }
+                try { Directory.CreateDirectory(dir); } catch { }
             }
-            return postDir;
+            return dir;
+        }
+
+        public static string GetPostInstallDirectory()
+        {
+            return GetInstallersDirectory();
         }
 
         public static string GetPostInstallJsonPath()
@@ -376,14 +386,19 @@ namespace OptiAssist
             return FindLocalInstaller(app);
         }
 
-        public static void OpenPostInstallFolder()
+        public static void OpenInstallersFolder()
         {
-            string dir = GetPostInstallDirectory();
+            string dir = GetInstallersDirectory();
             try
             {
                 Process.Start("explorer.exe", dir);
             }
             catch { }
+        }
+
+        public static void OpenPostInstallFolder()
+        {
+            OpenInstallersFolder();
         }
 
         public static void OpenPostInstallJson()
@@ -432,7 +447,7 @@ namespace OptiAssist
             }
 
             // 2. Configured as Local installation type (searches for <Name>Setup.exe)
-            log(string.Format("==> [LOCAL METHOD] Checking installer for '{0}' in the PostInstall\\ folder...", app.Name));
+            log(string.Format("==> [LOCAL METHOD] Checking installer for '{0}' in the Installers\\ folder...", app.Name));
             string localFile = FindLocalInstaller(app);
 
             if (!string.IsNullOrEmpty(localFile) && File.Exists(localFile))
@@ -462,7 +477,7 @@ namespace OptiAssist
             else
             {
                 string cleanExpected = (!string.IsNullOrEmpty(app.Name) ? app.Name.Replace(" ", "") : "App") + "Setup.exe";
-                log(string.Format("[SKIPPED] {0}: Local installer '{1}' missing in the PostInstall\\ folder and Winget fallback is disabled.",
+                log(string.Format("[SKIPPED] {0}: Local installer '{1}' missing in the Installers\\ folder and Winget fallback is disabled.",
                     app.Name, cleanExpected));
             }
         }

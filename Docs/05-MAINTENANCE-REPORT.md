@@ -6,14 +6,12 @@ Compiled as an independent, non-locking modular DLL add-on, it integrates seamle
 
 ---
 
-## 💼 Service Provider Mode Branding
+## 💼 In-Module Options & Contact Info Branding
 
-When **Service Provider Mode** is enabled in Settings, the report dynamically brands itself with your business credentials:
-* **Company / Technician Name (`CustomerName`)**: Displayed prominently in the top header and footer of every generated report.
-* **Contact Information (`ContactInfo`)**: Phone number, website, or email displayed directly below the company title.
-
-> [!TIP]
-> If Service Provider Mode is turned off, the report defaults to clean, neutral `OptiAssist` branding.
+The module includes a dedicated **`⚙️ Options`** drawer accessible right from the report header:
+* **Company / Technician Name (`CustomerName`)**: Configured under Settings (`Customize Application`) and displayed prominently in the top header and footer of every generated report.
+* **Contact Information (`ContactInfo`)**: Phone number, website, or email entered in the **Options** card and displayed directly below the company title.
+* **Streamlined Design**: Moving Contact Information directly into Maintenance Report keeps global application Settings clean and uncluttered, ensuring contact details are maintained right where they are used.
 
 ---
 

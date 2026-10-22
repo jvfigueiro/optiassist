@@ -19,6 +19,7 @@ namespace OptiAssist
         public bool EnableMaintenanceReport { get; set; }
         public bool OpenExternalLogsByDefault { get; set; }
         public List<string> DisabledAddons { get; set; }
+        public string CustomLogoPath { get; set; }
 
         // A new instance always holds the factory default values
         public AppSettings()
@@ -35,6 +36,7 @@ namespace OptiAssist
             EnableMaintenanceReport = false;
             OpenExternalLogsByDefault = false;
             DisabledAddons = new List<string>();
+            CustomLogoPath = "";
         }
     }
 
@@ -104,6 +106,10 @@ namespace OptiAssist
                     bool b;
                     if (bool.TryParse(dict["OpenExternalLogsByDefault"], out b)) settings.OpenExternalLogsByDefault = b;
                 }
+                if (dict.ContainsKey("CustomLogoPath"))
+                {
+                    settings.CustomLogoPath = dict["CustomLogoPath"];
+                }
                 if (dict.ContainsKey("DisabledAddons"))
                 {
                     string val = dict["DisabledAddons"];
@@ -147,6 +153,7 @@ namespace OptiAssist
                 sb.AppendLine(string.Format("  \"ServiceProviderMode\": {0},", settings.ServiceProviderMode ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"EnableMaintenanceReport\": {0},", settings.EnableMaintenanceReport ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"OpenExternalLogsByDefault\": {0},", settings.OpenExternalLogsByDefault ? "true" : "false"));
+                sb.AppendLine(string.Format("  \"CustomLogoPath\": \"{0}\",", EscapeJson(settings.CustomLogoPath)));
                 string disabledStr = settings.DisabledAddons != null ? string.Join(",", settings.DisabledAddons.ToArray()) : "";
                 sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\"", EscapeJson(disabledStr)));
                 sb.AppendLine("}");

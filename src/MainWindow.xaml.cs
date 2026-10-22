@@ -33,6 +33,8 @@ namespace OptiAssist
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             LoadApplicationSettings();
+            LoadAppLogo();
+            UpdateDeploymentButtonsUI();
             LoadPostInstallApps();
             ReloadAddonsList();
 
@@ -83,6 +85,21 @@ namespace OptiAssist
         }
 
         #region TAB NAVIGATION
+        private void BtnToggleSidebar_Click(object sender, RoutedEventArgs e)
+        {
+            if (borderSidebar == null || colSidebar == null) return;
+            if (borderSidebar.Visibility == Visibility.Visible)
+            {
+                borderSidebar.Visibility = Visibility.Collapsed;
+                colSidebar.Width = new GridLength(0);
+            }
+            else
+            {
+                colSidebar.Width = new GridLength(200);
+                borderSidebar.Visibility = Visibility.Visible;
+            }
+        }
+
         private void NavButton_Click(object sender, RoutedEventArgs e)
         {
             RadioButton rb = sender as RadioButton;
@@ -274,11 +291,7 @@ namespace OptiAssist
             {
                 _settings = SettingsHelper.Load();
 
-                if (chkServiceProviderMode != null)
-                    chkServiceProviderMode.IsChecked = _settings.ServiceProviderMode;
-
-                txtSettingStore.Text = _settings.CustomerName;
-                txtSettingPhone.Text = _settings.ContactInfo;
+                if (txtSettingStore != null) txtSettingStore.Text = _settings.CustomerName;
                 if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
                 if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
                 if (chkSettingExternalLogs != null) chkSettingExternalLogs.IsChecked = _settings.OpenExternalLogsByDefault;
@@ -287,6 +300,8 @@ namespace OptiAssist
                 ApplyLanguage(currentLang);
 
                 UpdateServiceProviderUI();
+                LoadAppLogo();
+                UpdateDeploymentButtonsUI();
 
                 // Load and apply custom accent and button color
                 string accent = string.IsNullOrEmpty(_settings.AccentColor) ? "#0EA5E9" : _settings.AccentColor;
@@ -313,13 +328,6 @@ namespace OptiAssist
         {
             if (_settings == null) return;
 
-            bool isProvider = chkServiceProviderMode != null && chkServiceProviderMode.IsChecked == true;
-
-            if (pnlServiceProviderFields != null)
-            {
-                pnlServiceProviderFields.Visibility = isProvider ? Visibility.Visible : Visibility.Collapsed;
-            }
-
             // Update top bar application branding
             if (lblAppTitle != null)
             {
@@ -329,7 +337,7 @@ namespace OptiAssist
                     customName = txtSettingStore.Text.Trim();
                 }
 
-                if (isProvider && !string.IsNullOrWhiteSpace(customName) && customName != "N/A")
+                if (!string.IsNullOrWhiteSpace(customName) && customName != "N/A" && !customName.Equals("OptiAssist", StringComparison.OrdinalIgnoreCase))
                 {
                     lblAppTitle.Text = customName;
                 }
@@ -568,12 +576,12 @@ namespace OptiAssist
         {
             try
             {
-                string postDir = InstallerHelper.GetPostInstallDirectory();
+                string postDir = InstallerHelper.GetInstallersDirectory();
                 if (!Directory.Exists(postDir)) Directory.CreateDirectory(postDir);
 
                 var dlg = new Microsoft.Win32.OpenFileDialog();
                 dlg.InitialDirectory = Path.GetFullPath(postDir);
-                dlg.Title = LocalizationHelper.Get("Msg_SelectInstallerTitle", "Select installer in PostInstall folder");
+                dlg.Title = LocalizationHelper.Get("Msg_SelectInstallerTitle", "Select installer in Installers folder");
                 dlg.Filter = LocalizationHelper.Get("Msg_SelectInstallerFilter", "Installers (*.exe;*.msi;*.msixbundle;*.appxbundle)|*.exe;*.msi;*.msixbundle;*.appxbundle|All Files (*.*)|*.*");
                 if (dlg.ShowDialog() == true)
                 {
@@ -1224,6 +1232,12 @@ namespace OptiAssist
             ShortcutsHelper.OpenGpedit();
         }
 
+        private void BtnServices_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[SHORTCUT] Opening Windows Services (services.msc)...");
+            ShortcutsHelper.OpenServices();
+        }
+
         private void BtnAdminCmd_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenAdminCmd(); }
         private void BtnAdminPowerShell_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenAdminPowerShell(); }
 
@@ -1291,7 +1305,21 @@ namespace OptiAssist
                 }
             }
 
+            if (pnlSidebarToolbox != null && string.IsNullOrEmpty(previouslySelectedAddonId))
+            {
+                foreach (object child in pnlSidebarToolbox.Children)
+                {
+                    RadioButton existingRb = child as RadioButton;
+                    if (existingRb != null && existingRb.IsChecked == true && existingRb.Tag is AddonEntry)
+                    {
+                        previouslySelectedAddonId = ((AddonEntry)existingRb.Tag).Id;
+                        break;
+                    }
+                }
+            }
+
             pnlSidebarAddons.Children.Clear();
+            if (pnlSidebarToolbox != null) pnlSidebarToolbox.Children.Clear();
 
             if (_addons == null) return;
 
@@ -1311,7 +1339,15 @@ namespace OptiAssist
                 rb.Click += NavButton_Click;
 
                 entry.SidebarButton = rb;
-                pnlSidebarAddons.Children.Add(rb);
+
+                if (pnlSidebarToolbox != null && string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
+                {
+                    pnlSidebarToolbox.Children.Add(rb);
+                }
+                else
+                {
+                    pnlSidebarAddons.Children.Add(rb);
+                }
 
                 if (!string.IsNullOrEmpty(previouslySelectedAddonId) &&
                     string.Equals(entry.Id, previouslySelectedAddonId, StringComparison.OrdinalIgnoreCase))
@@ -1533,8 +1569,9 @@ namespace OptiAssist
             if (string.IsNullOrWhiteSpace(langCode)) langCode = "en-US";
             LocalizationHelper.LoadLanguage(langCode);
 
-            // 0. Window Title
+            // 0. Window Title & Header Controls
             this.Title = LocalizationHelper.Get("App_Title", "OptiAssist");
+            if (btnToggleSidebar != null) btnToggleSidebar.ToolTip = LocalizationHelper.Get("Tooltip_ToggleSidebar", "Toggle Sidebar");
 
             // 1. Sidebar Navigation
             if (rbNavDashboard != null) rbNavDashboard.Content = LocalizationHelper.Get("Nav_Dashboard", "💻  Dashboard");
@@ -1626,15 +1663,15 @@ namespace OptiAssist
             if (btnCloseCustomize != null) btnCloseCustomize.Content = LocalizationHelper.Get("Btn_Close", "✕ Close");
             if (txtNewAppNameLabel != null) txtNewAppNameLabel.Text = LocalizationHelper.Get("Custom_Label_Name", "Program Name:");
             if (txtNewAppTypeLabel != null) txtNewAppTypeLabel.Text = LocalizationHelper.Get("Custom_Label_Type", "Installation Type:");
-            if (cmbItemLocal != null) cmbItemLocal.Content = LocalizationHelper.Get("Custom_Type_Local", "📁 Local (PostInstall)");
+            if (cmbItemLocal != null) cmbItemLocal.Content = LocalizationHelper.Get("Custom_Type_Local", "📁 Local (Installers)");
             if (cmbItemWinget != null) cmbItemWinget.Content = LocalizationHelper.Get("Custom_Type_Winget", "🌐 Winget (Repository)");
-            if (txtNewAppLocalLabel != null) txtNewAppLocalLabel.Text = LocalizationHelper.Get("Custom_Label_LocalFile", "Executable in PostInstall folder:");
+            if (txtNewAppLocalLabel != null) txtNewAppLocalLabel.Text = LocalizationHelper.Get("Custom_Label_LocalFile", "Executable in Installers folder:");
             if (btnSelectLocalInstaller != null)
             {
                 btnSelectLocalInstaller.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
-                btnSelectLocalInstaller.ToolTip = LocalizationHelper.Get("Tooltip_SelectLocalInstaller", "Select executable file from PostInstall folder");
+                btnSelectLocalInstaller.ToolTip = LocalizationHelper.Get("Tooltip_SelectLocalInstaller", "Select executable file from Installers folder");
             }
-            if (txtNewAppLocalFile != null) txtNewAppLocalFile.ToolTip = LocalizationHelper.Get("Tooltip_NewAppLocalFile", "Name of the executable in PostInstall folder (e.g. OfficeSetup.exe)");
+            if (txtNewAppLocalFile != null) txtNewAppLocalFile.ToolTip = LocalizationHelper.Get("Tooltip_NewAppLocalFile", "Name of the executable in Installers folder (e.g. OfficeSetup.exe)");
             if (txtNewAppWingetLabel != null) txtNewAppWingetLabel.Text = LocalizationHelper.Get("Custom_Label_WingetId", "Winget App ID (e.g. Google.Chrome):");
             if (txtNewAppWingetId != null) txtNewAppWingetId.ToolTip = LocalizationHelper.Get("Tooltip_NewAppWingetId", "Package identifier in Winget repository");
             if (btnAddCustomApp != null)
@@ -1691,6 +1728,11 @@ namespace OptiAssist
             if (btnEventVwr != null) btnEventVwr.Content = LocalizationHelper.Get("Tool_EventVwr", "📑 Event Viewer");
             if (txtBtnGpeditText != null) txtBtnGpeditText.Text = LocalizationHelper.Get("Tool_Gpedit", "📜 GPEDIT Tool (Pro/Ent)");
             if (btnGpedit != null) btnGpedit.ToolTip = LocalizationHelper.Get("Tooltip_Gpedit", "Group Policy Editor (gpedit.msc) - Available in Windows Pro & Enterprise editions");
+            if (btnServicesTool != null)
+            {
+                btnServicesTool.Content = LocalizationHelper.Get("Tool_Services", "⚙️ Windows Services (services.msc)");
+                btnServicesTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolServices", "Windows Services console (services.msc)");
+            }
             if (btnOpenMaintenanceFolderTool != null)
             {
                 btnOpenMaintenanceFolderTool.Content = LocalizationHelper.Get("Btn_OpenMaintenanceFolder", "📂 Maintenance Tools Folder (Portable)");
@@ -1741,29 +1783,25 @@ namespace OptiAssist
             // 8. Settings
             if (txtSettingsTitle != null) txtSettingsTitle.Text = LocalizationHelper.Get("Settings_Title", "OptiAssist Settings");
             if (txtSettingsSub != null) txtSettingsSub.Text = LocalizationHelper.Get("Settings_Subtitle", "Settings saved in Config\\settings.json on the portable drive");
-            if (chkServiceProviderMode != null) chkServiceProviderMode.Content = LocalizationHelper.Get("Settings_Chk_ProviderMode", "Service provider mode");
-            if (txtServiceProviderDesc != null) txtServiceProviderDesc.Text = LocalizationHelper.Get("Settings_Desc_ProviderMode", "Enables branding customization and options for service orders and technical reports");
-            if (txtStoreNameLabel != null) txtStoreNameLabel.Text = LocalizationHelper.Get("Settings_Label_StoreName", "Custom application name:");
-            if (txtSettingStore != null) txtSettingStore.ToolTip = LocalizationHelper.Get("Settings_Hint_StoreName", "💡 Customize the application according to the name you prefer.");
-            if (txtStoreNameHint != null) txtStoreNameHint.Text = LocalizationHelper.Get("Settings_Hint_StoreName", "💡 Customize the application according to the name you prefer.");
-            if (txtPhoneLabel != null) txtPhoneLabel.Text = LocalizationHelper.Get("Settings_Label_Phone", "Contact Information:");
-            if (txtSettingPhone != null) txtSettingPhone.ToolTip = LocalizationHelper.Get("Settings_Hint_Phone", "💡 Provide an email, phone number, or social media link of your choice");
-            if (txtPhoneHint != null) txtPhoneHint.Text = LocalizationHelper.Get("Settings_Hint_Phone", "💡 Provide an email, phone number, or social media link of your choice");
             if (txtLangLabel != null) txtLangLabel.Text = LocalizationHelper.Get("Settings_Label_Language", "Application Language:");
             SetupLanguageButtons(langCode);
 
-            if (chkSettingWinget != null) chkSettingWinget.Content = LocalizationHelper.Get("Settings_Chk_WingetFallback", "Enable Winget download fallback when program is not in PostInstall folder");
+            if (chkSettingWinget != null) chkSettingWinget.Content = LocalizationHelper.Get("Settings_Chk_WingetFallback", "Enable Winget download fallback when program is not in Installers folder");
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.Content = LocalizationHelper.Get("Settings_Chk_AutoRefresh", "Automatically refresh hardware specs on startup");
             if (chkSettingExternalLogs != null) chkSettingExternalLogs.Content = LocalizationHelper.Get("Settings_Chk_ExternalLogs", "Open external Logs window by default");
             if (btnSaveSettings != null) btnSaveSettings.Content = LocalizationHelper.Get("Btn_SaveSettings", "💾 Save Settings");
             if (btnResetSettings != null) btnResetSettings.Content = LocalizationHelper.Get("Btn_ResetSettings", "🔄 Restore Defaults");
-            if (btnCreateAutorun != null)
-            {
-                btnCreateAutorun.Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun");
-                btnCreateAutorun.ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry");
-            }
+
             if (txtPersonalizeTitle != null) txtPersonalizeTitle.Text = LocalizationHelper.Get("Settings_Personalize_Title", "🎨 Customize Application");
-            if (txtPersonalizeSub != null) txtPersonalizeSub.Text = LocalizationHelper.Get("Settings_Personalize_Subtitle", "Customize the visual theme, button accent colors, and styling of OptiAssist:");
+            if (txtPersonalizeSub != null) txtPersonalizeSub.Text = LocalizationHelper.Get("Settings_Personalize_Subtitle", "Customize the visual theme, button accent colors, branding, and styling of OptiAssist:");
+            if (txtStoreNameLabel != null) txtStoreNameLabel.Text = LocalizationHelper.Get("Settings_Label_StoreName", "Custom application name:");
+            if (txtSettingStore != null) txtSettingStore.ToolTip = LocalizationHelper.Get("Settings_Hint_StoreName", "Customize the application according to the name you prefer.");
+            if (txtStoreNameHint != null) txtStoreNameHint.Text = LocalizationHelper.Get("Settings_Hint_StoreName", "Customize the application according to the name you prefer.");
+            if (btnChangeAppLogo != null)
+            {
+                btnChangeAppLogo.Content = LocalizationHelper.Get("Btn_ChangeAppLogo", "🖼️ Change App Logo");
+                btnChangeAppLogo.ToolTip = LocalizationHelper.Get("Tooltip_ChangeAppLogo", "Select a custom logo image (.png, .jpg, .ico) for the application");
+            }
             if (txtThemeLabel != null) txtThemeLabel.Text = LocalizationHelper.Get("Settings_Label_Theme", "Visual Theme:");
             if (txtThemeText != null) txtThemeText.Text = _isDarkMode ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
             if (btnToggleTheme != null) btnToggleTheme.ToolTip = LocalizationHelper.Get("Tooltip_ToggleTheme", "Toggle between dark mode and light mode");
@@ -1791,6 +1829,25 @@ namespace OptiAssist
             if (btnPresetYellow != null) btnPresetYellow.Content = "🟡 " + LocalizationHelper.Get("Color_Yellow", "Yellow");
             if (btnPresetPink != null) btnPresetPink.Content = "🌸 " + LocalizationHelper.Get("Color_Pink", "Pink");
 
+            // Additional Settings card
+            if (txtAdditionalSettingsTitle != null) txtAdditionalSettingsTitle.Text = LocalizationHelper.Get("Settings_Card_AdditionalSettings", "🛠️ Additional Settings");
+            if (txtAdditionalSettingsSub != null) txtAdditionalSettingsSub.Text = LocalizationHelper.Get("Settings_Sub_AdditionalSettings", "Device integration, system installation, and portable drive options:");
+            if (btnCreateAutorun != null)
+            {
+                btnCreateAutorun.Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun");
+                btnCreateAutorun.ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry");
+            }
+            if (btnInstallApp != null)
+            {
+                btnInstallApp.ToolTip = LocalizationHelper.Get("Tooltip_InstallApp", "Install OptiAssist to C:\\Program Files\\OptiAssist with Desktop and Start Menu shortcuts");
+            }
+            if (btnUninstallApp != null)
+            {
+                btnUninstallApp.Content = LocalizationHelper.Get("Btn_UninstallApp", "🗑️ Uninstall OptiAssist");
+                btnUninstallApp.ToolTip = LocalizationHelper.Get("Tooltip_UninstallApp", "Uninstall OptiAssist from this device and remove all shortcuts");
+            }
+            UpdateDeploymentButtonsUI();
+
             // 9. About
             if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("About_Title", "About OptiAssist");
             if (txtAboutSub != null) txtAboutSub.Text = LocalizationHelper.Get("About_Subtitle", "Version information, copyright, and open-source license");
@@ -1799,6 +1856,11 @@ namespace OptiAssist
             if (txtAboutCreditsText != null) txtAboutCreditsText.Text = LocalizationHelper.Get("About_Credits_Text", "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist.");
             if (btnAboutGithub != null) btnAboutGithub.Content = LocalizationHelper.Get("Btn_AboutGithub", "🌐 GitHub Repository");
             if (btnAboutWebsite != null) btnAboutWebsite.Content = LocalizationHelper.Get("Btn_AboutWebsite", "🔗 Official Website");
+            if (btnAboutDocumentation != null)
+            {
+                btnAboutDocumentation.Content = LocalizationHelper.Get("Btn_AboutDocumentation", "📖 Documentation");
+                btnAboutDocumentation.ToolTip = LocalizationHelper.Get("Tooltip_AboutDocumentation", "Access the official OptiAssist documentation");
+            }
 
             // 10. Bottom status bar
             if (txtBitLockerLabel != null) txtBitLockerLabel.Text = LocalizationHelper.Get("Status_BitLocker", "🔒 BitLocker: ");
@@ -1917,18 +1979,6 @@ namespace OptiAssist
             ShortcutsHelper.OpenWindowsTool("tpm.msc");
         }
 
-        private void ChkServiceProviderMode_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_isLoadingSettings) return;
-
-            if (_settings == null) _settings = SettingsHelper.Load();
-            _settings.ServiceProviderMode = chkServiceProviderMode.IsChecked == true;
-            SettingsHelper.Save(_settings);
-
-            UpdateServiceProviderUI();
-            Log(string.Format("[CONFIG] ServiceProviderMode updated to {0} and saved to settings.json.", _settings.ServiceProviderMode));
-        }
-
         private void ChkSettingWinget_Changed(object sender, RoutedEventArgs e)
         {
             if (_isLoadingSettings) return;
@@ -1965,11 +2015,9 @@ namespace OptiAssist
         private void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
         {
             if (_settings == null) _settings = new AppSettings();
-            _settings.ServiceProviderMode = chkServiceProviderMode.IsChecked == true;
-            _settings.CustomerName = txtSettingStore.Text.Trim();
-            _settings.ContactInfo = txtSettingPhone.Text.Trim();
-            _settings.EnableWingetFallback = chkSettingWinget.IsChecked == true;
-            _settings.AutoRefreshHardware = chkSettingAutoRefresh.IsChecked == true;
+            _settings.CustomerName = txtSettingStore != null ? txtSettingStore.Text.Trim() : "";
+            _settings.EnableWingetFallback = chkSettingWinget != null && chkSettingWinget.IsChecked == true;
+            _settings.AutoRefreshHardware = chkSettingAutoRefresh != null && chkSettingAutoRefresh.IsChecked == true;
             _settings.OpenExternalLogsByDefault = chkSettingExternalLogs != null && chkSettingExternalLogs.IsChecked == true;
             _settings.AccentColor = txtSettingAccentColor.Text.Trim();
 
@@ -2074,6 +2122,139 @@ namespace OptiAssist
                     MessageBoxImage.Error);
             }
         }
+
+        #region APPLICATION BRANDING & LOGO
+        private void LoadAppLogo()
+        {
+            try
+            {
+                string logoPath = null;
+                if (_settings != null && !string.IsNullOrWhiteSpace(_settings.CustomLogoPath))
+                {
+                    string p = _settings.CustomLogoPath;
+                    if (!Path.IsPathRooted(p))
+                    {
+                        p = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, p);
+                    }
+                    if (File.Exists(p))
+                    {
+                        logoPath = p;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(logoPath))
+                {
+                    string defaultPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.png");
+                    if (File.Exists(defaultPath))
+                    {
+                        logoPath = defaultPath;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+                {
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bmp.UriSource = new Uri(logoPath, UriKind.Absolute);
+                    bmp.EndInit();
+                    bmp.Freeze();
+
+                    if (imgAppHeaderLogo != null) imgAppHeaderLogo.Source = bmp;
+                    if (imgAboutLogo != null) imgAboutLogo.Source = bmp;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("[LOGO ERROR] Failed to load logo: " + ex.Message);
+            }
+        }
+
+        private void BtnChangeAppLogo_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var ofd = new Microsoft.Win32.OpenFileDialog();
+                ofd.Filter = LocalizationHelper.Get("Filter_Images", "Image Files (*.png;*.jpg;*.jpeg;*.ico;*.bmp)|*.png;*.jpg;*.jpeg;*.ico;*.bmp|All Files (*.*)|*.*");
+                ofd.Title = LocalizationHelper.Get("Title_SelectLogo", "Select Application Logo");
+                if (ofd.ShowDialog() == true)
+                {
+                    string selectedFile = ofd.FileName;
+                    string configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config");
+                    if (!Directory.Exists(configDir))
+                    {
+                        Directory.CreateDirectory(configDir);
+                    }
+
+                    string ext = Path.GetExtension(selectedFile);
+                    string destFile = Path.Combine(configDir, "custom_logo" + ext);
+
+                    File.Copy(selectedFile, destFile, true);
+
+                    if (_settings == null) _settings = SettingsHelper.Load();
+                    _settings.CustomLogoPath = Path.Combine("Config", "custom_logo" + ext);
+                    SettingsHelper.Save(_settings);
+
+                    LoadAppLogo();
+
+                    MessageBox.Show(LocalizationHelper.Get("Msg_LogoChanged", "Application logo updated successfully!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    Log("[CONFIG] Custom application logo changed to: " + _settings.CustomLogoPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LogoError", "Failed to update logo: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                Log("[CONFIG ERROR] Failed to change logo: " + ex.Message);
+            }
+        }
+        #endregion
+
+        #region APPLICATION DEPLOYMENT (INSTALL / UNINSTALL)
+        private void UpdateDeploymentButtonsUI()
+        {
+            try
+            {
+                bool isInstalled = AppDeploymentHelper.IsAppInstalled();
+                string installedDir = AppDeploymentHelper.GetInstalledDirectory().TrimEnd('\\', '/');
+                string currentDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
+                bool runningFromInstalled = string.Equals(installedDir, currentDir, StringComparison.OrdinalIgnoreCase);
+
+                if (btnInstallApp != null)
+                {
+                    if (runningFromInstalled)
+                    {
+                        btnInstallApp.IsEnabled = false;
+                        btnInstallApp.Content = LocalizationHelper.Get("Btn_AppInstalled", "✔️ OptiAssist Installed");
+                    }
+                    else
+                    {
+                        btnInstallApp.IsEnabled = true;
+                        btnInstallApp.Content = LocalizationHelper.Get("Btn_InstallApp", "📥 Install OptiAssist");
+                    }
+                }
+
+                if (btnUninstallApp != null)
+                {
+                    btnUninstallApp.IsEnabled = isInstalled || runningFromInstalled;
+                }
+            }
+            catch { }
+        }
+
+        private void BtnInstallApp_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[INSTALL] Starting OptiAssist installation to Program Files...");
+            AppDeploymentHelper.InstallOptiAssist(Log);
+            UpdateDeploymentButtonsUI();
+        }
+
+        private void BtnUninstallApp_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[UNINSTALL] Requesting OptiAssist uninstallation...");
+            AppDeploymentHelper.UninstallOptiAssist(Log);
+            UpdateDeploymentButtonsUI();
+        }
+        #endregion
 
         #region THEME & COLOR PERSONALIZATION
         public void ApplyThemeAccentColor(string hexColor)
@@ -2289,6 +2470,30 @@ namespace OptiAssist
             catch (Exception ex)
             {
                 MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void BtnAboutDocumentation_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string docsReadme = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Docs", "README.md");
+                if (File.Exists(docsReadme))
+                {
+                    Process.Start(new ProcessStartInfo(docsReadme) { UseShellExecute = true });
+                }
+                else
+                {
+                    MessageBox.Show(
+                        LocalizationHelper.Get("Msg_DocumentationInDevelopment", "The documentation page is currently under development and will be available in an upcoming update."),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch
+            {
+                MessageBox.Show(
+                    LocalizationHelper.Get("Msg_DocumentationInDevelopment", "The documentation page is currently under development and will be available in an upcoming update."),
+                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         #endregion

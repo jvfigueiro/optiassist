@@ -44,6 +44,7 @@ Each command item is represented by `ToolboxCommandItem`:
 | `Shell` | String | Execution shell environment: `"cmd"`, `"powershell"`, or `"binary"`. |
 | `WaitForExit` | Boolean | Whether execution waits synchronously for termination or runs in the background. |
 | `CaptureOutput` | Boolean | Whether `stdout` and `stderr` streams are captured and routed to the logs. |
+| `OpenExternalLogs` | Boolean | Whether to automatically pop out the external Logs window upon executing this action. |
 | `TimeoutSeconds` | Integer | Maximum execution time in seconds (0 = unlimited). |
 
 ### 2. Process Execution Engine (`ToolboxProcessRunner.cs`)
@@ -141,3 +142,4 @@ OptiAssist comes pre-loaded with over 16 verified maintenance, repair, and perfo
     - Command: Opens `Config/Addons/Toolbox/Scripts/` containing `tweaks_interface.ps1`, `fix_printer_rpc.reg`, and `reset_network.bat`.
 16. **Launch Chris Titus WinUtil**:
     - Command: `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://christitus.com/win | iex"` (Shell: `powershell`).
+
