@@ -106,6 +106,63 @@ namespace OptiAssist
             {
                 _strings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
+
+            // Load per-module language files located inside Config\Addons\<ModuleName>\
+            LoadAddonLanguageFiles(langCode);
+        }
+
+        public static void LoadAddonLanguageFiles(string langCode)
+        {
+            if (string.IsNullOrWhiteSpace(langCode)) langCode = CurrentLanguage ?? "en-US";
+            if (_strings == null)
+            {
+                _strings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string addonsDir = Path.Combine(baseDir, "Config", "Addons");
+                if (!Directory.Exists(addonsDir)) return;
+
+                foreach (string subDir in Directory.GetDirectories(addonsDir))
+                {
+                    MergeAddonDirectoryLanguage(subDir, langCode);
+
+                    string langSubDir = Path.Combine(subDir, "Languages");
+                    if (Directory.Exists(langSubDir))
+                    {
+                        MergeAddonDirectoryLanguage(langSubDir, langCode);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static void MergeAddonDirectoryLanguage(string directory, string langCode)
+        {
+            try
+            {
+                string targetFile = Path.Combine(directory, langCode + ".json");
+                if (!File.Exists(targetFile))
+                {
+                    targetFile = Path.Combine(directory, "en-US.json");
+                }
+
+                if (File.Exists(targetFile))
+                {
+                    string json = File.ReadAllText(targetFile, Encoding.UTF8);
+                    var addonDict = ParseLanguageJson(json);
+                    if (addonDict != null)
+                    {
+                        foreach (var kvp in addonDict)
+                        {
+                            _strings[kvp.Key] = kvp.Value;
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         public static string Get(string key, string fallback = null)

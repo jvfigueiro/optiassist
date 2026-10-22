@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 
-namespace OptiAssist
+namespace OptiAssist.Addons.AppManager
 {
     public class InstallAppItem : INotifyPropertyChanged
     {
@@ -184,7 +184,7 @@ namespace OptiAssist
             _wingetId = "";
             _silentArgs = "";
             _selected = false;
-            Status = "Pronto";
+            Status = "Ready";
         }
 
         public InstallAppItem(string name, bool preSelected, string installType, string wingetId = "", string silentArgs = "", string localInstallerFile = "")
@@ -196,7 +196,7 @@ namespace OptiAssist
             _silentArgs = silentArgs ?? "";
             _localInstallerFile = localInstallerFile ?? "";
             _selected = preSelected;
-            Status = "Pronto";
+            Status = "Ready";
         }
     }
 
@@ -223,15 +223,35 @@ namespace OptiAssist
             return GetInstallersDirectory();
         }
 
-        public static string GetPostInstallJsonPath()
+        public static string GetAddonDirectory()
         {
             string configDir = SettingsHelper.GetConfigDirectory();
-            string newPath = Path.Combine(configDir, "autoinstall.json");
+            string addonDir = Path.Combine(configDir, "Addons", "AppManager");
+            if (!Directory.Exists(addonDir))
+            {
+                try { Directory.CreateDirectory(addonDir); } catch { }
+            }
+            return addonDir;
+        }
+
+        public static string GetPostInstallJsonPath()
+        {
+            string addonDir = GetAddonDirectory();
+            string newPath = Path.Combine(addonDir, "autoinstall.json");
+            string configDir = SettingsHelper.GetConfigDirectory();
+            string oldConfigPath = Path.Combine(configDir, "autoinstall.json");
             string legacyPath = Path.Combine(configDir, "PostInstall.json");
 
-            if (!File.Exists(newPath) && File.Exists(legacyPath))
+            if (!File.Exists(newPath))
             {
-                try { File.Move(legacyPath, newPath); } catch { }
+                if (File.Exists(oldConfigPath))
+                {
+                    try { File.Copy(oldConfigPath, newPath, true); } catch { }
+                }
+                else if (File.Exists(legacyPath))
+                {
+                    try { File.Copy(legacyPath, newPath, true); } catch { }
+                }
             }
 
             return newPath;
@@ -359,7 +379,7 @@ namespace OptiAssist
                 if (File.Exists(fullPath)) return fullPath;
             }
 
-            // 2. Secondary search in PostInstall folder for matching executable files
+            // 2. Secondary search in Installers folder for matching executable files
             try
             {
                 string[] allFiles = Directory.GetFiles(postDir, "*.*", SearchOption.TopDirectoryOnly);

@@ -40,7 +40,8 @@ namespace OptiAssist
     }
 
     /// <summary>
-    /// Represents a discovered and loaded Add-on DLL module in the application.
+    /// Represents a discovered and loaded Add-on DLL module in the application,
+    /// including both runtime IOptiAssistAddon properties and compiled AssemblyInfo metadata.
     /// </summary>
     public class AddonEntry : INotifyPropertyChanged
     {
@@ -53,8 +54,18 @@ namespace OptiAssist
         private string _dllPath;
         private string _displayPath;
         private bool _isEnabled;
+        private bool _canModify;
         private string _activeLabel;
         private string _removeLabel;
+        private string _statusBadgeText;
+
+        // Compiled AssemblyInfo Metadata
+        private string _assemblyTitle;
+        private string _assemblyDescription;
+        private string _assemblyCompany;
+        private string _assemblyProduct;
+        private string _assemblyCopyright;
+        private string _assemblyVersion;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -113,7 +124,23 @@ namespace OptiAssist
         public bool IsEnabled
         {
             get { return _isEnabled; }
-            set { _isEnabled = value; OnPropertyChanged("IsEnabled"); }
+            set
+            {
+                _isEnabled = value;
+                OnPropertyChanged("IsEnabled");
+                UpdateStatusBadgeText();
+            }
+        }
+
+        public bool CanModify
+        {
+            get { return _canModify; }
+            set
+            {
+                _canModify = value;
+                OnPropertyChanged("CanModify");
+                UpdateStatusBadgeText();
+            }
         }
 
         public string ActiveLabel
@@ -128,19 +155,86 @@ namespace OptiAssist
             set { _removeLabel = value; OnPropertyChanged("RemoveLabel"); }
         }
 
+        public string StatusBadgeText
+        {
+            get { return _statusBadgeText; }
+            set { _statusBadgeText = value; OnPropertyChanged("StatusBadgeText"); }
+        }
+
+        public string AssemblyTitle
+        {
+            get { return _assemblyTitle; }
+            set { _assemblyTitle = value; OnPropertyChanged("AssemblyTitle"); }
+        }
+
+        public string AssemblyDescription
+        {
+            get { return _assemblyDescription; }
+            set { _assemblyDescription = value; OnPropertyChanged("AssemblyDescription"); }
+        }
+
+        public string AssemblyCompany
+        {
+            get { return _assemblyCompany; }
+            set { _assemblyCompany = value; OnPropertyChanged("AssemblyCompany"); }
+        }
+
+        public string AssemblyProduct
+        {
+            get { return _assemblyProduct; }
+            set { _assemblyProduct = value; OnPropertyChanged("AssemblyProduct"); }
+        }
+
+        public string AssemblyCopyright
+        {
+            get { return _assemblyCopyright; }
+            set { _assemblyCopyright = value; OnPropertyChanged("AssemblyCopyright"); }
+        }
+
+        public string AssemblyVersion
+        {
+            get { return _assemblyVersion; }
+            set { _assemblyVersion = value; OnPropertyChanged("AssemblyVersion"); }
+        }
+
         public AddonEntry()
         {
             _id = "";
             _name = "";
             _description = "";
-            _version = "1.0.0";
-            _author = "OptiAssist";
+            _version = "1.1.0.0";
+            _author = "João Figueiró";
             _icon = "🧩";
             _dllPath = "";
             _displayPath = "";
             _isEnabled = true;
+            _canModify = true;
             _activeLabel = "Active";
             _removeLabel = "🗑️ Remove";
+            _statusBadgeText = "Active";
+
+            _assemblyTitle = "";
+            _assemblyDescription = "";
+            _assemblyCompany = "";
+            _assemblyProduct = "";
+            _assemblyCopyright = "";
+            _assemblyVersion = "1.1.0.0";
+        }
+
+        public void UpdateStatusBadgeText()
+        {
+            if (!_canModify)
+            {
+                StatusBadgeText = LocalizationHelper.Get("Addons_Badge_Core", "Core Module");
+            }
+            else if (_isEnabled)
+            {
+                StatusBadgeText = LocalizationHelper.Get("Addons_Badge_Active", "Active");
+            }
+            else
+            {
+                StatusBadgeText = LocalizationHelper.Get("Addons_Badge_Disabled", "Disabled");
+            }
         }
 
         public FrameworkElement GetOrCreateView()
@@ -158,8 +252,8 @@ namespace OptiAssist
             {
                 Name = Instance.Name;
                 Description = Instance.Description;
-                Version = Instance.Version;
-                Author = Instance.Author;
+                Version = !string.IsNullOrEmpty(AssemblyVersion) ? AssemblyVersion : Instance.Version;
+                Author = !string.IsNullOrEmpty(AssemblyCompany) ? AssemblyCompany : Instance.Author;
                 Icon = Instance.Icon;
                 if (SidebarButton != null)
                 {
@@ -168,6 +262,7 @@ namespace OptiAssist
             }
             ActiveLabel = LocalizationHelper.Get("Addons_Label_Active", "Active");
             RemoveLabel = LocalizationHelper.Get("Btn_RemoveAddon", "🗑️ Remove");
+            UpdateStatusBadgeText();
         }
 
         protected void OnPropertyChanged(string propName)
@@ -215,8 +310,81 @@ namespace OptiAssist
             return addonsDir;
         }
 
+        private static TAttr GetAssemblyAttribute<TAttr>(Assembly asm) where TAttr : Attribute
+        {
+            try
+            {
+                object[] attrs = asm.GetCustomAttributes(typeof(TAttr), false);
+                if (attrs != null && attrs.Length > 0)
+                {
+                    return attrs[0] as TAttr;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static void PopulateAssemblyMetadata(Assembly asm, IOptiAssistAddon addon, AddonEntry entry)
+        {
+            var titleAttr = GetAssemblyAttribute<AssemblyTitleAttribute>(asm);
+            var descAttr = GetAssemblyAttribute<AssemblyDescriptionAttribute>(asm);
+            var companyAttr = GetAssemblyAttribute<AssemblyCompanyAttribute>(asm);
+            var productAttr = GetAssemblyAttribute<AssemblyProductAttribute>(asm);
+            var copyrightAttr = GetAssemblyAttribute<AssemblyCopyrightAttribute>(asm);
+            var fileVerAttr = GetAssemblyAttribute<AssemblyFileVersionAttribute>(asm);
+
+            string asmVer = "";
+            if (fileVerAttr != null && !string.IsNullOrWhiteSpace(fileVerAttr.Version))
+            {
+                asmVer = fileVerAttr.Version;
+            }
+            else if (asm.GetName().Version != null)
+            {
+                asmVer = asm.GetName().Version.ToString();
+            }
+            else
+            {
+                asmVer = addon.Version;
+            }
+
+            entry.AssemblyTitle = (titleAttr != null && !string.IsNullOrWhiteSpace(titleAttr.Title)) ? titleAttr.Title : addon.Name;
+            entry.AssemblyDescription = (descAttr != null && !string.IsNullOrWhiteSpace(descAttr.Description)) ? descAttr.Description : addon.Description;
+            entry.AssemblyCompany = (companyAttr != null && !string.IsNullOrWhiteSpace(companyAttr.Company)) ? companyAttr.Company : addon.Author;
+            entry.AssemblyProduct = (productAttr != null && !string.IsNullOrWhiteSpace(productAttr.Product)) ? productAttr.Product : "OptiAssist Modules";
+            entry.AssemblyCopyright = (copyrightAttr != null && !string.IsNullOrWhiteSpace(copyrightAttr.Copyright)) ? copyrightAttr.Copyright : "Copyright (C) 2026 " + entry.AssemblyCompany;
+            entry.AssemblyVersion = asmVer;
+
+            entry.Version = entry.AssemblyVersion;
+            entry.Author = entry.AssemblyCompany;
+        }
+
+        private static int GetModuleSortOrder(string addonId)
+        {
+            if (string.IsNullOrEmpty(addonId)) return 100;
+            switch (addonId.ToLowerInvariant())
+            {
+                case "app-manager":
+                case "app_manager":
+                case "appmanager":
+                    return 1;
+                case "toolbox":
+                    return 2;
+                case "system-cleaner":
+                case "system_cleaner":
+                    return 3;
+                case "maintenance-report":
+                case "maintenance_report":
+                    return 4;
+                default:
+                    return 50;
+            }
+        }
+
         public static List<AddonEntry> LoadDiscoveredAddons(IOptiAssistHost host, List<string> disabledAddonIds)
         {
+            // Ensure per-module language files are merged into LocalizationHelper before initializing addons
+            LocalizationHelper.LoadAddonLanguageFiles(host != null ? host.CurrentLanguage : LocalizationHelper.CurrentLanguage);
+
             List<AddonEntry> list = new List<AddonEntry>();
             string addonsDir = GetAddonsDirectory();
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -266,8 +434,10 @@ namespace OptiAssist
                                 relPath = dllPath.Substring(baseDir.Length).TrimStart('\\', '/');
                             }
 
+                            bool isCoreToolbox = string.Equals(addon.Id, "toolbox", StringComparison.OrdinalIgnoreCase);
+
                             bool enabled = true;
-                            if (disabledAddonIds != null && disabledAddonIds.Contains(addon.Id))
+                            if (!isCoreToolbox && disabledAddonIds != null && disabledAddonIds.Contains(addon.Id))
                             {
                                 enabled = false;
                             }
@@ -277,14 +447,16 @@ namespace OptiAssist
                             entry.Id = addon.Id;
                             entry.Name = addon.Name;
                             entry.Description = addon.Description;
-                            entry.Version = addon.Version;
-                            entry.Author = addon.Author;
                             entry.Icon = addon.Icon;
                             entry.DllPath = dllPath;
                             entry.DisplayPath = relPath;
+                            entry.CanModify = !isCoreToolbox;
                             entry.IsEnabled = enabled;
                             entry.ActiveLabel = LocalizationHelper.Get("Addons_Label_Active", "Active");
                             entry.RemoveLabel = LocalizationHelper.Get("Btn_RemoveAddon", "🗑️ Remove");
+
+                            PopulateAssemblyMetadata(asm, addon, entry);
+                            entry.UpdateStatusBadgeText();
 
                             list.Add(entry);
                         }
@@ -298,6 +470,13 @@ namespace OptiAssist
                     }
                 }
             }
+
+            list.Sort((a, b) =>
+            {
+                int cmp = GetModuleSortOrder(a.Id).CompareTo(GetModuleSortOrder(b.Id));
+                if (cmp != 0) return cmp;
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
 
             return list;
         }
@@ -334,12 +513,6 @@ namespace OptiAssist
                     return false;
                 }
 
-                if (host != null)
-                {
-                    validAddon.Initialize(host);
-                }
-
-                installedAddonName = validAddon.Name;
                 string moduleFolderName = Path.GetFileNameWithoutExtension(sourceDllPath);
                 string targetDir = Path.Combine(GetAddonsDirectory(), moduleFolderName);
                 if (!Directory.Exists(targetDir))
@@ -353,6 +526,30 @@ namespace OptiAssist
                     File.Copy(sourceDllPath, targetDllPath, true);
                 }
 
+                // Also copy any companion language json files located alongside the source DLL
+                string sourceDir = Path.GetDirectoryName(sourceDllPath);
+                if (!string.IsNullOrEmpty(sourceDir) && Directory.Exists(sourceDir) &&
+                    !string.Equals(Path.GetFullPath(sourceDir).TrimEnd('\\'), Path.GetFullPath(targetDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (string jsonFile in Directory.GetFiles(sourceDir, "*.json", SearchOption.TopDirectoryOnly))
+                    {
+                        try
+                        {
+                            string destJson = Path.Combine(targetDir, Path.GetFileName(jsonFile));
+                            File.Copy(jsonFile, destJson, true);
+                        }
+                        catch { }
+                    }
+                }
+
+                LocalizationHelper.LoadAddonLanguageFiles(host != null ? host.CurrentLanguage : LocalizationHelper.CurrentLanguage);
+
+                if (host != null)
+                {
+                    validAddon.Initialize(host);
+                }
+
+                installedAddonName = validAddon.Name;
                 return true;
             }
             catch (Exception ex)
@@ -368,6 +565,12 @@ namespace OptiAssist
             if (entry == null || string.IsNullOrEmpty(entry.DllPath))
             {
                 error = "Invalid module entry.";
+                return false;
+            }
+
+            if (!entry.CanModify || string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
+            {
+                error = "The Toolbox module is an integral part of OptiAssist and cannot be removed.";
                 return false;
             }
 

@@ -130,11 +130,8 @@
                                      Style="{StaticResource BtnNav}"
                                      IsChecked="True"
                                      Click="NavButton_Click"/>
-                        <RadioButton x:Name="rbNavPostInstall"
-                                     GroupName="SidebarNavGroup"
-                                     Content="📦  App Manager"
-                                     Style="{StaticResource BtnNav}"
-                                     Click="NavButton_Click"/>
+                        <!-- Dynamic App Manager Container -->
+                        <StackPanel x:Name="pnlSidebarAppManager" />
                         <!-- Dynamic Toolbox Container (Between App Manager and Windows Tools) -->
                         <StackPanel x:Name="pnlSidebarToolbox" />
                         <RadioButton x:Name="rbNavShortcuts"
@@ -412,507 +409,6 @@
                                             ToolTip="Restart computer directly into BIOS / UEFI"
                                             Click="BtnRebootBios_Click"/>
                                 </UniformGrid>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- ================================================ -->
-                    <!-- TAB 1: APP MANAGER (POST-INSTALL)               -->
-                    <!-- ================================================ -->
-                    <StackPanel x:Name="panelPostInstall" Visibility="Collapsed" Margin="4">
-                        <!-- Main Header -->
-                        <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtPostInstallTitle"
-                                       Text="App Manager"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtPostInstallSubtitle"
-                                       Text="Automated installation of essential software and update of installed applications"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-
-                        <!-- SECTION 1: APPLICATION UPDATES (Always Visible) -->
-                        <Border x:Name="cardWingetUpgrades"
-                                Visibility="Visible"
-                                Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0,0,0,10">
-                            <StackPanel>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock x:Name="txtWingetCardTitle"
-                                                   Text="🔄 Application Updates"
-                                                   FontWeight="Bold"
-                                                   FontSize="13"
-                                                   Foreground="{DynamicResource BrushAccent}" />
-                                        <TextBlock x:Name="lblWingetUpgradeStatus"
-                                                   Text="Click 'Check Updates' or wait for the winget query..."
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                                   Margin="0,2,0,0" />
-                                    </StackPanel>
-                                    <Button x:Name="btnCheckWingetUpgrades"
-                                             Grid.Column="1"
-                                             Content="🔄 Check Updates"
-                                             Style="{StaticResource BtnDefault}"
-                                             Padding="10,3"
-                                             Click="BtnCheckWingetUpgrades_Click" />
-                                </Grid>
-
-                                <!-- Progress Bar / Loading Indicator -->
-                                <ProgressBar x:Name="pbWingetScan"
-                                             IsIndeterminate="True"
-                                             Height="6"
-                                             Margin="0,0,0,6"
-                                             Foreground="{DynamicResource BrushAccent}"
-                                             Background="{DynamicResource BrushBgPrimary}"
-                                             BorderThickness="0"
-                                             Visibility="Collapsed" />
-
-                                <!-- Centered View Logs Button during execution -->
-                                <StackPanel x:Name="pnlWingetLogsAction"
-                                            HorizontalAlignment="Center"
-                                            Margin="0,0,0,8"
-                                            Visibility="Collapsed">
-                                    <Button x:Name="btnViewLogsFromUpgrade"
-                                            Content="⬛ View Logs"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="28"
-                                            Padding="14,0"
-                                            ToolTip="Monitor execution log in real time on the Logs screen"
-                                            Click="BtnViewLogs_Click" />
-                                </StackPanel>
-
-                                <!-- Upgradable Applications List -->
-                                <Border x:Name="borderUpgradesList"
-                                        Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="4"
-                                        MaxHeight="220"
-                                        Margin="0,0,0,8"
-                                        Visibility="Collapsed">
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl x:Name="icWingetUpgradesList">
-                                             <ItemsControl.ItemTemplate>
-                                                 <DataTemplate>
-                                                     <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="4,5">
-                                                         <Grid>
-                                                             <Grid.ColumnDefinitions>
-                                                                 <ColumnDefinition Width="Auto" />
-                                                                 <ColumnDefinition Width="220" />
-                                                                 <ColumnDefinition Width="200" />
-                                                                 <ColumnDefinition Width="*" />
-                                                             </Grid.ColumnDefinitions>
-                                                             <CheckBox Grid.Column="0" IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                                             <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                             <TextBlock Grid.Column="2" Text="{Binding VersionDisplay}" Foreground="{DynamicResource BrushAccent}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                             <TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                         </Grid>
-                                                     </Border>
-                                                 </DataTemplate>
-                                             </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </Border>
-
-                                <!-- Upgrade Panel Action Buttons -->
-                                <Grid x:Name="gridUpgradeActions" Visibility="Collapsed" Margin="0,4,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                        <Button x:Name="btnSelectAllUpgrades"
-                                                Content="Select All"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnSelectAllUpgrades_Click"/>
-                                        <Button x:Name="btnDeselectAllUpgrades"
-                                                Content="Deselect All"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnDeselectAllUpgrades_Click"/>
-                                        <Button x:Name="btnRecheckWingetUpgrades"
-                                                Content="🔄 Check Again"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnRecheckWingetUpgrades_Click"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                        <Button x:Name="btnUpgradeAll"
-                                                Content="🚀 Update All"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnUpgradeAll_Click" />
-                                        <Button x:Name="btnUpgradeSelected"
-                                                Content="🔄 Update Selected"
-                                                Style="{StaticResource BtnAccent}"
-                                                Click="BtnUpgradeSelected_Click" />
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Expandable Customization Panel (Config\autoinstall.json) -->
-                        <Border x:Name="cardCustomizePostInstall"
-                                Visibility="Collapsed"
-                                Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushAccent}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0,0,0,10">
-                            <StackPanel>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock x:Name="txtCustomizeHeaderTitle"
-                                                   Text="⚙️ Customize Automated Application Installation"
-                                                   FontWeight="Bold"
-                                                   FontSize="13"
-                                                   Foreground="{DynamicResource BrushAccent}" />
-                                        <TextBlock x:Name="txtCustomizeHeaderSub"
-                                                   Text="Add new programs, set whether they are automated by default, and choose between Local installer or Winget."
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                                   Margin="0,2,0,0" />
-                                    </StackPanel>
-                                    <Button x:Name="btnCloseCustomize"
-                                            Grid.Column="1"
-                                            Content="✕ Close"
-                                            Style="{StaticResource BtnDefault}"
-                                            Padding="8,2"
-                                            Click="BtnCloseCustomize_Click" />
-                                </Grid>
-
-                                <!-- Program Add/Edit Form -->
-                                <Border Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="10"
-                                        Margin="0,0,0,10">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="1.8*" />
-                                            <ColumnDefinition Width="1.5*" />
-                                            <ColumnDefinition Width="2.2*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Program Name -->
-                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,6">
-                                            <TextBlock x:Name="txtNewAppNameLabel" Text="Program Name:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
-                                            <TextBox x:Name="txtNewAppName" Height="26" />
-                                        </StackPanel>
-
-                                        <!-- Installation Type -->
-                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,6">
-                                            <TextBlock x:Name="txtNewAppTypeLabel" Text="Installation Type:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
-                                            <ComboBox x:Name="cmbNewAppType" Height="26" SelectedIndex="0" SelectionChanged="CmbNewAppType_SelectionChanged">
-                                                <ComboBoxItem x:Name="cmbItemLocal" Content="📁 Local (PostInstall)" Tag="Local" />
-                                                <ComboBoxItem x:Name="cmbItemWinget" Content="🌐 Winget (Repository)" Tag="Winget" />
-                                            </ComboBox>
-                                        </StackPanel>
-
-                                        <!-- Local: Select File in PostInstall Folder -->
-                                        <StackPanel x:Name="panelNewAppLocal" Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Visibility="Visible">
-                                            <TextBlock x:Name="txtNewAppLocalLabel" Text="Executable in PostInstall folder:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox x:Name="txtNewAppLocalFile" Height="26" Margin="0,0,4,0" ToolTip="Name of the executable in PostInstall folder (e.g. OfficeSetup.exe)" />
-                                                <Button x:Name="btnSelectLocalInstaller"
-                                                        Grid.Column="1"
-                                                        Content="📁 Select..."
-                                                        Style="{StaticResource BtnDefault}"
-                                                        Height="26"
-                                                        Padding="8,0"
-                                                        ToolTip="Select executable file from PostInstall folder"
-                                                        Click="BtnSelectLocalInstaller_Click" />
-                                            </Grid>
-                                        </StackPanel>
-
-                                        <!-- Winget: Enter App ID -->
-                                        <StackPanel x:Name="panelNewAppWinget" Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Visibility="Collapsed">
-                                            <TextBlock x:Name="txtNewAppWingetLabel" Text="Winget App ID (e.g. Google.Chrome):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" />
-                                            <TextBox x:Name="txtNewAppWingetId" Height="26" ToolTip="Package identifier in Winget repository" />
-                                        </StackPanel>
-
-                                        <!-- Add / Save and Cancel Buttons -->
-                                        <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,6">
-                                            <Button x:Name="btnAddCustomApp"
-                                                    Content="➕ Add"
-                                                    Style="{StaticResource BtnAccent}"
-                                                    Height="26"
-                                                    Padding="12,0"
-                                                    Margin="0,0,4,0"
-                                                    Click="BtnAddCustomApp_Click" />
-                                            <Button x:Name="btnCancelEditApp"
-                                                    Content="✕"
-                                                    Style="{StaticResource BtnDefault}"
-                                                    Height="26"
-                                                    Width="26"
-                                                    Visibility="Collapsed"
-                                                    ToolTip="Cancel edit"
-                                                    Click="BtnCancelEditApp_Click" />
-                                        </StackPanel>
-
-                                        <!-- Row 2: Automate and Silent Arguments -->
-                                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
-                                            <CheckBox x:Name="chkNewAppPreSelected"
-                                                      Content="Automate by default"
-                                                      VerticalAlignment="Center"
-                                                      Margin="0,0,16,0" />
-                                            <TextBlock x:Name="txtNewAppSilentLabel" Text="Silent arguments (optional):" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                            <TextBox x:Name="txtNewAppSilentArgs" Width="180" Height="24" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-
-                                <!-- autoinstall.json Programs List for Editing -->
-                                <TextBlock x:Name="txtCurrentListTitle"
-                                           Text="Programs in current list:"
-                                           FontWeight="SemiBold"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource BrushTextPrimary}"
-                                           Margin="0,0,0,4" />
-
-                                <Border Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="4"
-                                        MaxHeight="190">
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl x:Name="icCustomAppsEditorList">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="4,4">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="180" />
-                                                                <ColumnDefinition Width="150" />
-                                                                <ColumnDefinition Width="120" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0"
-                                                                       Text="{Binding Name}"
-                                                                       FontWeight="SemiBold"
-                                                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding DisplayTypeInfo}"
-                                                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                                                       FontSize="11"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-
-                                                            <CheckBox Grid.Column="2"
-                                                                      Content="{Binding AutomateLabel}"
-                                                                      IsChecked="{Binding PreSelected, Mode=TwoWay}"
-                                                                      VerticalAlignment="Center" />
-
-                                                            <TextBlock Grid.Column="3"
-                                                                       Text="{Binding DetailInfo}"
-                                                                       Foreground="{DynamicResource BrushTextMuted}"
-                                                                       FontSize="10"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-
-                                                            <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <Button Content="▲"
-                                                                        Width="28" Height="24"
-                                                                        Margin="0,0,3,0"
-                                                                        Style="{StaticResource BtnRowAction}"
-                                                                        Click="BtnMoveAppUp_Click"
-                                                                        Tag="{Binding}"
-                                                                        ToolTip="{Binding ToolTipMoveUp}" />
-                                                                <Button Content="▼"
-                                                                        Width="28" Height="24"
-                                                                        Margin="0,0,3,0"
-                                                                        Style="{StaticResource BtnRowAction}"
-                                                                        Click="BtnMoveAppDown_Click"
-                                                                        Tag="{Binding}"
-                                                                        ToolTip="{Binding ToolTipMoveDown}" />
-                                                                <Button Content="✏"
-                                                                        Width="28" Height="24"
-                                                                        Margin="0,0,3,0"
-                                                                        Style="{StaticResource BtnRowAction}"
-                                                                        Click="BtnEditCustomApp_Click"
-                                                                        Tag="{Binding}"
-                                                                        ToolTip="{Binding ToolTipEdit}" />
-                                                                <Button Content="🗑"
-                                                                        Width="28" Height="24"
-                                                                        Margin="0,0,0,0"
-                                                                        Style="{StaticResource BtnRowAction}"
-                                                                        Click="BtnRemoveCustomApp_Click"
-                                                                        Tag="{Binding}"
-                                                                        ToolTip="{Binding ToolTipRemove}" />
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </Border>
-
-                                <!-- Editor Footer Actions -->
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                        <Button x:Name="btnSaveCustomApps"
-                                                Content="💾 Save Changes"
-                                                Style="{StaticResource BtnAccent}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnSaveCustomApps_Click" />
-                                        <Button x:Name="btnResetDefaultApps"
-                                                Content="🔄 Restore Default List"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnResetDefaultApps_Click" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                        <Button x:Name="btnOpenPostInstallJson"
-                                                Content="📂 Open autoinstall.json"
-                                                Style="{StaticResource BtnDefault}"
-                                                Click="BtnOpenPostInstallJson_Click" />
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- SECTION 3: AUTOMATED APPLICATION INSTALLATION LIST -->
-                        <Border Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0,0,0,10"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel>
-                                <!-- Installation Section Header -->
-                                <TextBlock x:Name="txtAppsInstallCardTitle"
-                                           Text="📦 Automated Application Installation"
-                                           FontWeight="Bold"
-                                           FontSize="13"
-                                           Foreground="{DynamicResource BrushAccent}"
-                                           Margin="0,0,0,2"/>
-                                <TextBlock x:Name="txtAppsInstallCardSub"
-                                           Text="Select the programs you want to automatically batch-install on the computer:"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource BrushTextSecondary}"
-                                           Margin="0,0,0,10"/>
-
-                                <!-- ScrollViewer List -->
-                                <Border Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="4"
-                                        MaxHeight="260"
-                                        Margin="0,0,0,10">
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl x:Name="icAppsList">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border BorderBrush="{DynamicResource BrushBorderCard}" BorderThickness="0,0,0,1" Padding="6,7">
-                                                        <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Name}"
-                                                                       FontWeight="SemiBold"
-                                                                       FontSize="12"
-                                                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                                                       VerticalAlignment="Center"
-                                                                       Margin="8,0,0,0"
-                                                                       TextTrimming="CharacterEllipsis"/>
-                                                        </CheckBox>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </Border>
-
-                                <!-- Installation Progress Bar -->
-                                <ProgressBar x:Name="pbInstallProgress"
-                                             Height="6"
-                                             Margin="0,0,0,10"
-                                             HorizontalAlignment="Stretch"
-                                             Foreground="{DynamicResource BrushAccent}"
-                                             Background="{DynamicResource BrushBgPrimary}"
-                                             BorderThickness="0"/>
-
-                                <!-- Action Buttons at Screen Bottom -->
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button x:Name="btnSelectEssentials"
-                                                Content="Select Essentials"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnSelectEssentials_Click"/>
-                                        <Button x:Name="btnDeselectAll"
-                                                Content="Deselect All"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnDeselectAll_Click"/>
-                                        <Button x:Name="btnToggleCustomizePostInstall"
-                                                Content="⚙️ Customize Automated Installation"
-                                                Style="{StaticResource BtnDefault}"
-                                                Margin="0,0,6,0"
-                                                Click="BtnToggleCustomizePostInstall_Click"/>
-                                        <Button x:Name="btnOpenPostInstallFolder"
-                                                Content="📂 Installers Folder"
-                                                Style="{StaticResource BtnDefault}"
-                                                Click="BtnOpenPostInstallFolder_Click"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button x:Name="btnRunInstallSelected"
-                                                Content="🚀 Install Selected"
-                                                Style="{StaticResource BtnAccent}"
-                                                Padding="16,0"
-                                                Height="30"
-                                                Click="BtnInstallSelected_Click"/>
-                                    </StackPanel>
-                                </Grid>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -1335,32 +831,54 @@
                                                     <!-- Icon -->
                                                     <TextBlock Grid.Column="0"
                                                                Text="{Binding Icon}"
-                                                               FontSize="22"
+                                                               FontSize="24"
                                                                VerticalAlignment="Center"
                                                                Margin="0,0,12,0"/>
 
-                                                    <!-- Info -->
+                                                    <!-- Info & AssemblyInfo Metadata -->
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                                            <TextBlock Text=" • v" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0"/>
-                                                            <TextBlock Text="{Binding Version}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                                            <TextBlock Text=" • " Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0"/>
-                                                            <TextBlock Text="{Binding Author}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text=" • v" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding AssemblyVersion}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccent}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text=" • " Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding AssemblyCompany}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                                                            <Border Background="{DynamicResource BrushBgCard}"
+                                                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="3"
+                                                                    Padding="6,1"
+                                                                    Margin="8,0,0,0"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccent}"/>
+                                                            </Border>
                                                         </StackPanel>
-                                                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding DisplayPath}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}" Margin="0,3,0,0"/>
+                                                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                            <TextBlock Text="{Binding AssemblyTitle}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="{Binding AssemblyProduct}" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="{Binding AssemblyDescription}" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding AssemblyCopyright}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="  •  " FontSize="9" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="{Binding DisplayPath}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                        </StackPanel>
                                                     </StackPanel>
 
                                                     <!-- Enable/Disable Switch + Remove Button -->
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
                                                         <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                  IsEnabled="{Binding CanModify}"
                                                                   Content="{Binding ActiveLabel}"
                                                                   FontSize="11"
                                                                   VerticalAlignment="Center"
                                                                   Margin="0,0,12,0"
                                                                   Click="AddonEnableCheckbox_Click"/>
                                                         <Button Content="{Binding RemoveLabel}"
+                                                                IsEnabled="{Binding CanModify}"
                                                                 Style="{StaticResource BtnDanger}"
                                                                 Height="26"
                                                                 Padding="10,0"
@@ -1529,6 +1047,98 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                                             Margin="0,0,8,8"
                                             Click="BtnAboutDocumentation_Click"/>
                                 </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- About Installed Modules & Plugins Summary Card -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="16"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtAboutAddonsTitle"
+                                           Text="🧩 About Installed Modules &amp; Plugins"
+                                           FontWeight="Bold"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,2"/>
+                                <TextBlock x:Name="txtAboutAddonsSubtitle"
+                                           Text="Quick summary and AssemblyInfo metadata of all modular add-ons integrated into OptiAssist:"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,0,0,10"
+                                           TextWrapping="Wrap"/>
+
+                                <ItemsControl x:Name="icAboutAddonsList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource BrushBgPrimary}"
+                                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="6"
+                                                    Padding="12,10"
+                                                    Margin="0,0,0,6">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Icon -->
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding Icon}"
+                                                               FontSize="22"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,12,0"/>
+
+                                                    <!-- Summary + AssemblyInfo Metadata -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text=" (" FontSize="11" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding AssemblyTitle}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text=")" FontSize="11" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text=" • v" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding AssemblyVersion}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccent}" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                            <TextBlock Text="{Binding AssemblyProduct}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                            <TextBlock Text=" • " FontSize="10" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="{Binding AssemblyDescription}" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                            <TextBlock Text=" • " FontSize="10" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="{Binding AssemblyCompany}" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding AssemblyCopyright}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="  •  " FontSize="9" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                            <TextBlock Text="{Binding DisplayPath}" FontSize="9" Foreground="{DynamicResource BrushTextMuted}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+
+                                                    <!-- Status Badge -->
+                                                    <Border Grid.Column="2"
+                                                            Background="{DynamicResource BrushBgCard}"
+                                                            BorderBrush="{DynamicResource BrushBorderCard}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="8,3"
+                                                            VerticalAlignment="Center"
+                                                            Margin="10,0,0,0">
+                                                        <TextBlock Text="{Binding StatusBadgeText}"
+                                                                   FontSize="10"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrushAccent}"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
                     </StackPanel>

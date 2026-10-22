@@ -405,12 +405,12 @@ namespace OptiAssist.Addons.MaintenanceReport
 
         public string Version
         {
-            get { return "1.0.0"; }
+            get { return "1.1.0.0"; }
         }
 
         public string Author
         {
-            get { return "OptiAssist"; }
+            get { return "João Figueiró"; }
         }
 
         public string Icon

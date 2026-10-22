@@ -17,10 +17,6 @@ namespace OptiAssist
     {
         private AppSettings _settings;
         private HardwareSummary _hardware;
-        private ObservableCollection<InstallAppItem> _apps;
-        private ObservableCollection<InstallAppItem> _customEditorApps;
-        private ObservableCollection<WingetUpgradeItem> _wingetUpgrades;
-        private InstallAppItem _editingAppItem;
         private ObservableCollection<AddonEntry> _addons;
         private bool _isLoadingSettings = false;
 
@@ -35,16 +31,12 @@ namespace OptiAssist
             LoadApplicationSettings();
             LoadAppLogo();
             UpdateDeploymentButtonsUI();
-            LoadPostInstallApps();
             ReloadAddonsList();
 
             if (_settings != null && _settings.AutoRefreshHardware)
             {
                 RefreshHardwareAsync();
             }
-
-            // Start background check for Winget updates
-            BtnCheckWingetUpgrades_Click(null, null);
         }
 
         private void UpdateStatusBadge(TextBlock tb, string value)
@@ -108,7 +100,6 @@ namespace OptiAssist
             // Hide all panels
             scrollViewerContent.Visibility = Visibility.Collapsed;
             panelDashboard.Visibility = Visibility.Collapsed;
-            panelPostInstall.Visibility = Visibility.Collapsed;
             panelShortcuts.Visibility = Visibility.Collapsed;
             panelAddonHost.Visibility = Visibility.Collapsed;
             panelTerminal.Visibility = Visibility.Collapsed;
@@ -120,11 +111,6 @@ namespace OptiAssist
             {
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelDashboard.Visibility = Visibility.Visible;
-            }
-            else if (rb == rbNavPostInstall)
-            {
-                scrollViewerContent.Visibility = Visibility.Visible;
-                panelPostInstall.Visibility = Visibility.Visible;
             }
             else if (rb == rbNavShortcuts)
             {
@@ -354,17 +340,6 @@ namespace OptiAssist
                 lblFooterStoreName.Visibility = Visibility.Visible;
             }
         }
-
-        private void LoadPostInstallApps()
-        {
-            var appsList = InstallerHelper.LoadApps();
-            foreach (var app in appsList)
-            {
-                app.Selected = app.PreSelected;
-            }
-            _apps = new ObservableCollection<InstallAppItem>(appsList);
-            icAppsList.ItemsSource = _apps;
-        }
         #endregion
 
         #region OVERVIEW (DASHBOARD)
@@ -495,548 +470,43 @@ namespace OptiAssist
 
         private void BtnRunPostInstallTask_Click(object sender, RoutedEventArgs e)
         {
-            if (rbNavPostInstall != null)
+            if (!NavigateToAddon("app-manager"))
             {
-                rbNavPostInstall.IsChecked = true;
-                NavButton_Click(rbNavPostInstall, null);
+                MessageBox.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
-            BtnInstallSelected_Click(sender, e);
+
+            if (_addons != null)
+            {
+                foreach (AddonEntry entry in _addons)
+                {
+                    if (entry != null && string.Equals(entry.Id, "app-manager", StringComparison.OrdinalIgnoreCase) && entry.Instance != null)
+                    {
+                        try
+                        {
+                            var method = entry.Instance.GetType().GetMethod("RunAutomatedPostInstall");
+                            if (method != null)
+                            {
+                                method.Invoke(entry.Instance, null);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log("[APP MANAGER ERROR] " + ex.Message);
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
         private void BtnTaskPostInstall_Click(object sender, RoutedEventArgs e)
         {
-            rbNavPostInstall.IsChecked = true;
-            NavButton_Click(rbNavPostInstall, null);
-        }
-        #endregion
-
-        #region APP MANAGER (POST-INSTALL)
-        private void BtnSelectEssentials_Click(object sender, RoutedEventArgs e)
-        {
-            if (_apps == null) return;
-            foreach (var app in _apps)
+            if (!NavigateToAddon("app-manager"))
             {
-                app.Selected = app.PreSelected;
-            }
-            icAppsList.Items.Refresh();
-        }
-
-        private void BtnDeselectAll_Click(object sender, RoutedEventArgs e)
-        {
-            if (_apps == null) return;
-            foreach (var app in _apps)
-            {
-                app.Selected = false;
-            }
-            icAppsList.Items.Refresh();
-        }
-
-        private void BtnToggleCustomizePostInstall_Click(object sender, RoutedEventArgs e)
-        {
-            if (cardCustomizePostInstall.Visibility == Visibility.Visible)
-            {
-                cardCustomizePostInstall.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                cardCustomizePostInstall.Visibility = Visibility.Visible;
-                PopulateCustomAppsEditor();
+                MessageBox.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
-
-        private void BtnCloseCustomize_Click(object sender, RoutedEventArgs e)
-        {
-            cardCustomizePostInstall.Visibility = Visibility.Collapsed;
-        }
-
-        private void PopulateCustomAppsEditor()
-        {
-            var list = InstallerHelper.LoadApps();
-            _customEditorApps = new ObservableCollection<InstallAppItem>(list);
-            icCustomAppsEditorList.ItemsSource = _customEditorApps;
-        }
-
-        private void CmbNewAppType_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (panelNewAppLocal == null || panelNewAppWinget == null) return;
-            var item = cmbNewAppType.SelectedItem as ComboBoxItem;
-            if (item != null && item.Tag != null && item.Tag.ToString() == "Winget")
-            {
-                panelNewAppLocal.Visibility = Visibility.Collapsed;
-                panelNewAppWinget.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                panelNewAppLocal.Visibility = Visibility.Visible;
-                panelNewAppWinget.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private void BtnSelectLocalInstaller_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                string postDir = InstallerHelper.GetInstallersDirectory();
-                if (!Directory.Exists(postDir)) Directory.CreateDirectory(postDir);
-
-                var dlg = new Microsoft.Win32.OpenFileDialog();
-                dlg.InitialDirectory = Path.GetFullPath(postDir);
-                dlg.Title = LocalizationHelper.Get("Msg_SelectInstallerTitle", "Select installer in Installers folder");
-                dlg.Filter = LocalizationHelper.Get("Msg_SelectInstallerFilter", "Installers (*.exe;*.msi;*.msixbundle;*.appxbundle)|*.exe;*.msi;*.msixbundle;*.appxbundle|All Files (*.*)|*.*");
-                if (dlg.ShowDialog() == true)
-                {
-                    string fileName = Path.GetFileName(dlg.FileName);
-                    txtNewAppLocalFile.Text = fileName;
-                    if (string.IsNullOrWhiteSpace(txtNewAppName.Text))
-                    {
-                        string clean = Path.GetFileNameWithoutExtension(fileName)
-                            .Replace("Setup", "")
-                            .Replace("setup", "")
-                            .Replace("_", " ")
-                            .Trim();
-                        if (!string.IsNullOrEmpty(clean))
-                            txtNewAppName.Text = clean;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_SelectInstallerError", "Error selecting file: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
-
-        private void BtnAddCustomApp_Click(object sender, RoutedEventArgs e)
-        {
-            string name = txtNewAppName.Text != null ? txtNewAppName.Text.Trim() : "";
-            if (string.IsNullOrEmpty(name))
-            {
-                MessageBox.Show(LocalizationHelper.Get("Msg_EnterAppName", "Please enter the program name."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
-                txtNewAppName.Focus();
-                return;
-            }
-
-            string installType = "Local";
-            var selectedTypeItem = cmbNewAppType.SelectedItem as ComboBoxItem;
-            if (selectedTypeItem != null && selectedTypeItem.Tag != null)
-            {
-                installType = selectedTypeItem.Tag.ToString();
-            }
-
-            string localFile = txtNewAppLocalFile.Text != null ? txtNewAppLocalFile.Text.Trim() : "";
-            string wingetId = txtNewAppWingetId.Text != null ? txtNewAppWingetId.Text.Trim() : "";
-            string silentArgs = txtNewAppSilentArgs.Text != null ? txtNewAppSilentArgs.Text.Trim() : "";
-            bool preSelected = chkNewAppPreSelected.IsChecked == true;
-
-            if (installType == "Winget" && string.IsNullOrEmpty(wingetId))
-            {
-                wingetId = name;
-            }
-
-            if (_customEditorApps == null)
-            {
-                _customEditorApps = new ObservableCollection<InstallAppItem>();
-                icCustomAppsEditorList.ItemsSource = _customEditorApps;
-            }
-
-            if (_editingAppItem != null)
-            {
-                // Edit mode: update existing item
-                _editingAppItem.Name = name;
-                _editingAppItem.InstallType = installType;
-                _editingAppItem.LocalInstallerFile = localFile;
-                _editingAppItem.WingetId = wingetId;
-                _editingAppItem.PreSelected = preSelected;
-                _editingAppItem.SilentArgs = silentArgs;
-
-                _editingAppItem = null;
-                btnAddCustomApp.Content = LocalizationHelper.Get("Btn_Add", "➕ Adicionar");
-                btnCancelEditApp.Visibility = Visibility.Collapsed;
-                icCustomAppsEditorList.Items.Refresh();
-            }
-            else
-            {
-                // Add mode: add new item
-                var newItem = new InstallAppItem(name, preSelected, installType, wingetId, silentArgs, localFile);
-                _customEditorApps.Add(newItem);
-            }
-
-            // Clear form fields
-            ClearCustomAppForm();
-        }
-
-        private void BtnEditCustomApp_Click(object sender, RoutedEventArgs e)
-        {
-            var btn = sender as Button;
-            if (btn == null) return;
-            var item = btn.Tag as InstallAppItem;
-            if (item == null) return;
-
-            _editingAppItem = item;
-            txtNewAppName.Text = item.Name;
-            cmbNewAppType.SelectedIndex = (item.InstallType == "Winget") ? 1 : 0;
-            txtNewAppLocalFile.Text = item.LocalInstallerFile;
-            txtNewAppWingetId.Text = item.WingetId;
-            chkNewAppPreSelected.IsChecked = item.PreSelected;
-            txtNewAppSilentArgs.Text = item.SilentArgs;
-
-            btnAddCustomApp.Content = LocalizationHelper.Get("Btn_Update", "💾 Atualizar");
-            btnCancelEditApp.Visibility = Visibility.Visible;
-            txtNewAppName.Focus();
-        }
-
-        private void BtnCancelEditApp_Click(object sender, RoutedEventArgs e)
-        {
-            _editingAppItem = null;
-            ClearCustomAppForm();
-            btnAddCustomApp.Content = LocalizationHelper.Get("Btn_Add", "➕ Adicionar");
-            btnCancelEditApp.Visibility = Visibility.Collapsed;
-        }
-
-        private void ClearCustomAppForm()
-        {
-            txtNewAppName.Text = "";
-            txtNewAppLocalFile.Text = "";
-            txtNewAppWingetId.Text = "";
-            txtNewAppSilentArgs.Text = "";
-            chkNewAppPreSelected.IsChecked = false;
-            cmbNewAppType.SelectedIndex = 0;
-        }
-
-        private void BtnRemoveCustomApp_Click(object sender, RoutedEventArgs e)
-        {
-            var btn = sender as Button;
-            if (btn == null) return;
-            var item = btn.Tag as InstallAppItem;
-            if (item != null && _customEditorApps != null)
-            {
-                _customEditorApps.Remove(item);
-            }
-        }
-
-        private void BtnMoveAppUp_Click(object sender, RoutedEventArgs e)
-        {
-            var btn = sender as Button;
-            if (btn == null) return;
-            var item = btn.Tag as InstallAppItem;
-            if (item != null && _customEditorApps != null)
-            {
-                int index = _customEditorApps.IndexOf(item);
-                if (index > 0)
-                {
-                    _customEditorApps.Move(index, index - 1);
-                }
-            }
-        }
-
-        private void BtnMoveAppDown_Click(object sender, RoutedEventArgs e)
-        {
-            var btn = sender as Button;
-            if (btn == null) return;
-            var item = btn.Tag as InstallAppItem;
-            if (item != null && _customEditorApps != null)
-            {
-                int index = _customEditorApps.IndexOf(item);
-                if (index >= 0 && index < _customEditorApps.Count - 1)
-                {
-                    _customEditorApps.Move(index, index + 1);
-                }
-            }
-        }
-
-        private void BtnSaveCustomApps_Click(object sender, RoutedEventArgs e)
-        {
-            if (_customEditorApps == null) return;
-            InstallerHelper.SaveApps(_customEditorApps);
-            LoadPostInstallApps();
-            MessageBox.Show(LocalizationHelper.Get("Msg_CustomAppsSaved", "Application list successfully saved in Config\\autoinstall.json!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void BtnResetDefaultApps_Click(object sender, RoutedEventArgs e)
-        {
-            var res = MessageBox.Show(LocalizationHelper.Get("Msg_ResetDefaultAppsConfirm", "Do you want to restore the default program list in autoinstall.json?"), "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (res == MessageBoxResult.Yes)
-            {
-                var defaults = InstallerHelper.GetDefaultApps();
-                InstallerHelper.SaveApps(defaults);
-                PopulateCustomAppsEditor();
-                LoadPostInstallApps();
-                MessageBox.Show(LocalizationHelper.Get("Msg_ResetDefaultAppsDone", "Default program list successfully restored!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void BtnOpenPostInstallJson_Click(object sender, RoutedEventArgs e)
-        {
-            InstallerHelper.OpenPostInstallJson();
-        }
-
-        private void BtnOpenPostInstallFolder_Click(object sender, RoutedEventArgs e)
-        {
-            InstallerHelper.OpenPostInstallFolder();
-        }
-
-        private void BtnInstallSelected_Click(object sender, RoutedEventArgs e)
-        {
-            if (_apps == null) return;
-
-            List<InstallAppItem> selected = new List<InstallAppItem>();
-            foreach (var app in _apps)
-            {
-                if (app.Selected) selected.Add(app);
-            }
-
-            if (selected.Count == 0)
-            {
-                MessageBox.Show(LocalizationHelper.Get("Msg_NoAppsSelected", "No application was selected."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            btnRunInstallSelected.IsEnabled = false;
-            pbInstallProgress.Value = 0;
-            pbInstallProgress.Maximum = selected.Count;
-
-            ThreadPool.QueueUserWorkItem(state =>
-            {
-                Log("=================================================");
-                Log("   STARTING AUTOMATED SOFTWARE INSTALLATION      ");
-                Log(string.Format("   Total programs to install: {0}", selected.Count));
-                Log("   (Configuration: Config\\autoinstall.json)");
-                Log("=================================================\n");
-
-                bool wingetFallback = _settings != null ? _settings.EnableWingetFallback : true;
-
-                int current = 0;
-                foreach (var app in selected)
-                {
-                    current++;
-                    Log(string.Format("[{0}/{1}] Processing: {2}...", current, selected.Count, app.Name));
-                    InstallerHelper.InstallApp(app, wingetFallback, msg => Log(msg));
-                    Log("");
-
-                    Dispatcher.Invoke(new Action(() =>
-                    {
-                        if (pbInstallProgress.Value < pbInstallProgress.Maximum)
-                            pbInstallProgress.Value++;
-                    }));
-                }
-
-                Log("=================================================");
-                Log("   PROGRAM INSTALLATION COMPLETED!               ");
-                Log("=================================================");
-
-                Dispatcher.Invoke(new Action(() =>
-                {
-                    btnRunInstallSelected.IsEnabled = true;
-                    MessageBox.Show(LocalizationHelper.Get("Msg_InstallCompleted", "Installation of selected programs completed!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                }));
-            });
-        }
-
-        #region APPLICATION UPDATES (WINGET UPGRADE)
-        private enum WingetStatusState { Initial, Scanning, UpToDate, Found, Updating, UpdatingAll }
-        private WingetStatusState _wingetStatusState = WingetStatusState.Initial;
-        private int _wingetFoundCount = 0;
-        private int _wingetUpdatingCount = 0;
-
-        private void UpdateWingetStatusText()
-        {
-            if (lblWingetUpgradeStatus == null) return;
-            switch (_wingetStatusState)
-            {
-                case WingetStatusState.Initial:
-                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_Initial", "Click 'Check for Updates' or wait for winget scan...");
-                    break;
-                case WingetStatusState.Scanning:
-                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_Scanning", "Scanning for available updates via winget...");
-                    break;
-                case WingetStatusState.UpToDate:
-                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_UpToDate", "✔️ All installed applications are already up to date!");
-                    break;
-                case WingetStatusState.Found:
-                    lblWingetUpgradeStatus.Text = string.Format(LocalizationHelper.Get("Upgrade_Status_Found", "Updates found for {0} application(s):"), _wingetFoundCount);
-                    break;
-                case WingetStatusState.Updating:
-                    lblWingetUpgradeStatus.Text = string.Format(LocalizationHelper.Get("Upgrade_Status_Updating", "Updating {0} selected application(s)... Track progress in Logs."), _wingetUpdatingCount);
-                    break;
-                case WingetStatusState.UpdatingAll:
-                    lblWingetUpgradeStatus.Text = LocalizationHelper.Get("Upgrade_Status_UpdatingAll", "Running 'winget upgrade --all' in background... Track progress in Logs.");
-                    break;
-            }
-        }
-
-        private void BtnCheckWingetUpgrades_Click(object sender, RoutedEventArgs e)
-        {
-            cardWingetUpgrades.Visibility = Visibility.Visible;
-            pbWingetScan.Visibility = Visibility.Visible;
-            _wingetStatusState = WingetStatusState.Scanning;
-            UpdateWingetStatusText();
-            borderUpgradesList.Visibility = Visibility.Collapsed;
-            gridUpgradeActions.Visibility = Visibility.Collapsed;
-
-            ThreadPool.QueueUserWorkItem(state =>
-            {
-                var upgrades = InstallerHelper.CheckAvailableUpgrades(msg => Log(msg));
-
-                Dispatcher.Invoke(new Action(() =>
-                {
-                    pbWingetScan.Visibility = Visibility.Collapsed;
-
-                    if (upgrades == null || upgrades.Count == 0)
-                    {
-                        _wingetStatusState = WingetStatusState.UpToDate;
-                        UpdateWingetStatusText();
-                        borderUpgradesList.Visibility = Visibility.Collapsed;
-                        gridUpgradeActions.Visibility = Visibility.Collapsed;
-                    }
-                    else
-                    {
-                        _wingetFoundCount = upgrades.Count;
-                        _wingetStatusState = WingetStatusState.Found;
-                        UpdateWingetStatusText();
-                        _wingetUpgrades = new ObservableCollection<WingetUpgradeItem>(upgrades);
-                        icWingetUpgradesList.ItemsSource = _wingetUpgrades;
-                        borderUpgradesList.Visibility = Visibility.Visible;
-                        gridUpgradeActions.Visibility = Visibility.Visible;
-                    }
-                }));
-            });
-        }
-
-        private void BtnCloseWingetUpgrades_Click(object sender, RoutedEventArgs e)
-        {
-            cardWingetUpgrades.Visibility = Visibility.Collapsed;
-        }
-
-        private void BtnSelectAllUpgrades_Click(object sender, RoutedEventArgs e)
-        {
-            if (_wingetUpgrades == null) return;
-            foreach (var item in _wingetUpgrades)
-            {
-                item.Selected = true;
-            }
-        }
-
-        private void BtnDeselectAllUpgrades_Click(object sender, RoutedEventArgs e)
-        {
-            if (_wingetUpgrades == null) return;
-            foreach (var item in _wingetUpgrades)
-            {
-                item.Selected = false;
-            }
-        }
-
-        private void BtnRecheckWingetUpgrades_Click(object sender, RoutedEventArgs e)
-        {
-            BtnCheckWingetUpgrades_Click(sender, e);
-        }
-
-        private void BtnUpgradeSelected_Click(object sender, RoutedEventArgs e)
-        {
-            if (_wingetUpgrades == null) return;
-
-            List<WingetUpgradeItem> selected = new List<WingetUpgradeItem>();
-            foreach (var item in _wingetUpgrades)
-            {
-                if (item.Selected) selected.Add(item);
-            }
-
-            if (selected.Count == 0)
-            {
-                MessageBox.Show(LocalizationHelper.Get("Msg_NoAppsSelected", "No application was selected for update."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            btnUpgradeSelected.IsEnabled = false;
-            btnUpgradeAll.IsEnabled = false;
-            pbWingetScan.Visibility = Visibility.Visible;
-            pnlWingetLogsAction.Visibility = Visibility.Visible;
-            _wingetUpdatingCount = selected.Count;
-            _wingetStatusState = WingetStatusState.Updating;
-            UpdateWingetStatusText();
-
-            ThreadPool.QueueUserWorkItem(state =>
-            {
-                Log("=================================================");
-                Log("   STARTING APPLICATION UPDATE (WINGET)          ");
-                Log(string.Format("   Total programs to update: {0}", selected.Count));
-                Log("=================================================\n");
-
-                int current = 0;
-                int successes = 0;
-                foreach (var item in selected)
-                {
-                    current++;
-                    Log(string.Format("[{0}/{1}] Updating {2} ({3})...", current, selected.Count, item.Name, item.Id));
-                    bool ok = InstallerHelper.UpgradeWingetPackage(item.Id, Log);
-                    if (ok) successes++;
-                    Log("");
-                }
-
-                Log("=================================================");
-                Log(string.Format("   UPDATES COMPLETED ({0}/{1} successful)        ", successes, selected.Count));
-                Log("=================================================\n");
-
-                Dispatcher.Invoke(new Action(() =>
-                {
-                    btnUpgradeSelected.IsEnabled = true;
-                    btnUpgradeAll.IsEnabled = true;
-                    pbWingetScan.Visibility = Visibility.Collapsed;
-                    pnlWingetLogsAction.Visibility = Visibility.Collapsed;
-                    MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_UpgradeCompleted", "Application update completed!\n{0} of {1} successfully updated."), successes, selected.Count),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // Re-scan updates to refresh list
-                    BtnCheckWingetUpgrades_Click(null, null);
-                }));
-            });
-        }
-
-        private void BtnUpgradeAll_Click(object sender, RoutedEventArgs e)
-        {
-            var res = MessageBox.Show(LocalizationHelper.Get("Msg_UpgradeAllConfirm", "Do you want to update all system programs now via 'winget upgrade --all'?"),
-                "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (res != MessageBoxResult.Yes) return;
-
-            btnUpgradeSelected.IsEnabled = false;
-            btnUpgradeAll.IsEnabled = false;
-            pbWingetScan.Visibility = Visibility.Visible;
-            pnlWingetLogsAction.Visibility = Visibility.Visible;
-            _wingetStatusState = WingetStatusState.UpdatingAll;
-            UpdateWingetStatusText();
-
-            ThreadPool.QueueUserWorkItem(state =>
-            {
-                Log("=================================================");
-                Log("   RUNNING BULK UPDATE: winget upgrade --all     ");
-                Log("=================================================\n");
-
-                bool ok = InstallerHelper.UpgradeAllWingetPackages(Log);
-
-                Log("=================================================");
-                Log(ok ? "   BULK UPDATE FINISHED SUCCESSFULLY!            " : "   BULK UPDATE FINISHED WITH WARNINGS/ERRORS     ");
-                Log("=================================================\n");
-
-                Dispatcher.Invoke(new Action(() =>
-                {
-                    btnUpgradeSelected.IsEnabled = true;
-                    btnUpgradeAll.IsEnabled = true;
-                    pbWingetScan.Visibility = Visibility.Collapsed;
-                    pnlWingetLogsAction.Visibility = Visibility.Collapsed;
-                    MessageBox.Show(LocalizationHelper.Get("Msg_UpgradeAllFinished", "Bulk update command finished! Check details in Logs tab."),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // Re-scan updates to refresh list
-                    BtnCheckWingetUpgrades_Click(null, null);
-                }));
-            });
-        }
-
-        private void BtnViewLogs_Click(object sender, RoutedEventArgs e)
-        {
-            rbNavTerminal.IsChecked = true;
-            NavButton_Click(rbNavTerminal, null);
-        }
-        #endregion
         #endregion
 
         #region OPTIMIZATION & MAINTENANCE
@@ -1281,6 +751,7 @@ namespace OptiAssist
                 List<AddonEntry> list = AddonHelper.LoadDiscoveredAddons(this, disabled);
                 _addons = new ObservableCollection<AddonEntry>(list);
                 if (icAddonsList != null) icAddonsList.ItemsSource = _addons;
+                if (icAboutAddonsList != null) icAboutAddonsList.ItemsSource = _addons;
 
                 RebuildSidebarAddonsMenu();
             }
@@ -1305,6 +776,19 @@ namespace OptiAssist
                 }
             }
 
+            if (pnlSidebarAppManager != null && string.IsNullOrEmpty(previouslySelectedAddonId))
+            {
+                foreach (object child in pnlSidebarAppManager.Children)
+                {
+                    RadioButton existingRb = child as RadioButton;
+                    if (existingRb != null && existingRb.IsChecked == true && existingRb.Tag is AddonEntry)
+                    {
+                        previouslySelectedAddonId = ((AddonEntry)existingRb.Tag).Id;
+                        break;
+                    }
+                }
+            }
+
             if (pnlSidebarToolbox != null && string.IsNullOrEmpty(previouslySelectedAddonId))
             {
                 foreach (object child in pnlSidebarToolbox.Children)
@@ -1319,6 +803,7 @@ namespace OptiAssist
             }
 
             pnlSidebarAddons.Children.Clear();
+            if (pnlSidebarAppManager != null) pnlSidebarAppManager.Children.Clear();
             if (pnlSidebarToolbox != null) pnlSidebarToolbox.Children.Clear();
 
             if (_addons == null) return;
@@ -1340,7 +825,11 @@ namespace OptiAssist
 
                 entry.SidebarButton = rb;
 
-                if (pnlSidebarToolbox != null && string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
+                if (pnlSidebarAppManager != null && string.Equals(entry.Id, "app-manager", StringComparison.OrdinalIgnoreCase))
+                {
+                    pnlSidebarAppManager.Children.Add(rb);
+                }
+                else if (pnlSidebarToolbox != null && string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
                 {
                     pnlSidebarToolbox.Children.Add(rb);
                 }
@@ -1520,6 +1009,12 @@ namespace OptiAssist
             AddonEntry entry = cb != null ? cb.DataContext as AddonEntry : null;
             if (entry != null && _settings != null)
             {
+                if (!entry.CanModify)
+                {
+                    cb.IsChecked = true;
+                    entry.IsEnabled = true;
+                    return;
+                }
                 if (_settings.DisabledAddons == null) _settings.DisabledAddons = new List<string>();
                 if (cb.IsChecked == true)
                 {
@@ -1575,7 +1070,6 @@ namespace OptiAssist
 
             // 1. Sidebar Navigation
             if (rbNavDashboard != null) rbNavDashboard.Content = LocalizationHelper.Get("Nav_Dashboard", "💻  Dashboard");
-            if (rbNavPostInstall != null) rbNavPostInstall.Content = LocalizationHelper.Get("Nav_PostInstall", "📦  App Manager");
             if (rbNavShortcuts != null) rbNavShortcuts.Content = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
             if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "⬛  Logs");
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
@@ -1641,71 +1135,6 @@ namespace OptiAssist
                 btnTaskToolbox.ToolTip = LocalizationHelper.Get("Tooltip_TaskToolbox", "Open Toolbox custom actions and tools");
             }
 
-            // 3. App Manager (PostInstall)
-            if (txtPostInstallTitle != null) txtPostInstallTitle.Text = LocalizationHelper.Get("PostInstall_Title", "App Manager");
-            if (txtPostInstallSubtitle != null) txtPostInstallSubtitle.Text = LocalizationHelper.Get("PostInstall_Subtitle", "Automated installation of essential software and update of installed applications");
-            if (txtWingetCardTitle != null) txtWingetCardTitle.Text = LocalizationHelper.Get("Upgrade_Card_Title", "🔄 Application Updates");
-            UpdateWingetStatusText();
-            if (btnCheckWingetUpgrades != null) btnCheckWingetUpgrades.Content = LocalizationHelper.Get("Btn_CheckUpdates", "🔄 Check for Updates");
-            if (btnViewLogsFromUpgrade != null)
-            {
-                btnViewLogsFromUpgrade.Content = LocalizationHelper.Get("Btn_ViewLogs", "⬛ View Logs");
-                btnViewLogsFromUpgrade.ToolTip = LocalizationHelper.Get("Tooltip_ViewLogs", "Monitor execution log in real time on the Logs screen");
-            }
-            if (btnSelectAllUpgrades != null) btnSelectAllUpgrades.Content = LocalizationHelper.Get("Btn_SelectAll", "Select All");
-            if (btnDeselectAllUpgrades != null) btnDeselectAllUpgrades.Content = LocalizationHelper.Get("Btn_DeselectAll", "Deselect All");
-            if (btnRecheckWingetUpgrades != null) btnRecheckWingetUpgrades.Content = LocalizationHelper.Get("Btn_Recheck", "🔄 Re-check");
-            if (btnUpgradeAll != null) btnUpgradeAll.Content = LocalizationHelper.Get("Btn_UpgradeAll", "🚀 Update All");
-            if (btnUpgradeSelected != null) btnUpgradeSelected.Content = LocalizationHelper.Get("Btn_UpgradeSelected", "🔄 Update Selected");
-
-            if (txtCustomizeHeaderTitle != null) txtCustomizeHeaderTitle.Text = LocalizationHelper.Get("Custom_Card_Title", "⚙️ Customize automated application installation");
-            if (txtCustomizeHeaderSub != null) txtCustomizeHeaderSub.Text = LocalizationHelper.Get("Custom_Card_Subtitle", "Add new programs, set default automation, and choose between Local installer or Winget.");
-            if (btnCloseCustomize != null) btnCloseCustomize.Content = LocalizationHelper.Get("Btn_Close", "✕ Close");
-            if (txtNewAppNameLabel != null) txtNewAppNameLabel.Text = LocalizationHelper.Get("Custom_Label_Name", "Program Name:");
-            if (txtNewAppTypeLabel != null) txtNewAppTypeLabel.Text = LocalizationHelper.Get("Custom_Label_Type", "Installation Type:");
-            if (cmbItemLocal != null) cmbItemLocal.Content = LocalizationHelper.Get("Custom_Type_Local", "📁 Local (Installers)");
-            if (cmbItemWinget != null) cmbItemWinget.Content = LocalizationHelper.Get("Custom_Type_Winget", "🌐 Winget (Repository)");
-            if (txtNewAppLocalLabel != null) txtNewAppLocalLabel.Text = LocalizationHelper.Get("Custom_Label_LocalFile", "Executable in Installers folder:");
-            if (btnSelectLocalInstaller != null)
-            {
-                btnSelectLocalInstaller.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
-                btnSelectLocalInstaller.ToolTip = LocalizationHelper.Get("Tooltip_SelectLocalInstaller", "Select executable file from Installers folder");
-            }
-            if (txtNewAppLocalFile != null) txtNewAppLocalFile.ToolTip = LocalizationHelper.Get("Tooltip_NewAppLocalFile", "Name of the executable in Installers folder (e.g. OfficeSetup.exe)");
-            if (txtNewAppWingetLabel != null) txtNewAppWingetLabel.Text = LocalizationHelper.Get("Custom_Label_WingetId", "Winget App ID (e.g. Google.Chrome):");
-            if (txtNewAppWingetId != null) txtNewAppWingetId.ToolTip = LocalizationHelper.Get("Tooltip_NewAppWingetId", "Package identifier in Winget repository");
-            if (btnAddCustomApp != null)
-            {
-                btnAddCustomApp.Content = (_editingAppItem != null) ? LocalizationHelper.Get("Btn_Update", "💾 Update") : LocalizationHelper.Get("Btn_Add", "➕ Add");
-            }
-            if (btnCancelEditApp != null) btnCancelEditApp.ToolTip = LocalizationHelper.Get("Tooltip_CancelEdit", "Cancel edit");
-            if (chkNewAppPreSelected != null) chkNewAppPreSelected.Content = LocalizationHelper.Get("Custom_Chk_AutomateDefault", "Automate by default");
-            if (txtNewAppSilentLabel != null) txtNewAppSilentLabel.Text = LocalizationHelper.Get("Custom_Label_SilentArgs", "Silent arguments (optional):");
-            if (txtCurrentListTitle != null) txtCurrentListTitle.Text = LocalizationHelper.Get("Custom_CurrentList_Title", "Programs in current list:");
-            if (btnSaveCustomApps != null) btnSaveCustomApps.Content = LocalizationHelper.Get("Btn_SaveCustomApps", "💾 Save Changes");
-            if (btnResetDefaultApps != null) btnResetDefaultApps.Content = LocalizationHelper.Get("Btn_ResetDefaultApps", "🔄 Reset to Defaults");
-            if (btnOpenPostInstallJson != null) btnOpenPostInstallJson.Content = LocalizationHelper.Get("Btn_OpenPostInstallJson", "📂 Open autoinstall.json");
-
-            if (_customEditorApps != null)
-            {
-                foreach (var item in _customEditorApps)
-                {
-                    item.RefreshLocalization();
-                }
-                if (icCustomAppsEditorList != null && icCustomAppsEditorList.Items != null)
-                {
-                    icCustomAppsEditorList.Items.Refresh();
-                }
-            }
-
-            if (txtAppsInstallCardTitle != null) txtAppsInstallCardTitle.Text = LocalizationHelper.Get("Install_Card_Title", "📦 Automated Application Installation");
-            if (txtAppsInstallCardSub != null) txtAppsInstallCardSub.Text = LocalizationHelper.Get("Install_Card_Subtitle", "Select the programs you want to batch install automatically on this computer:");
-            if (btnSelectEssentials != null) btnSelectEssentials.Content = LocalizationHelper.Get("Btn_SelectEssentials", "Select Essentials");
-            if (btnDeselectAll != null) btnDeselectAll.Content = LocalizationHelper.Get("Btn_DeselectAll", "Deselect All");
-            if (btnToggleCustomizePostInstall != null) btnToggleCustomizePostInstall.Content = LocalizationHelper.Get("Btn_CustomizeAutomated", "⚙️ Customize Automated Installation");
-            if (btnOpenPostInstallFolder != null) btnOpenPostInstallFolder.Content = LocalizationHelper.Get("Btn_OpenPostInstallFolder", "📂 Installers Folder");
-            if (btnRunInstallSelected != null) btnRunInstallSelected.Content = LocalizationHelper.Get("Btn_RunInstallSelected", "🚀 Install Selected");
-
             // 5. Windows Administrative Tools
             if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Tools_Title", "Windows Administrative Tools");
             if (txtToolsSubtitle != null) txtToolsSubtitle.Text = LocalizationHelper.Get("Tools_Subtitle", "Quick access to primary management consoles and native system utilities");
@@ -1766,6 +1195,7 @@ namespace OptiAssist
                     }
                     addon.RefreshMetadataFromInstance();
                 }
+                RebuildSidebarAddonsMenu();
             }
 
             // 7. Logs
@@ -1861,6 +1291,8 @@ namespace OptiAssist
                 btnAboutDocumentation.Content = LocalizationHelper.Get("Btn_AboutDocumentation", "📖 Documentation");
                 btnAboutDocumentation.ToolTip = LocalizationHelper.Get("Tooltip_AboutDocumentation", "Access the official OptiAssist documentation");
             }
+            if (txtAboutAddonsTitle != null) txtAboutAddonsTitle.Text = LocalizationHelper.Get("About_Addons_Title", "🧩 About Installed Modules & Plugins");
+            if (txtAboutAddonsSubtitle != null) txtAboutAddonsSubtitle.Text = LocalizationHelper.Get("About_Addons_Subtitle", "Quick summary and AssemblyInfo metadata of all modular add-ons integrated into OptiAssist:");
 
             // 10. Bottom status bar
             if (txtBitLockerLabel != null) txtBitLockerLabel.Text = LocalizationHelper.Get("Status_BitLocker", "🔒 BitLocker: ");

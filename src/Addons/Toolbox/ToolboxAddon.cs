@@ -81,8 +81,8 @@ namespace OptiAssist.Addons.Toolbox
         public string Id { get { return "toolbox"; } }
         public string Name { get { return T("Nav_Toolbox", "Toolbox"); } }
         public string Description { get { return T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist"); } }
-        public string Version { get { return "1.1.0"; } }
-        public string Author { get { return "OptiAssist"; } }
+        public string Version { get { return "1.1.0.0"; } }
+        public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🧰"; } }
 
         public void Initialize(IOptiAssistHost host)
