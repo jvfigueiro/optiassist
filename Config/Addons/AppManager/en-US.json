@@ -11,7 +11,7 @@
   "Upgrade_Status_Updating": "Updating {0} selected application(s)... Track progress in Logs.",
   "Upgrade_Status_UpdatingAll": "Running 'winget upgrade --all' in background... Track progress in Logs.",
   "Btn_CheckUpdates": "🔄 Check for Updates",
-  "Btn_ViewLogs": "⬛ View Logs",
+  "Btn_ViewLogs": "📜 View Logs",
   "Btn_SelectAll": "Select All",
   "Btn_DeselectAll": "Deselect All",
   "Btn_Recheck": "🔄 Re-check",

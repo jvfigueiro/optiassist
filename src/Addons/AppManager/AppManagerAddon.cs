@@ -91,7 +91,7 @@ namespace OptiAssist.Addons.AppManager
         private FrameworkElement _rootView;
 
         public string Id { get { return "app-manager"; } }
-        public string Name { get { return T("PostInstall_Title", "App Manager"); } }
+        public string Name { get { return T("Nav_AppManager", "App Manager"); } }
         public string Description { get { return T("PostInstall_Subtitle", "Automated installation of essential software and update of installed applications"); } }
         public string Version { get { return "1.1.0.0"; } }
         public string Author { get { return "João Figueiró"; } }
@@ -245,7 +245,7 @@ namespace OptiAssist.Addons.AppManager
             };
             _btnViewLogsFromUpgrade = new Button()
             {
-                Content = T("Btn_ViewLogs", "⬛ View Logs"),
+                Content = T("Btn_ViewLogs", "📜 View Logs"),
                 Height = 28,
                 Padding = new Thickness(14, 0, 14, 0),
                 ToolTip = T("Tooltip_ViewLogs", "Monitor execution log in real time on the Logs screen")
@@ -1533,7 +1533,7 @@ namespace OptiAssist.Addons.AppManager
             if (_btnCheckWingetUpgrades != null) _btnCheckWingetUpgrades.Content = T("Btn_CheckUpdates", "🔄 Check for Updates");
             if (_btnViewLogsFromUpgrade != null)
             {
-                _btnViewLogsFromUpgrade.Content = T("Btn_ViewLogs", "⬛ View Logs");
+                _btnViewLogsFromUpgrade.Content = T("Btn_ViewLogs", "📜 View Logs");
                 _btnViewLogsFromUpgrade.ToolTip = T("Tooltip_ViewLogs", "Monitor execution log in real time on the Logs screen");
             }
             if (_btnSelectAllUpgrades != null) _btnSelectAllUpgrades.Content = T("Btn_SelectAll", "Select All");

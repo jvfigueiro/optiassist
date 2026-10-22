@@ -58,7 +58,7 @@ namespace OptiAssist
             StackPanel spTitle = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
             _txtTitle = new TextBlock()
             {
-                Text = LocalizationHelper.Get("Logs_Title", "⬛ Logs"),
+                Text = LocalizationHelper.Get("Logs_Title", "📜 Logs"),
                 FontSize = 16,
                 FontWeight = FontWeights.Bold
             };

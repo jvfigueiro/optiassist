@@ -1031,7 +1031,7 @@ namespace OptiAssist
             // 1. Sidebar Navigation
             if (rbNavDashboard != null) rbNavDashboard.Content = LocalizationHelper.Get("Nav_Dashboard", "💻  Dashboard");
             if (rbNavShortcuts != null) rbNavShortcuts.Content = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
-            if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "⬛  Logs");
+            if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "📜  Logs");
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
             if (rbNavAbout != null) rbNavAbout.Content = LocalizationHelper.Get("Nav_About", "ℹ️  About");
 
@@ -1159,7 +1159,7 @@ namespace OptiAssist
             }
 
             // 7. Logs
-            if (txtLogsTitle != null) txtLogsTitle.Text = LocalizationHelper.Get("Logs_Title", "⬛ Logs");
+            if (txtLogsTitle != null) txtLogsTitle.Text = LocalizationHelper.Get("Logs_Title", "📜 Logs");
             if (txtLogsSub != null) txtLogsSub.Text = LocalizationHelper.Get("Logs_Subtitle", "Real-time log of diagnostics, scripts, and system executions");
             if (btnPopoutLog != null)
             {

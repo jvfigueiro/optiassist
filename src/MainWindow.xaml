@@ -137,7 +137,7 @@
                                      Click="NavButton_Click"/>
                         <RadioButton x:Name="rbNavTerminal"
                                      GroupName="SidebarNavGroup"
-                                     Content="⬛  Logs"
+                                     Content="📜  Logs"
                                      Style="{StaticResource BtnNav}"
                                      Click="NavButton_Click"/>
 
@@ -1175,7 +1175,7 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                             <TextBlock x:Name="txtLogsTitle"
-                                       Text="⬛ Logs"
+                                       Text="📜 Logs"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"
