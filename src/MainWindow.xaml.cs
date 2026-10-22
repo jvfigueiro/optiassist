@@ -92,7 +92,6 @@ namespace OptiAssist
             scrollViewerContent.Visibility = Visibility.Collapsed;
             panelDashboard.Visibility = Visibility.Collapsed;
             panelPostInstall.Visibility = Visibility.Collapsed;
-            panelOptimization.Visibility = Visibility.Collapsed;
             panelShortcuts.Visibility = Visibility.Collapsed;
             panelAddonHost.Visibility = Visibility.Collapsed;
             panelTerminal.Visibility = Visibility.Collapsed;
@@ -109,11 +108,6 @@ namespace OptiAssist
             {
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelPostInstall.Visibility = Visibility.Visible;
-            }
-            else if (rb == rbNavOptimization)
-            {
-                scrollViewerContent.Visibility = Visibility.Visible;
-                panelOptimization.Visibility = Visibility.Visible;
             }
             else if (rb == rbNavShortcuts)
             {
@@ -162,6 +156,7 @@ namespace OptiAssist
             {
                 _externalLogWindow = new LogWindow(this);
                 _externalLogWindow.SetLogText(txtConsoleLog != null ? txtConsoleLog.Text : "");
+                _externalLogWindow.ApplyTheme(_isDarkMode);
                 _externalLogWindow.Show();
             }
             else
@@ -170,8 +165,19 @@ namespace OptiAssist
                 {
                     _externalLogWindow.WindowState = WindowState.Normal;
                 }
+                _externalLogWindow.ApplyTheme(_isDarkMode);
                 _externalLogWindow.Activate();
             }
+        }
+
+        public void OpenLogWindow()
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(new Action(OpenLogWindow));
+                return;
+            }
+            OpenExternalLogWindow();
         }
 
         public void OnExternalLogWindowClosed()
@@ -1533,7 +1539,6 @@ namespace OptiAssist
             // 1. Sidebar Navigation
             if (rbNavDashboard != null) rbNavDashboard.Content = LocalizationHelper.Get("Nav_Dashboard", "💻  Dashboard");
             if (rbNavPostInstall != null) rbNavPostInstall.Content = LocalizationHelper.Get("Nav_PostInstall", "📦  App Manager");
-            if (rbNavOptimization != null) rbNavOptimization.Content = LocalizationHelper.Get("Nav_Optimization", "⚡  Optimization");
             if (rbNavShortcuts != null) rbNavShortcuts.Content = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
             if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "⬛  Logs");
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
@@ -1663,31 +1668,6 @@ namespace OptiAssist
             if (btnToggleCustomizePostInstall != null) btnToggleCustomizePostInstall.Content = LocalizationHelper.Get("Btn_CustomizeAutomated", "⚙️ Customize Automated Installation");
             if (btnOpenPostInstallFolder != null) btnOpenPostInstallFolder.Content = LocalizationHelper.Get("Btn_OpenPostInstallFolder", "📂 Installers Folder");
             if (btnRunInstallSelected != null) btnRunInstallSelected.Content = LocalizationHelper.Get("Btn_RunInstallSelected", "🚀 Install Selected");
-
-            // 4. Optimization
-            if (txtOptTitle != null) txtOptTitle.Text = LocalizationHelper.Get("Opt_Title", "System Optimization and Cleanup");
-            if (txtOptSubtitle != null) txtOptSubtitle.Text = LocalizationHelper.Get("Opt_Subtitle", "Advanced performance tweaks, integrity repairs, and quick utilities");
-            if (txtCommSectionTitle != null) txtCommSectionTitle.Text = LocalizationHelper.Get("Opt_Community_Title", "🌐 Community Tools");
-            if (btnChrisTitusOpt != null) btnChrisTitusOpt.Content = LocalizationHelper.Get("Btn_ChrisTitus", "🚀 Chris Titus Tool (WinUtil)");
-            if (txtIntegrityTitle != null) txtIntegrityTitle.Text = LocalizationHelper.Get("Opt_Integrity_Title", "🛡️ System Integrity & Repairs");
-            if (txtBtnSfcText != null) txtBtnSfcText.Text = LocalizationHelper.Get("Btn_Sfc", "Check & Repair Windows Integrity via SFC");
-            if (btnSfc != null) btnSfc.ToolTip = LocalizationHelper.Get("Tooltip_Sfc", "Check and Repair Windows Integrity via SFC (sfc /scannow)");
-            if (txtBtnDismText != null) txtBtnDismText.Text = LocalizationHelper.Get("Btn_Dism", "Check & Repair Windows Integrity via DISM");
-            if (btnDism != null) btnDism.ToolTip = LocalizationHelper.Get("Tooltip_Dism", "Check and Repair Windows Integrity via DISM (Dism /Online /Cleanup-Image /RestoreHealth)");
-            if (btnChkdsk != null) btnChkdsk.Content = LocalizationHelper.Get("Btn_Chkdsk", "Check Disk Integrity (CHKDSK C:)");
-            if (btnPrinterFix != null) btnPrinterFix.Content = LocalizationHelper.Get("Btn_PrinterFix", "Fix Network Printer RPC Issue");
-            if (btnDualBoot != null) btnDualBoot.Content = LocalizationHelper.Get("Btn_DualBoot", "Fix System Clock for Dual Boot");
-            if (btnStoreFix != null) btnStoreFix.Content = LocalizationHelper.Get("Btn_StoreFix", "Install or Repair Microsoft Store");
-            if (btnNetReset != null) btnNetReset.Content = LocalizationHelper.Get("Btn_NetReset", "Network Reset");
-            if (btnWinSat != null) btnWinSat.Content = LocalizationHelper.Get("Btn_WinSat", "WinSAT Benchmark");
-            if (txtCleanupTitle != null) txtCleanupTitle.Text = LocalizationHelper.Get("Opt_Cleanup_Title", "⚡ Cleanup & Performance");
-            if (btnTempClean != null) btnTempClean.Content = LocalizationHelper.Get("Btn_TempClean", "Clean Temporary Files");
-            if (btnUpdateClean != null) btnUpdateClean.Content = LocalizationHelper.Get("Btn_UpdateClean", "Clean Windows Update Cache");
-            if (btnVisualEffects != null) btnVisualEffects.Content = LocalizationHelper.Get("Btn_VisualEffects", "Optimize Visual Effects");
-            if (btnTelemetry != null) btnTelemetry.Content = LocalizationHelper.Get("Btn_Telemetry", "Disable Telemetry & Optimize Services");
-            if (txtBtnCompactOsText != null) txtBtnCompactOsText.Text = LocalizationHelper.Get("Btn_CompactOs", "Compact Windows Installation");
-            if (btnCompactOs != null) btnCompactOs.ToolTip = LocalizationHelper.Get("Tooltip_CompactOs", "Compact Windows OS (compact.exe /CompactOS:always) - Reduces disk footprint");
-            if (btnOpenScriptsFolder != null) btnOpenScriptsFolder.Content = LocalizationHelper.Get("Btn_OpenScriptsFolder", "📂 Open Scripts Folder");
 
             // 5. Windows Administrative Tools
             if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Tools_Title", "Windows Administrative Tools");
@@ -2231,6 +2211,7 @@ namespace OptiAssist
         }
 
         private bool _isDarkMode = true;
+        public bool IsDarkMode { get { return _isDarkMode; } }
 
         public void ApplyTheme(bool isDark)
         {
@@ -2258,6 +2239,11 @@ namespace OptiAssist
             {
                 txtThemeIcon.Text = isDark ? "☀️" : "🌙";
                 txtThemeText.Text = isDark ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
+            }
+
+            if (_externalLogWindow != null)
+            {
+                _externalLogWindow.ApplyTheme(isDark);
             }
         }
 

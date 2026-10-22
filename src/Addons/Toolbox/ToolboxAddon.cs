@@ -27,9 +27,31 @@ namespace OptiAssist.Addons.Toolbox
         private TextBlock _txtTitle;
         private TextBlock _txtSubtitle;
         private TextBox _txtSearch;
+        private Button _btnOptions;
         private Button _btnNewCommand;
         private Button _btnRestorePresets;
         private Button _btnOpenJson;
+
+        // Options Panel & Edit Mode
+        private Border _borderOptionsCard;
+        private TextBlock _txtOptionsTitle;
+        private CheckBox _chkEditMode;
+        private Button _btnManageCategories;
+        private bool _isEditModeEnabled = false;
+
+        // Category Manager Card
+        private Border _borderCategoryManagerCard;
+        private TextBlock _txtCatMgrHeader;
+        private TextBlock _lblCatMgrSelect;
+        private ComboBox _cmbManageExistingCategories;
+        private TextBlock _lblCatMgrNewName;
+        private TextBox _txtRenameCategory;
+        private Button _btnRenameCategory;
+        private Button _btnDeleteCategory;
+        private TextBlock _lblCatMgrAdd;
+        private TextBox _txtAddNewCategory;
+        private Button _btnAddCategory;
+        private Button _btnCloseCategoryManager;
 
         // CRUD Form Editor controls
         private Border _borderEditorCard;
@@ -95,8 +117,10 @@ namespace OptiAssist.Addons.Toolbox
 
             Grid rootGrid = new Grid();
             rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 0: Header & Toolbar
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: CRUD Form Modal/Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 2: Categories Accordion
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: Options Panel
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 2: Category Manager Panel
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 3: CRUD Form Modal/Panel
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 4: Categories Accordion
 
             // =====================================================================
             // ROW 0: HEADER & ACTION TOOLBAR
@@ -164,44 +188,26 @@ namespace OptiAssist.Addons.Toolbox
             Grid.SetColumn(spSearch, 0);
             toolbarGrid.Children.Add(spSearch);
 
-            // Action buttons on right
+            // Action buttons on right (Clean: only Opções button)
             StackPanel spToolbarButtons = new StackPanel() { Orientation = Orientation.Horizontal };
 
-            _btnNewCommand = new Button()
+            _btnOptions = new Button()
             {
-                Content = T("Btn_ToolboxNew", "➕ New Toolbox"),
+                Content = T("Btn_ToolboxOptions", "⚙️ Options"),
                 Height = 30,
-                Padding = new Thickness(12, 0, 12, 0),
+                Padding = new Thickness(14, 0, 14, 0),
                 FontSize = 11.5,
                 FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 0, 6, 0)
+                ToolTip = T("Tooltip_ToolboxOptions", "Open Toolbox options")
             };
-            _btnNewCommand.SetResourceReference(Button.StyleProperty, "BtnAccent");
-            _btnNewCommand.Click += (s, e) => OpenEditorForNew();
-            spToolbarButtons.Children.Add(_btnNewCommand);
-
-            _btnRestorePresets = new Button()
+            _btnOptions.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnOptions.Click += (s, e) =>
             {
-                Content = T("Btn_ToolboxRestorePresets", "🔄 Restore Presets"),
-                Height = 30,
-                Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11.5,
-                Margin = new Thickness(0, 0, 6, 0)
+                _borderOptionsCard.Visibility = (_borderOptionsCard.Visibility == Visibility.Visible)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             };
-            _btnRestorePresets.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            _btnRestorePresets.Click += BtnRestorePresets_Click;
-            spToolbarButtons.Children.Add(_btnRestorePresets);
-
-            _btnOpenJson = new Button()
-            {
-                Content = T("Btn_ToolboxOpenJson", "📂 Open toolbox.json"),
-                Height = 30,
-                Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11.5
-            };
-            _btnOpenJson.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            _btnOpenJson.Click += BtnOpenJson_Click;
-            spToolbarButtons.Children.Add(_btnOpenJson);
+            spToolbarButtons.Children.Add(_btnOptions);
 
             Grid.SetColumn(spToolbarButtons, 1);
             toolbarGrid.Children.Add(spToolbarButtons);
@@ -213,15 +219,31 @@ namespace OptiAssist.Addons.Toolbox
             rootGrid.Children.Add(spTop);
 
             // =====================================================================
-            // ROW 1: CRUD ADD / EDIT FORM MODAL PANEL (COLLAPSIBLE)
+            // ROW 1: OPTIONS PANEL
+            // =====================================================================
+            _borderOptionsCard = BuildOptionsCard();
+            _borderOptionsCard.Visibility = Visibility.Collapsed;
+            Grid.SetRow(_borderOptionsCard, 1);
+            rootGrid.Children.Add(_borderOptionsCard);
+
+            // =====================================================================
+            // ROW 2: CATEGORY MANAGER PANEL
+            // =====================================================================
+            _borderCategoryManagerCard = BuildCategoryManagerCard();
+            _borderCategoryManagerCard.Visibility = Visibility.Collapsed;
+            Grid.SetRow(_borderCategoryManagerCard, 2);
+            rootGrid.Children.Add(_borderCategoryManagerCard);
+
+            // =====================================================================
+            // ROW 3: CRUD ADD / EDIT FORM MODAL PANEL (COLLAPSIBLE)
             // =====================================================================
             _borderEditorCard = BuildCrudEditorCard();
             _borderEditorCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderEditorCard, 1);
+            Grid.SetRow(_borderEditorCard, 3);
             rootGrid.Children.Add(_borderEditorCard);
 
             // =====================================================================
-            // ROW 2: DYNAMIC CATEGORIES ACCORDION VIEW
+            // ROW 4: DYNAMIC CATEGORIES ACCORDION VIEW
             // =====================================================================
             ScrollViewer svCategories = new ScrollViewer()
             {
@@ -233,11 +255,392 @@ namespace OptiAssist.Addons.Toolbox
             _spCategoriesHost = new StackPanel();
             svCategories.Content = _spCategoriesHost;
 
-            Grid.SetRow(svCategories, 2);
+            Grid.SetRow(svCategories, 4);
             rootGrid.Children.Add(svCategories);
 
             RebuildCategoriesAccordion();
             return rootGrid;
+        }
+
+        private Border BuildOptionsCard()
+        {
+            Border card = new Border()
+            {
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(12, 10, 12, 10),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel sp = new StackPanel();
+
+            _txtOptionsTitle = new TextBlock()
+            {
+                Text = T("Toolbox_Options_Title", "⚙️ Toolbox Options"),
+                FontSize = 13.5,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            _txtOptionsTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            sp.Children.Add(_txtOptionsTitle);
+
+            WrapPanel wpButtons = new WrapPanel() { Margin = new Thickness(0, 0, 0, 8) };
+
+            _btnNewCommand = new Button()
+            {
+                Content = T("Btn_ToolboxNew", "➕ New Toolbox"),
+                Height = 30,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 8, 6)
+            };
+            _btnNewCommand.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            _btnNewCommand.Click += (s, e) =>
+            {
+                _borderOptionsCard.Visibility = Visibility.Collapsed;
+                _borderCategoryManagerCard.Visibility = Visibility.Collapsed;
+                OpenEditorForNew();
+            };
+            wpButtons.Children.Add(_btnNewCommand);
+
+            _btnRestorePresets = new Button()
+            {
+                Content = T("Btn_ToolboxRestorePresets", "🔄 Restore Presets"),
+                Height = 30,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 8, 6)
+            };
+            _btnRestorePresets.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnRestorePresets.Click += BtnRestorePresets_Click;
+            wpButtons.Children.Add(_btnRestorePresets);
+
+            _btnOpenJson = new Button()
+            {
+                Content = T("Btn_ToolboxOpenJson", "📂 Open toolbox.json"),
+                Height = 30,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 8, 6)
+            };
+            _btnOpenJson.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnOpenJson.Click += BtnOpenJson_Click;
+            wpButtons.Children.Add(_btnOpenJson);
+
+            _btnManageCategories = new Button()
+            {
+                Content = T("Btn_ManageCategories", "🏷️ Manage Categories"),
+                Height = 30,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 8, 6)
+            };
+            _btnManageCategories.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnManageCategories.Click += (s, e) =>
+            {
+                RefreshCategoryManagerDropdowns();
+                _borderCategoryManagerCard.Visibility = (_borderCategoryManagerCard.Visibility == Visibility.Visible)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+            };
+            wpButtons.Children.Add(_btnManageCategories);
+
+            sp.Children.Add(wpButtons);
+
+            _chkEditMode = new CheckBox()
+            {
+                Content = T("Toolbox_Chk_EditMode", "Enable edit mode"),
+                IsChecked = _isEditModeEnabled,
+                FontSize = 12,
+                Margin = new Thickness(2, 2, 0, 2)
+            };
+            _chkEditMode.Checked += (s, e) =>
+            {
+                _isEditModeEnabled = true;
+                RebuildCategoriesAccordion();
+            };
+            _chkEditMode.Unchecked += (s, e) =>
+            {
+                _isEditModeEnabled = false;
+                RebuildCategoriesAccordion();
+            };
+            sp.Children.Add(_chkEditMode);
+
+            card.Child = sp;
+            return card;
+        }
+
+        private Border BuildCategoryManagerCard()
+        {
+            Border card = new Border()
+            {
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1.5),
+                Padding = new Thickness(14, 12, 14, 12),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            card.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+
+            StackPanel sp = new StackPanel();
+
+            // Header row with Title and Close button
+            Grid headerGrid = new Grid() { Margin = new Thickness(0, 0, 0, 10) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            _txtCatMgrHeader = new TextBlock()
+            {
+                Text = T("Category_Manager_Title", "🏷️ Manage Categories"),
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _txtCatMgrHeader.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            Grid.SetColumn(_txtCatMgrHeader, 0);
+            headerGrid.Children.Add(_txtCatMgrHeader);
+
+            _btnCloseCategoryManager = new Button()
+            {
+                Content = T("Btn_Close", "✕ Close"),
+                Height = 26,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11
+            };
+            _btnCloseCategoryManager.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnCloseCategoryManager.Click += (s, e) => { _borderCategoryManagerCard.Visibility = Visibility.Collapsed; };
+            Grid.SetColumn(_btnCloseCategoryManager, 1);
+            headerGrid.Children.Add(_btnCloseCategoryManager);
+            sp.Children.Add(headerGrid);
+
+            // Section 1: Rename or Delete Existing Category
+            Border borderExisting = new Border()
+            {
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(10),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            borderExisting.SetResourceReference(Border.BackgroundProperty, "BrushBgPrimary");
+            borderExisting.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spExisting = new StackPanel();
+
+            _lblCatMgrSelect = CreateFormLabel(T("Category_Select_Label", "Existing category:"));
+            spExisting.Children.Add(_lblCatMgrSelect);
+
+            _cmbManageExistingCategories = new ComboBox()
+            {
+                Height = 28,
+                Margin = new Thickness(0, 2, 0, 8),
+                FontSize = 12
+            };
+            _cmbManageExistingCategories.SelectionChanged += (s, e) =>
+            {
+                if (_cmbManageExistingCategories.SelectedItem != null)
+                {
+                    _txtRenameCategory.Text = _cmbManageExistingCategories.SelectedItem.ToString();
+                }
+            };
+            spExisting.Children.Add(_cmbManageExistingCategories);
+
+            _lblCatMgrNewName = CreateFormLabel(T("Category_New_Name", "New category name:"));
+            spExisting.Children.Add(_lblCatMgrNewName);
+
+            _txtRenameCategory = CreateFormTextBox();
+            spExisting.Children.Add(_txtRenameCategory);
+
+            StackPanel spCatActions = new StackPanel()
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+
+            _btnRenameCategory = new Button()
+            {
+                Content = T("Btn_RenameCategory", "✏️ Rename Category"),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            _btnRenameCategory.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            _btnRenameCategory.Click += BtnRenameCategory_Click;
+            spCatActions.Children.Add(_btnRenameCategory);
+
+            _btnDeleteCategory = new Button()
+            {
+                Content = T("Btn_DeleteCategory", "🗑️ Delete Category"),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5
+            };
+            _btnDeleteCategory.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnDeleteCategory.Click += BtnDeleteCategory_Click;
+            spCatActions.Children.Add(_btnDeleteCategory);
+
+            spExisting.Children.Add(spCatActions);
+            borderExisting.Child = spExisting;
+            sp.Children.Add(borderExisting);
+
+            // Section 2: Add New Category
+            Border borderNew = new Border()
+            {
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(10),
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            borderNew.SetResourceReference(Border.BackgroundProperty, "BrushBgPrimary");
+            borderNew.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spNew = new StackPanel();
+            _lblCatMgrAdd = CreateFormLabel(T("Category_Add_Label", "Create new category:"));
+            spNew.Children.Add(_lblCatMgrAdd);
+
+            Grid gridNew = new Grid() { Margin = new Thickness(0, 2, 0, 0) };
+            gridNew.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            gridNew.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            _txtAddNewCategory = CreateFormTextBox();
+            Grid.SetColumn(_txtAddNewCategory, 0);
+            gridNew.Children.Add(_txtAddNewCategory);
+
+            _btnAddCategory = new Button()
+            {
+                Content = T("Btn_AddCategory", "➕ Create Category"),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(8, 0, 0, 0)
+            };
+            _btnAddCategory.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            _btnAddCategory.Click += BtnAddCategory_Click;
+            Grid.SetColumn(_btnAddCategory, 1);
+            gridNew.Children.Add(_btnAddCategory);
+
+            spNew.Children.Add(gridNew);
+            borderNew.Child = spNew;
+            sp.Children.Add(borderNew);
+
+            card.Child = sp;
+            return card;
+        }
+
+        private void RefreshCategoryManagerDropdowns()
+        {
+            if (_storage == null) return;
+            List<string> cats = _storage.GetDistinctCategories();
+            if (_cmbManageExistingCategories != null)
+            {
+                _cmbManageExistingCategories.Items.Clear();
+                foreach (string c in cats) _cmbManageExistingCategories.Items.Add(c);
+                if (_cmbManageExistingCategories.Items.Count > 0)
+                {
+                    _cmbManageExistingCategories.SelectedIndex = 0;
+                    if (_txtRenameCategory != null)
+                    {
+                        _txtRenameCategory.Text = _cmbManageExistingCategories.SelectedItem.ToString();
+                    }
+                }
+                else
+                {
+                    if (_txtRenameCategory != null) _txtRenameCategory.Text = "";
+                }
+            }
+            if (_cmbFieldCategory != null)
+            {
+                string curr = _cmbFieldCategory.Text;
+                _cmbFieldCategory.Items.Clear();
+                foreach (string c in cats) _cmbFieldCategory.Items.Add(c);
+                _cmbFieldCategory.Text = curr;
+            }
+        }
+
+        private void BtnRenameCategory_Click(object sender, RoutedEventArgs e)
+        {
+            if (_cmbManageExistingCategories == null || _cmbManageExistingCategories.SelectedItem == null)
+            {
+                MessageBox.Show(T("Msg_SelectCategoryFirst", "Please select an existing category first."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string oldName = _cmbManageExistingCategories.SelectedItem.ToString();
+            string newName = (_txtRenameCategory.Text ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                MessageBox.Show(T("Msg_CategoryNameEmpty", "Category name cannot be empty."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            int count = _storage.RenameCategory(oldName, newName);
+            _commands = _storage.LoadCommands();
+            RefreshCategoryManagerDropdowns();
+            RebuildCategoriesAccordion();
+            HostLog(string.Format("[TOOLBOX] Renamed category '{0}' to '{1}' ({2} actions updated).", oldName, newName, count));
+            MessageBox.Show(
+                string.Format(T("Msg_CategoryRenamed", "Category successfully renamed to '{0}'. {1} action(s) updated."), newName, count),
+                "Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void BtnDeleteCategory_Click(object sender, RoutedEventArgs e)
+        {
+            if (_cmbManageExistingCategories == null || _cmbManageExistingCategories.SelectedItem == null)
+            {
+                MessageBox.Show(T("Msg_SelectCategoryFirst", "Please select an existing category first."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string cat = _cmbManageExistingCategories.SelectedItem.ToString();
+            int matching = 0;
+            if (_commands != null)
+            {
+                foreach (ToolboxCommandItem c in _commands)
+                {
+                    if (c != null && string.Equals(c.category, cat, StringComparison.OrdinalIgnoreCase)) matching++;
+                }
+            }
+
+            var res = MessageBox.Show(
+                string.Format(T("Msg_CategoryDeleteConfirm", "Are you sure you want to delete category '{0}' and all {1} action(s) in it?"), cat, matching),
+                "Toolbox", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (res != MessageBoxResult.Yes) return;
+
+            int deleted = _storage.DeleteCategory(cat);
+            _commands = _storage.LoadCommands();
+            RefreshCategoryManagerDropdowns();
+            RebuildCategoriesAccordion();
+            HostLog(string.Format("[TOOLBOX] Deleted category '{0}' and its {1} action(s).", cat, deleted));
+            MessageBox.Show(
+                string.Format(T("Msg_CategoryDeleted", "Category '{0}' and {1} action(s) deleted successfully."), cat, deleted),
+                "Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void BtnAddCategory_Click(object sender, RoutedEventArgs e)
+        {
+            string newCat = (_txtAddNewCategory.Text ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(newCat))
+            {
+                MessageBox.Show(T("Msg_CategoryNameEmpty", "Category name cannot be empty."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _borderCategoryManagerCard.Visibility = Visibility.Collapsed;
+            _borderOptionsCard.Visibility = Visibility.Collapsed;
+            OpenEditorForNew();
+            _cmbFieldCategory.Text = newCat;
+            _txtFieldTitle.Focus();
+            MessageBox.Show(
+                string.Format(T("Msg_CategoryAdded", "Category '{0}' created! Fill in the first action to save it."), newCat),
+                "Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private Border BuildCrudEditorCard()
@@ -646,7 +1049,8 @@ namespace OptiAssist.Addons.Toolbox
                 Width = 32,
                 Height = 30,
                 FontSize = 12,
-                ToolTip = T("Tooltip_Edit", "Edit")
+                ToolTip = T("Tooltip_Edit", "Edit"),
+                Visibility = _isEditModeEnabled ? Visibility.Visible : Visibility.Collapsed
             };
             btnEdit.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnEdit.Click += (s, e) => OpenEditorForItem(capturedItem);
@@ -922,6 +1326,11 @@ namespace OptiAssist.Addons.Toolbox
                 return;
             }
 
+            if (_host != null)
+            {
+                _host.OpenLogWindow();
+            }
+
             string headerLine = string.Format("[TOOLBOX] Starting '{0}' ({1}: {2})...",
                 item.title, item.shell.ToUpperInvariant(), item.command);
             HostLog(headerLine);
@@ -976,9 +1385,23 @@ namespace OptiAssist.Addons.Toolbox
         {
             if (_txtTitle != null) _txtTitle.Text = T("Toolbox_Title", "🧰 Toolbox");
             if (_txtSubtitle != null) _txtSubtitle.Text = T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist");
+            if (_btnOptions != null) _btnOptions.Content = T("Btn_ToolboxOptions", "⚙️ Options");
+            if (_txtOptionsTitle != null) _txtOptionsTitle.Text = T("Toolbox_Options_Title", "⚙️ Toolbox Options");
             if (_btnNewCommand != null) _btnNewCommand.Content = T("Btn_ToolboxNew", "➕ New Toolbox");
             if (_btnRestorePresets != null) _btnRestorePresets.Content = T("Btn_ToolboxRestorePresets", "🔄 Restore Presets");
             if (_btnOpenJson != null) _btnOpenJson.Content = T("Btn_ToolboxOpenJson", "📂 Open toolbox.json");
+            if (_btnManageCategories != null) _btnManageCategories.Content = T("Btn_ManageCategories", "🏷️ Manage Categories");
+            if (_chkEditMode != null) _chkEditMode.Content = T("Toolbox_Chk_EditMode", "Enable edit mode");
+
+            if (_txtCatMgrHeader != null) _txtCatMgrHeader.Text = T("Category_Manager_Title", "🏷️ Manage Categories");
+            if (_lblCatMgrSelect != null) _lblCatMgrSelect.Text = T("Category_Select_Label", "Existing category:");
+            if (_lblCatMgrNewName != null) _lblCatMgrNewName.Text = T("Category_New_Name", "New category name:");
+            if (_btnRenameCategory != null) _btnRenameCategory.Content = T("Btn_RenameCategory", "✏️ Rename Category");
+            if (_btnDeleteCategory != null) _btnDeleteCategory.Content = T("Btn_DeleteCategory", "🗑️ Delete Category");
+            if (_lblCatMgrAdd != null) _lblCatMgrAdd.Text = T("Category_Add_Label", "Create new category:");
+            if (_btnAddCategory != null) _btnAddCategory.Content = T("Btn_AddCategory", "➕ Create Category");
+            if (_btnCloseCategoryManager != null) _btnCloseCategoryManager.Content = T("Btn_Close", "✕ Close");
+
             if (_lblFieldTitle != null) _lblFieldTitle.Text = T("Toolbox_Field_Title", "Title * :");
             if (_lblFieldCategory != null) _lblFieldCategory.Text = T("Toolbox_Field_Category", "Category * :");
             if (_lblFieldShell != null) _lblFieldShell.Text = T("Toolbox_Field_Shell", "Shell / Interpreter * :");

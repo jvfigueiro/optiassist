@@ -19,6 +19,7 @@ namespace OptiAssist
         AppSettings Settings { get; }
         HardwareSummary Hardware { get; }
         void SaveSettings();
+        void OpenLogWindow();
     }
 
     /// <summary>

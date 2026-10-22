@@ -144,6 +144,77 @@ namespace OptiAssist.Addons.Toolbox
         }
 
         /// <summary>
+        /// Retrieves all unique categories present among the stored commands, sorted alphabetically.
+        /// </summary>
+        public List<string> GetDistinctCategories()
+        {
+            List<ToolboxCommandItem> list = LoadCommands();
+            List<string> categories = new List<string>();
+            foreach (ToolboxCommandItem item in list)
+            {
+                if (item != null && !string.IsNullOrWhiteSpace(item.category))
+                {
+                    string cat = item.category.Trim();
+                    bool exists = false;
+                    for (int i = 0; i < categories.Count; i++)
+                    {
+                        if (string.Equals(categories[i], cat, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) categories.Add(cat);
+                }
+            }
+            categories.Sort(StringComparer.OrdinalIgnoreCase);
+            return categories;
+        }
+
+        /// <summary>
+        /// Renames an existing category across all stored commands and persists immediately.
+        /// Returns the count of affected commands.
+        /// </summary>
+        public int RenameCategory(string oldCategory, string newCategory)
+        {
+            if (string.IsNullOrWhiteSpace(oldCategory) || string.IsNullOrWhiteSpace(newCategory)) return 0;
+            string trimmedOld = oldCategory.Trim();
+            string trimmedNew = newCategory.Trim();
+            List<ToolboxCommandItem> list = LoadCommands();
+            int count = 0;
+            foreach (ToolboxCommandItem item in list)
+            {
+                if (item != null && string.Equals(item.category, trimmedOld, StringComparison.OrdinalIgnoreCase))
+                {
+                    item.category = trimmedNew;
+                    count++;
+                }
+            }
+            if (count > 0)
+            {
+                SaveCommands(list);
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// Deletes all commands under the specified category and persists immediately.
+        /// Returns the count of deleted commands.
+        /// </summary>
+        public int DeleteCategory(string category)
+        {
+            if (string.IsNullOrWhiteSpace(category)) return 0;
+            string trimmed = category.Trim();
+            List<ToolboxCommandItem> list = LoadCommands();
+            int count = list.RemoveAll(item => item != null && string.Equals(item.category, trimmed, StringComparison.OrdinalIgnoreCase));
+            if (count > 0)
+            {
+                SaveCommands(list);
+            }
+            return count;
+        }
+
+        /// <summary>
         /// Returns the default factory preset commands across categories.
         /// </summary>
         public static List<ToolboxCommandItem> CreateDefaultPresets()

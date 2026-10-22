@@ -20,6 +20,7 @@ namespace OptiAssist
         private Button _btnExport;
         private Button _btnCopy;
         private Button _btnClear;
+        private Border _borderConsole;
 
         public LogWindow(MainWindow parent)
         {
@@ -33,7 +34,7 @@ namespace OptiAssist
             this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             // Inherit application styles and colors
-            this.SetResourceReference(Window.BackgroundProperty, "BrushBgWindow");
+            this.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
             this.SetResourceReference(Window.ForegroundProperty, "BrushTextPrimary");
 
             try
@@ -124,13 +125,13 @@ namespace OptiAssist
             mainGrid.Children.Add(headerGrid);
 
             // Center: Monospace Console / Terminal Window
-            Border consoleBorder = new Border()
+            _borderConsole = new Border()
             {
                 CornerRadius = new CornerRadius(6),
                 BorderThickness = new Thickness(1)
             };
-            consoleBorder.SetResourceReference(Border.BackgroundProperty, "BrushConsoleBg");
-            consoleBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            _borderConsole.SetResourceReference(Border.BackgroundProperty, "BrushConsoleBg");
+            _borderConsole.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
             _txtConsole = new TextBox()
             {
@@ -146,13 +147,71 @@ namespace OptiAssist
                 Padding = new Thickness(12, 10, 12, 10)
             };
             _txtConsole.SetResourceReference(TextBox.ForegroundProperty, "BrushConsoleText");
-            consoleBorder.Child = _txtConsole;
+            _borderConsole.Child = _txtConsole;
 
-            Grid.SetRow(consoleBorder, 1);
-            mainGrid.Children.Add(consoleBorder);
+            Grid.SetRow(_borderConsole, 1);
+            mainGrid.Children.Add(_borderConsole);
 
             this.Content = mainGrid;
             this.Closed += LogWindow_Closed;
+
+            try
+            {
+                if (_parent != null)
+                {
+                    ApplyTheme(_parent.IsDarkMode);
+                }
+            }
+            catch { }
+        }
+
+        public void ApplyTheme(bool isDark)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(new Action(() => ApplyTheme(isDark)));
+                return;
+            }
+
+            Brush bg = TryGetBrush("BrushBgPrimary", isDark ? "#18181B" : "#F1F5F9");
+            Brush textPrimary = TryGetBrush("BrushTextPrimary", isDark ? "#F8FAFC" : "#0F172A");
+            Brush textSecondary = TryGetBrush("BrushTextSecondary", isDark ? "#94A3B8" : "#475569");
+            Brush borderCard = TryGetBrush("BrushBorderCard", isDark ? "#33333D" : "#CBD5E1");
+            Brush consoleBg = TryGetBrush("BrushConsoleBg", isDark ? "#0C0C0F" : "#0F172A");
+            Brush consoleText = TryGetBrush("BrushConsoleText", isDark ? "#E2E8F0" : "#F8FAFC");
+
+            this.Background = bg;
+            this.Foreground = textPrimary;
+
+            if (_txtTitle != null) _txtTitle.Foreground = textPrimary;
+            if (_txtSubtitle != null) _txtSubtitle.Foreground = textSecondary;
+            if (_borderConsole != null)
+            {
+                _borderConsole.Background = consoleBg;
+                _borderConsole.BorderBrush = borderCard;
+            }
+            if (_txtConsole != null)
+            {
+                _txtConsole.Foreground = consoleText;
+            }
+        }
+
+        private static Brush TryGetBrush(string resourceKey, string fallbackHex)
+        {
+            if (Application.Current != null && Application.Current.Resources.Contains(resourceKey))
+            {
+                Brush b = Application.Current.Resources[resourceKey] as Brush;
+                if (b != null) return b;
+            }
+            try
+            {
+                var col = (Color)ColorConverter.ConvertFromString(fallbackHex);
+                return new SolidColorBrush(col);
+            }
+            catch
+            {
+                return Brushes.Transparent;
+            }
         }
 
         public void SetLogText(string text)
@@ -252,3 +311,4 @@ namespace OptiAssist
         }
     }
 }
+
