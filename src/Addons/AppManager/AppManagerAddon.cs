@@ -145,9 +145,13 @@ namespace OptiAssist.Addons.AppManager
             StackPanel root = new StackPanel() { Margin = new Thickness(0) };
 
             // =========================================================
-            // MAIN HEADER
+            // MAIN HEADER (Harmonized layout across all OptiAssist modules)
             // =========================================================
-            StackPanel headerStack = new StackPanel() { Margin = new Thickness(0, 0, 0, 10), VerticalAlignment = VerticalAlignment.Center };
+            Grid headerGrid = new Grid() { Margin = new Thickness(0, 0, 0, 10) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            StackPanel titlePanel = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
             _txtPostInstallTitle = new TextBlock()
             {
                 Text = T("PostInstall_Title", "App Manager"),
@@ -166,9 +170,11 @@ namespace OptiAssist.Addons.AppManager
             };
             _txtPostInstallSubtitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
-            headerStack.Children.Add(_txtPostInstallTitle);
-            headerStack.Children.Add(_txtPostInstallSubtitle);
-            root.Children.Add(headerStack);
+            titlePanel.Children.Add(_txtPostInstallTitle);
+            titlePanel.Children.Add(_txtPostInstallSubtitle);
+            Grid.SetColumn(titlePanel, 0);
+            headerGrid.Children.Add(titlePanel);
+            root.Children.Add(headerGrid);
 
             // =========================================================
             // SECTION 1: APPLICATION UPDATES (Always Visible)

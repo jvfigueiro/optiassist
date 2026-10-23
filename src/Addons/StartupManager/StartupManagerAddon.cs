@@ -136,14 +136,7 @@ namespace OptiAssist.Addons.StartupManager
 
             Grid root = new Grid();
 
-            // Main Content Area inside ScrollViewer
-            ScrollViewer sv = new ScrollViewer
-            {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Padding = new Thickness(0, 0, 0, 16)
-            };
-
-            StackPanel mainStack = new StackPanel { MaxWidth = 1100 };
+            StackPanel mainStack = new StackPanel();
 
             // 1. Header (Title + Subtitle in visual harmony with AppManager & MaintenanceReport)
             Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
@@ -287,8 +280,7 @@ namespace OptiAssist.Addons.StartupManager
             _pnlItemsList = new StackPanel();
             mainStack.Children.Add(_pnlItemsList);
 
-            sv.Content = mainStack;
-            root.Children.Add(sv);
+            root.Children.Add(mainStack);
 
             // 6. Modal Overlay for Add / Edit Program
             CreateModalOverlay(root);

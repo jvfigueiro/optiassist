@@ -92,7 +92,7 @@ namespace OptiAssist
                 if (_sidebarHoverTimer == null)
                 {
                     _sidebarHoverTimer = new System.Windows.Threading.DispatcherTimer();
-                    _sidebarHoverTimer.Interval = TimeSpan.FromSeconds(1.25);
+                    _sidebarHoverTimer.Interval = TimeSpan.FromMilliseconds(700);
                     _sidebarHoverTimer.Tick += (s, args) =>
                     {
                         _sidebarHoverTimer.Stop();
@@ -107,6 +107,7 @@ namespace OptiAssist
                 else
                 {
                     _sidebarHoverTimer.Stop();
+                    _sidebarHoverTimer.Interval = TimeSpan.FromMilliseconds(700);
                 }
                 _sidebarHoverTimer.Start();
             }

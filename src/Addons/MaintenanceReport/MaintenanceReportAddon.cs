@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace OptiAssist.Addons.MaintenanceReport
@@ -452,7 +453,7 @@ namespace OptiAssist.Addons.MaintenanceReport
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
 
-            StackPanel titlePanel = new StackPanel();
+            StackPanel titlePanel = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
             _txtTitle = new TextBlock();
             _txtTitle.Text = T("Report_Title", "Maintenance Service Record");
             _txtTitle.FontSize = 15;
@@ -474,8 +475,11 @@ namespace OptiAssist.Addons.MaintenanceReport
 
             _btnOptions = new Button();
             _btnOptions.Content = T("Report_Btn_Options", "⚙️ Options");
-            _btnOptions.Height = 30;
+            _btnOptions.Height = 28;
             _btnOptions.Padding = new Thickness(12, 0, 12, 0);
+            _btnOptions.FontSize = 11;
+            _btnOptions.FontWeight = FontWeights.SemiBold;
+            _btnOptions.Cursor = Cursors.Hand;
             _btnOptions.VerticalAlignment = VerticalAlignment.Center;
             _btnOptions.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnOptions.Click += (s, e) =>

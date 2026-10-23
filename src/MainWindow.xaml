@@ -188,20 +188,26 @@
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelDashboard" Visibility="Visible" Margin="4">
                         <!-- Section Header -->
-                        <StackPanel Margin="0,0,0,10" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtDashboardTitle"
-                                       Text="Welcome to OptiAssist!"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtDashboardSubtitle"
-                                       Text="The ultimate tool to keep your system in shape"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtDashboardTitle"
+                                           Text="Welcome to OptiAssist!"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="txtDashboardSubtitle"
+                                           Text="The ultimate tool to keep your system in shape"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
 
                         <!-- 2-Block Grid per Row: Hardware Specs (Left) and Operating System (Right) -->
                         <Grid Margin="0,0,0,8" HorizontalAlignment="Stretch">
@@ -425,20 +431,26 @@
                     <!-- TAB 3: WINDOWS TOOLS                            -->
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelShortcuts" Visibility="Collapsed" Margin="4">
-                        <StackPanel Margin="0,0,0,8">
-                            <TextBlock x:Name="txtToolsTitle"
-                                       Text="Windows Tools"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtToolsSubtitle"
-                                       Text="Instant access to native Windows administrative tools and portable utilities"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtToolsTitle"
+                                           Text="Windows Tools"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="txtToolsSubtitle"
+                                           Text="Instant access to native Windows administrative tools and portable utilities"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
 
                         <!-- Administrative Tools Grid -->
                         <Border Background="{DynamicResource BrushBgCard}"
@@ -509,20 +521,26 @@
                     <!-- TAB 5: SETTINGS                                -->
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelSettings" Visibility="Collapsed" Margin="4">
-                        <StackPanel Margin="0,0,0,8">
-                            <TextBlock x:Name="txtSettingsTitle"
-                                       Text="OptiAssist Settings"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtSettingsSub"
-                                       Text="Settings saved in Config\settings.json on the portable drive"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtSettingsTitle"
+                                           Text="OptiAssist Settings"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="txtSettingsSub"
+                                           Text="Settings saved in Config\settings.json on the portable drive"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
 
                         <Border Background="{DynamicResource BrushBgCard}"
                                 BorderBrush="{DynamicResource BrushBorderCard}"
@@ -920,20 +938,26 @@
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelAbout" Visibility="Collapsed" Margin="4">
                         <!-- Header -->
-                        <StackPanel Margin="0,0,0,12" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtAboutTitle"
-                                       Text="ℹ️ About OptiAssist"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="txtAboutSub"
-                                       Text="Version information, open-source license terms, and official channels"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       Margin="0,2,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtAboutTitle"
+                                           Text="ℹ️ About OptiAssist"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="txtAboutSub"
+                                           Text="Version information, open-source license terms, and official channels"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
 
                         <!-- Main License and Information Card -->
                         <Border Background="{DynamicResource BrushBgCard}"
@@ -1160,14 +1184,14 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                       Visibility="Collapsed"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
-                      Margin="4">
+                      Margin="12,8,12,8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" /> <!-- Top: Header with Title and Actions -->
                         <RowDefinition Height="*" />    <!-- Center: Monospace Console -->
                     </Grid.RowDefinitions>
 
                     <!-- Top: Title & Action Buttons -->
-                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />

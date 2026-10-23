@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace OptiAssist.Addons.Toolbox
@@ -117,41 +118,81 @@ namespace OptiAssist.Addons.Toolbox
             if (_commands == null) _commands = _storage.LoadCommands();
 
             Grid rootGrid = new Grid();
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 0: Header & Toolbar
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: Options Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 2: Category Manager Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 3: CRUD Form Modal/Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 4: Categories Accordion
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 0: Top Header
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: Search Toolbar
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 2: Options Panel
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 3: Category Manager Panel
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 4: CRUD Form Modal/Panel
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 5: Categories Accordion
 
             // =====================================================================
-            // ROW 0: HEADER & ACTION TOOLBAR
+            // ROW 0: TOP HEADER (Harmonized layout across all OptiAssist modules)
             // =====================================================================
-            StackPanel spTop = new StackPanel() { Margin = new Thickness(0, 0, 0, 10) };
+            Grid headerGrid = new Grid() { Margin = new Thickness(0, 0, 0, 10) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            StackPanel titlePanel = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
 
             _txtTitle = new TextBlock()
             {
-                Text = T("Toolbox_Title", "🧰 Toolbox"),
-                FontSize = 22,
-                FontWeight = FontWeights.Bold
+                Text = T("Toolbox_Title", "Toolbox"),
+                FontSize = 15,
+                FontWeight = FontWeights.Bold,
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             _txtTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            spTop.Children.Add(_txtTitle);
+            titlePanel.Children.Add(_txtTitle);
 
             _txtSubtitle = new TextBlock()
             {
                 Text = T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist"),
-                FontSize = 12,
-                Margin = new Thickness(0, 2, 0, 10),
-                TextWrapping = TextWrapping.Wrap
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             _txtSubtitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            spTop.Children.Add(_txtSubtitle);
+            titlePanel.Children.Add(_txtSubtitle);
 
+            Grid.SetColumn(titlePanel, 0);
+            headerGrid.Children.Add(titlePanel);
+
+            StackPanel topActions = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+            _btnOptions = new Button()
+            {
+                Content = T("Btn_ToolboxOptions", "⚙️ Options"),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Cursor = Cursors.Hand,
+                ToolTip = T("Tooltip_ToolboxOptions", "Open Toolbox options")
+            };
+            _btnOptions.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnOptions.Click += (s, e) =>
+            {
+                _borderOptionsCard.Visibility = (_borderOptionsCard.Visibility == Visibility.Visible)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+            };
+            topActions.Children.Add(_btnOptions);
+
+            Grid.SetColumn(topActions, 1);
+            headerGrid.Children.Add(topActions);
+
+            Grid.SetRow(headerGrid, 0);
+            rootGrid.Children.Add(headerGrid);
+
+            // =====================================================================
+            // ROW 1: SEARCH & FILTER TOOLBAR
+            // =====================================================================
             Border toolbarCard = new Border()
             {
-                CornerRadius = new CornerRadius(8),
+                CornerRadius = new CornerRadius(6),
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(10, 8, 10, 8)
+                Padding = new Thickness(10, 8, 10, 8),
+                Margin = new Thickness(0, 0, 0, 10)
             };
             toolbarCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             toolbarCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
@@ -165,18 +206,18 @@ namespace OptiAssist.Addons.Toolbox
             TextBlock lblSearchIcon = new TextBlock()
             {
                 Text = "🔎",
-                FontSize = 13,
+                FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 6, 0)
+                Margin = new Thickness(0, 0, 8, 0)
             };
             spSearch.Children.Add(lblSearchIcon);
 
             _txtSearch = new TextBox()
             {
-                Width = 260,
+                Width = 280,
                 Height = 28,
                 Padding = new Thickness(6, 4, 6, 4),
-                FontSize = 12,
+                FontSize = 11,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 BorderThickness = new Thickness(1),
                 ToolTip = T("Toolbox_Search_Tooltip", "Filter actions by title, category, or command")
@@ -189,62 +230,36 @@ namespace OptiAssist.Addons.Toolbox
             Grid.SetColumn(spSearch, 0);
             toolbarGrid.Children.Add(spSearch);
 
-            // Action buttons on right (Clean: only Opções button)
-            StackPanel spToolbarButtons = new StackPanel() { Orientation = Orientation.Horizontal };
-
-            _btnOptions = new Button()
-            {
-                Content = T("Btn_ToolboxOptions", "⚙️ Options"),
-                Height = 30,
-                Padding = new Thickness(14, 0, 14, 0),
-                FontSize = 11.5,
-                FontWeight = FontWeights.SemiBold,
-                ToolTip = T("Tooltip_ToolboxOptions", "Open Toolbox options")
-            };
-            _btnOptions.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            _btnOptions.Click += (s, e) =>
-            {
-                _borderOptionsCard.Visibility = (_borderOptionsCard.Visibility == Visibility.Visible)
-                    ? Visibility.Collapsed
-                    : Visibility.Visible;
-            };
-            spToolbarButtons.Children.Add(_btnOptions);
-
-            Grid.SetColumn(spToolbarButtons, 1);
-            toolbarGrid.Children.Add(spToolbarButtons);
-
             toolbarCard.Child = toolbarGrid;
-            spTop.Children.Add(toolbarCard);
-
-            Grid.SetRow(spTop, 0);
-            rootGrid.Children.Add(spTop);
+            Grid.SetRow(toolbarCard, 1);
+            rootGrid.Children.Add(toolbarCard);
 
             // =====================================================================
-            // ROW 1: OPTIONS PANEL
+            // ROW 2: OPTIONS PANEL
             // =====================================================================
             _borderOptionsCard = BuildOptionsCard();
             _borderOptionsCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderOptionsCard, 1);
+            Grid.SetRow(_borderOptionsCard, 2);
             rootGrid.Children.Add(_borderOptionsCard);
 
             // =====================================================================
-            // ROW 2: CATEGORY MANAGER PANEL
+            // ROW 3: CATEGORY MANAGER PANEL
             // =====================================================================
             _borderCategoryManagerCard = BuildCategoryManagerCard();
             _borderCategoryManagerCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderCategoryManagerCard, 2);
+            Grid.SetRow(_borderCategoryManagerCard, 3);
             rootGrid.Children.Add(_borderCategoryManagerCard);
 
             // =====================================================================
-            // ROW 3: CRUD ADD / EDIT FORM MODAL PANEL (COLLAPSIBLE)
+            // ROW 4: CRUD ADD / EDIT FORM MODAL PANEL (COLLAPSIBLE)
             // =====================================================================
             _borderEditorCard = BuildCrudEditorCard();
             _borderEditorCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderEditorCard, 3);
+            Grid.SetRow(_borderEditorCard, 4);
             rootGrid.Children.Add(_borderEditorCard);
 
             // =====================================================================
-            // ROW 4: DYNAMIC CATEGORIES ACCORDION VIEW
+            // ROW 5: DYNAMIC CATEGORIES ACCORDION VIEW
             // =====================================================================
             ScrollViewer svCategories = new ScrollViewer()
             {
@@ -256,7 +271,7 @@ namespace OptiAssist.Addons.Toolbox
             _spCategoriesHost = new StackPanel();
             svCategories.Content = _spCategoriesHost;
 
-            Grid.SetRow(svCategories, 4);
+            Grid.SetRow(svCategories, 5);
             rootGrid.Children.Add(svCategories);
 
             RebuildCategoriesAccordion();
@@ -292,11 +307,12 @@ namespace OptiAssist.Addons.Toolbox
             _btnNewCommand = new Button()
             {
                 Content = T("Btn_ToolboxNew", "➕ New Toolbox"),
-                Height = 30,
+                Height = 28,
                 Padding = new Thickness(12, 0, 12, 0),
-                FontSize = 11.5,
+                FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 0, 8, 6)
+                Margin = new Thickness(0, 0, 8, 6),
+                Cursor = Cursors.Hand
             };
             _btnNewCommand.SetResourceReference(Button.StyleProperty, "BtnAccent");
             _btnNewCommand.Click += (s, e) =>
@@ -310,10 +326,11 @@ namespace OptiAssist.Addons.Toolbox
             _btnRestorePresets = new Button()
             {
                 Content = T("Btn_ToolboxRestorePresets", "🔄 Restore Presets"),
-                Height = 30,
+                Height = 28,
                 Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11.5,
-                Margin = new Thickness(0, 0, 8, 6)
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 8, 6),
+                Cursor = Cursors.Hand
             };
             _btnRestorePresets.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnRestorePresets.Click += BtnRestorePresets_Click;
@@ -322,10 +339,11 @@ namespace OptiAssist.Addons.Toolbox
             _btnOpenJson = new Button()
             {
                 Content = T("Btn_ToolboxOpenJson", "📂 Open toolbox.json"),
-                Height = 30,
+                Height = 28,
                 Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11.5,
-                Margin = new Thickness(0, 0, 8, 6)
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 8, 6),
+                Cursor = Cursors.Hand
             };
             _btnOpenJson.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnOpenJson.Click += BtnOpenJson_Click;
@@ -334,10 +352,11 @@ namespace OptiAssist.Addons.Toolbox
             _btnManageCategories = new Button()
             {
                 Content = T("Btn_ManageCategories", "🏷️ Manage Categories"),
-                Height = 30,
+                Height = 28,
                 Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11.5,
-                Margin = new Thickness(0, 0, 8, 6)
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 8, 6),
+                Cursor = Cursors.Hand
             };
             _btnManageCategories.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnManageCategories.Click += (s, e) =>
