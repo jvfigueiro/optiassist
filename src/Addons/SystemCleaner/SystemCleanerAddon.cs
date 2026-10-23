@@ -14,11 +14,30 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Input;
 using Microsoft.Win32;
 
 namespace OptiAssist.Addons.SystemCleaner
 {
     #region RESULTS, CONTEXT & PATH SANITIZER
+
+    /// <summary>
+    /// Represents an individual scanned file marked for cleaning with its size.
+    /// </summary>
+    public class ScannedFileEntry
+    {
+        public string Path { get; set; }
+        public long SizeBytes { get; set; }
+        public string SizeDisplay { get { return BaseCleaner.FormatBytes(SizeBytes); } }
+        public string FileName
+        {
+            get
+            {
+                try { return System.IO.Path.GetFileName(Path); }
+                catch { return Path; }
+            }
+        }
+    }
 
     /// <summary>
     /// Result returned by BaseCleaner.Scan() during a non-destructive dry-run analysis.
@@ -27,6 +46,7 @@ namespace OptiAssist.Addons.SystemCleaner
     {
         public string CleanerId { get; set; }
         public List<string> FoundItems { get; set; }
+        public List<ScannedFileEntry> ScannedFiles { get; set; }
         public long EstimatedBytes { get; set; }
         public int SkippedOrLockedCount { get; set; }
         public List<string> Warnings { get; set; }
@@ -34,7 +54,16 @@ namespace OptiAssist.Addons.SystemCleaner
         public ScanResult()
         {
             FoundItems = new List<string>();
+            ScannedFiles = new List<ScannedFileEntry>();
             Warnings = new List<string>();
+        }
+
+        public void AddFile(string path, long size)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            FoundItems.Add(path);
+            ScannedFiles.Add(new ScannedFileEntry { Path = path, SizeBytes = size });
+            EstimatedBytes += size;
         }
     }
 
@@ -269,6 +298,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public string SectionId { get; set; }
         public string SectionTitle { get; set; }
         public string SectionIcon { get; set; }
+        public ScanResult LastScanResult { get; set; }
 
         public string Name
         {
@@ -397,8 +427,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     try
                     {
                         FileInfo fi = new FileInfo(f);
-                        result.FoundItems.Add(f);
-                        result.EstimatedBytes += fi.Length;
+                        result.AddFile(f, fi.Length);
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -617,8 +646,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         if (File.Exists(file))
                         {
                             FileInfo fi = new FileInfo(file);
-                            res.FoundItems.Add(file);
-                            res.EstimatedBytes += fi.Length;
+                            res.AddFile(file, fi.Length);
                         }
                     }
                     catch { res.SkippedOrLockedCount++; }
@@ -698,8 +726,8 @@ namespace OptiAssist.Addons.SystemCleaner
                 int hr = SHQueryRecycleBin(null, ref info);
                 if (hr == 0 && info.i64Size > 0)
                 {
-                    res.EstimatedBytes = info.i64Size;
-                    for (int i = 0; i < (int)Math.Min(info.i64NumItems, 500); i++)
+                    res.AddFile(string.Format("Lixeira / Recycle Bin ({0} itens)", info.i64NumItems), info.i64Size);
+                    for (int i = 1; i < (int)Math.Min(info.i64NumItems, 100); i++)
                     {
                         res.FoundItems.Add("RecycleBinItem#" + i);
                     }
@@ -753,8 +781,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         if (Clipboard.ContainsText() || Clipboard.ContainsImage() || Clipboard.ContainsFileDropList())
                         {
-                            res.FoundItems.Add("SystemClipboardData");
-                            res.EstimatedBytes = 4096;
+                            res.AddFile("Área de Transferência do Windows (Clipboard)", 4096);
                         }
                     }));
                 }
@@ -803,7 +830,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public override ScanResult Scan(CleanerContext context)
         {
             ScanResult res = new ScanResult() { CleanerId = Id };
-            res.FoundItems.Add("DnsResolverCache");
+            res.AddFile("Cache DNS do Windows (DnsResolverCache)", 0);
             return res;
         }
 
@@ -937,8 +964,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         string[] names = key.GetValueNames();
                         foreach (string n in names)
                         {
-                            res.FoundItems.Add("HKCU\\" + MuiRegistryPath + "\\" + n);
-                            res.EstimatedBytes += 256;
+                            res.AddFile("HKCU\\" + MuiRegistryPath + "\\" + n, 256);
                         }
                     }
                 }
@@ -1006,8 +1032,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         foreach (string valName in key.GetValueNames())
                         {
-                            res.FoundItems.Add("HKCU\\" + RunMruPath + "\\" + valName);
-                            res.EstimatedBytes += 256;
+                            res.AddFile("HKCU\\" + RunMruPath + "\\" + valName, 256);
                         }
                     }
                 }
@@ -1134,8 +1159,7 @@ namespace OptiAssist.Addons.SystemCleaner
                             int count = k.SubKeyCount + k.ValueCount;
                             if (count > 0)
                             {
-                                res.FoundItems.Add("HKCU\\" + keyPath);
-                                res.EstimatedBytes += count * 256L;
+                                res.AddFile("HKCU\\" + keyPath, count * 256L);
                             }
                         }
                     }
@@ -1527,9 +1551,8 @@ namespace OptiAssist.Addons.SystemCleaner
                         try
                         {
                             FileInfo fi = new FileInfo(dbPath);
-                            res.FoundItems.Add(dbPath);
                             // Estimate ~10% reclaimable fragmentation page space on non-vacuumed DBs
-                            res.EstimatedBytes += Math.Max(4096L, fi.Length / 10L);
+                            res.AddFile(dbPath + " [SQLite Database]", Math.Max(4096L, fi.Length / 10L));
                         }
                         catch { res.SkippedOrLockedCount++; }
                     }
@@ -1621,8 +1644,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         if (PathSanitizer.IsSafeToDelete(sub))
                         {
-                            res.FoundItems.Add(sub);
-                            res.EstimatedBytes += GetDirectorySizeSafe(sub);
+                            res.AddFile(sub + " [Pasta / Folder]", GetDirectorySizeSafe(sub));
                         }
                         // Do not recurse inside a matched node_modules / venv folder
                         continue;
@@ -1724,8 +1746,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         try
                         {
                             FileInfo fi = new FileInfo(f);
-                            res.FoundItems.Add(f);
-                            res.EstimatedBytes += fi.Length;
+                            res.AddFile(f, fi.Length);
                         }
                         catch { res.SkippedOrLockedCount++; }
                     }
@@ -2529,7 +2550,12 @@ namespace OptiAssist.Addons.SystemCleaner
                 foreach (BaseCleaner c in _allCleaners)
                 {
                     if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
-                        c.IsSelected = true;
+                    {
+                        if (!c.IsDangerous)
+                        {
+                            c.IsSelected = true;
+                        }
+                    }
                 }
                 UpdateSelectedSummary();
             };
@@ -3028,6 +3054,52 @@ namespace OptiAssist.Addons.SystemCleaner
                     cb.Checked += (s, e) => UpdateSelectedSummary();
                     cb.Unchecked += (s, e) => UpdateSelectedSummary();
 
+                    if (cleaner.IsDangerous)
+                    {
+                        Action handleDangerousConfirm = () =>
+                        {
+                            string warn = !string.IsNullOrEmpty(cleaner.WarningMessage)
+                                ? cleaner.WarningMessage
+                                : cleaner.Description;
+                            string title = T("Msg_CleanerDangerousTitle", "OptiAssist - Aviso de Segurança");
+                            string msg = string.Format(
+                                T("Msg_CleanerDangerousPrompt",
+                                  "⚠️ AVISO DE ATENÇÃO\n\nOpção selecionada: {0}\n\nRiscos e Consequências:\n{1}\n\nEsta opção pode remover dados de navegação, sessões salvas ou arquivos importantes.\n\nTem certeza de que deseja marcar esta opção para limpeza mesmo assim?"),
+                                cleaner.Name, warn);
+
+                            MessageBoxResult res = MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                            if (res == MessageBoxResult.Yes)
+                            {
+                                cb.IsChecked = true;
+                                cleaner.IsSelected = true;
+                            }
+                            else
+                            {
+                                cb.IsChecked = false;
+                                cleaner.IsSelected = false;
+                            }
+                            UpdateSelectedSummary();
+                        };
+
+                        cb.PreviewMouseLeftButtonDown += (s, e) =>
+                        {
+                            if (cb.IsChecked != true)
+                            {
+                                e.Handled = true;
+                                handleDangerousConfirm();
+                            }
+                        };
+
+                        cb.PreviewKeyDown += (s, e) =>
+                        {
+                            if (e.Key == System.Windows.Input.Key.Space && cb.IsChecked != true)
+                            {
+                                e.Handled = true;
+                                handleDangerousConfirm();
+                            }
+                        };
+                    }
+
                     _pnlCategoriesContainer.Children.Add(cb);
                 }
 
@@ -3238,6 +3310,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     }));
 
                     ScanResult sr = cleaner.Scan(ctx);
+                    cleaner.LastScanResult = sr;
                     totalFoundBytes += sr.EstimatedBytes;
                     totalFoundItems += sr.FoundItems.Count;
                     totalSkipped += sr.SkippedOrLockedCount;
@@ -3343,33 +3416,37 @@ namespace OptiAssist.Addons.SystemCleaner
 
                         foreach (BaseCleaner item in grp.Value)
                         {
-                            Border row = new Border
+                            Border card = new Border
                             {
                                 BorderThickness = new Thickness(1),
-                                CornerRadius = new CornerRadius(4),
-                                Padding = new Thickness(10, 6, 10, 6),
-                                Margin = new Thickness(0, 2, 0, 4)
+                                CornerRadius = new CornerRadius(5),
+                                Padding = new Thickness(10, 8, 10, 8),
+                                Margin = new Thickness(0, 3, 0, 4)
                             };
-                            row.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
-                            row.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+                            card.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                            card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                            StackPanel cardStack = new StackPanel();
 
                             Grid g = new Grid();
                             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                             g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
                             StackPanel spLeft = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                             TextBlock txtName = new TextBlock
                             {
-                                Text = item.Name,
-                                FontSize = 11,
+                                Text = (item.Icon != null ? (item.Icon + " ") : "") + item.Name,
+                                FontSize = 11.5,
                                 FontWeight = FontWeights.SemiBold
                             };
                             txtName.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
 
                             TextBlock txtCount = new TextBlock
                             {
-                                Text = string.Format("{0} files found", item.FoundCount),
-                                FontSize = 10
+                                Text = string.Format("{0} {1}", item.FoundCount, T("Cleaner_Results_Found", "files found")),
+                                FontSize = 10,
+                                Margin = new Thickness(0, 1, 0, 0)
                             };
                             txtCount.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
@@ -3377,6 +3454,210 @@ namespace OptiAssist.Addons.SystemCleaner
                             spLeft.Children.Add(txtCount);
                             Grid.SetColumn(spLeft, 0);
                             g.Children.Add(spLeft);
+
+                            Border pnlFiles = new Border
+                            {
+                                Visibility = Visibility.Collapsed,
+                                BorderThickness = new Thickness(1),
+                                CornerRadius = new CornerRadius(4),
+                                Padding = new Thickness(8),
+                                Margin = new Thickness(0, 8, 0, 2)
+                            };
+                            pnlFiles.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+                            pnlFiles.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                            bool hasFiles = item.LastScanResult != null && item.LastScanResult.ScannedFiles != null && item.LastScanResult.ScannedFiles.Count > 0;
+                            if (hasFiles)
+                            {
+                                Button btnToggleFiles = new Button
+                                {
+                                    Content = "👁️ " + T("Cleaner_Btn_ViewFiles", "Ver Arquivos") + " (" + item.LastScanResult.ScannedFiles.Count + ")",
+                                    FontSize = 10.5,
+                                    Height = 24,
+                                    Padding = new Thickness(8, 0, 8, 0),
+                                    Margin = new Thickness(8, 0, 12, 0),
+                                    Cursor = Cursors.Hand,
+                                    VerticalAlignment = VerticalAlignment.Center
+                                };
+                                btnToggleFiles.SetResourceReference(Button.StyleProperty, "BtnDefault");
+
+                                StackPanel filesStack = new StackPanel();
+
+                                Grid tbGrid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+                                tbGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                                tbGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                                TextBox txtFilter = new TextBox
+                                {
+                                    Height = 24,
+                                    FontSize = 10.5,
+                                    Padding = new Thickness(6, 2, 6, 2),
+                                    VerticalContentAlignment = VerticalAlignment.Center,
+                                    ToolTip = T("Cleaner_Filter_Placeholder", "Filtrar arquivos por nome...")
+                                };
+                                txtFilter.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
+                                txtFilter.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
+                                txtFilter.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
+                                Grid.SetColumn(txtFilter, 0);
+                                tbGrid.Children.Add(txtFilter);
+
+                                Button btnCopy = new Button
+                                {
+                                    Content = T("Cleaner_Btn_CopyList", "📋 Copiar Lista"),
+                                    Height = 24,
+                                    FontSize = 10,
+                                    Padding = new Thickness(8, 0, 8, 0),
+                                    Margin = new Thickness(6, 0, 0, 0),
+                                    Cursor = Cursors.Hand
+                                };
+                                btnCopy.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                                btnCopy.Click += (s, e) =>
+                                {
+                                    try
+                                    {
+                                        StringBuilder sb = new StringBuilder();
+                                        foreach (var fe in item.LastScanResult.ScannedFiles)
+                                        {
+                                            sb.AppendLine(fe.SizeDisplay + "\t" + fe.Path);
+                                        }
+                                        Clipboard.SetText(sb.ToString());
+                                        MessageBox.Show(T("Cleaner_Msg_Copied", "Caminho dos arquivos copiado para a área de transferência!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                                    }
+                                    catch { }
+                                };
+                                Grid.SetColumn(btnCopy, 1);
+                                tbGrid.Children.Add(btnCopy);
+                                filesStack.Children.Add(tbGrid);
+
+                                ScrollViewer svFiles = new ScrollViewer
+                                {
+                                    MaxHeight = 200,
+                                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+                                };
+                                StackPanel spList = new StackPanel();
+
+                                Action<string> renderList = (filter) =>
+                                {
+                                    spList.Children.Clear();
+                                    string q = (filter ?? "").Trim().ToLowerInvariant();
+                                    int count = 0;
+                                    foreach (var f in item.LastScanResult.ScannedFiles)
+                                    {
+                                        if (!string.IsNullOrEmpty(q) && (f.Path == null || !f.Path.ToLowerInvariant().Contains(q)))
+                                            continue;
+
+                                        if (count >= 500)
+                                        {
+                                            TextBlock tbMore = new TextBlock
+                                            {
+                                                Text = string.Format("... e mais {0} arquivos (use a caixa de busca para filtrar)", item.LastScanResult.ScannedFiles.Count - count),
+                                                FontSize = 10,
+                                                FontStyle = FontStyles.Italic,
+                                                Margin = new Thickness(4, 4, 0, 2)
+                                            };
+                                            tbMore.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+                                            spList.Children.Add(tbMore);
+                                            break;
+                                        }
+
+                                        Grid fileRow = new Grid { Margin = new Thickness(0, 1, 0, 1) };
+                                        fileRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                                        fileRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                                        fileRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                                        TextBlock tbPath = new TextBlock
+                                        {
+                                            Text = f.Path,
+                                            FontSize = 10,
+                                            FontFamily = new FontFamily("Consolas, Segoe UI"),
+                                            TextTrimming = TextTrimming.CharacterEllipsis,
+                                            ToolTip = f.Path,
+                                            VerticalAlignment = VerticalAlignment.Center
+                                        };
+                                        tbPath.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                                        Grid.SetColumn(tbPath, 0);
+                                        fileRow.Children.Add(tbPath);
+
+                                        TextBlock tbSize = new TextBlock
+                                        {
+                                            Text = f.SizeDisplay,
+                                            FontSize = 10,
+                                            FontWeight = FontWeights.Bold,
+                                            Margin = new Thickness(8, 0, 8, 0),
+                                            VerticalAlignment = VerticalAlignment.Center
+                                        };
+                                        tbSize.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                                        Grid.SetColumn(tbSize, 1);
+                                        fileRow.Children.Add(tbSize);
+
+                                        Button btnOpen = new Button
+                                        {
+                                            Content = "📂",
+                                            Width = 22,
+                                            Height = 18,
+                                            FontSize = 9,
+                                            Padding = new Thickness(0),
+                                            ToolTip = T("Cleaner_Tooltip_OpenFolder", "Abrir pasta no Windows Explorer"),
+                                            Cursor = Cursors.Hand
+                                        };
+                                        btnOpen.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                                        string capturedPath = f.Path;
+                                        btnOpen.Click += (s, e) =>
+                                        {
+                                            try
+                                            {
+                                                if (File.Exists(capturedPath) || Directory.Exists(capturedPath))
+                                                {
+                                                    Process.Start("explorer.exe", string.Format("/select,\"{0}\"", capturedPath));
+                                                }
+                                                else
+                                                {
+                                                    string dir = Path.GetDirectoryName(capturedPath);
+                                                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                                                    {
+                                                        Process.Start("explorer.exe", dir);
+                                                    }
+                                                }
+                                            }
+                                            catch { }
+                                        };
+                                        Grid.SetColumn(btnOpen, 2);
+                                        fileRow.Children.Add(btnOpen);
+
+                                        ContextMenu cm = new ContextMenu();
+                                        MenuItem miCopy = new MenuItem { Header = T("Cleaner_Ctx_CopyPath", "Copiar caminho do arquivo") };
+                                        miCopy.Click += (s, e) => { try { Clipboard.SetText(capturedPath); } catch { } };
+                                        cm.Items.Add(miCopy);
+                                        fileRow.ContextMenu = cm;
+
+                                        spList.Children.Add(fileRow);
+                                        count++;
+                                    }
+                                };
+
+                                txtFilter.TextChanged += (s, e) => renderList(txtFilter.Text);
+                                svFiles.Content = spList;
+                                filesStack.Children.Add(svFiles);
+                                pnlFiles.Child = filesStack;
+
+                                btnToggleFiles.Click += (s, e) =>
+                                {
+                                    if (pnlFiles.Visibility == Visibility.Visible)
+                                    {
+                                        pnlFiles.Visibility = Visibility.Collapsed;
+                                        btnToggleFiles.Content = "👁️ " + T("Cleaner_Btn_ViewFiles", "Ver Arquivos") + " (" + item.LastScanResult.ScannedFiles.Count + ")";
+                                    }
+                                    else
+                                    {
+                                        renderList(txtFilter.Text);
+                                        pnlFiles.Visibility = Visibility.Visible;
+                                        btnToggleFiles.Content = "✕ " + T("Cleaner_Btn_HideFiles", "Ocultar Arquivos");
+                                    }
+                                };
+
+                                Grid.SetColumn(btnToggleFiles, 1);
+                                g.Children.Add(btnToggleFiles);
+                            }
 
                             TextBlock txtSize = new TextBlock
                             {
@@ -3386,11 +3667,13 @@ namespace OptiAssist.Addons.SystemCleaner
                                 VerticalAlignment = VerticalAlignment.Center
                             };
                             txtSize.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-                            Grid.SetColumn(txtSize, 1);
+                            Grid.SetColumn(txtSize, 2);
                             g.Children.Add(txtSize);
 
-                            row.Child = g;
-                            _pnlScannedItemsList.Children.Add(row);
+                            cardStack.Children.Add(g);
+                            cardStack.Children.Add(pnlFiles);
+                            card.Child = cardStack;
+                            _pnlScannedItemsList.Children.Add(card);
                         }
                     }
                 }
@@ -3458,23 +3741,27 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
             }
 
+            string confirmTitle = T("Msg_CleanerConfirmTitle", "Confirmar Limpeza do Sistema");
             StringBuilder confirmSb = new StringBuilder();
-            confirmSb.AppendFormat(
-                T("Msg_CleanerConfirm", "Do you want to clean the {1} selected modules now?\nEstimated reclaimable space: {0}"),
-                BaseCleaner.FormatBytes(estimatedSpace), selected.Count);
+            confirmSb.AppendLine(T("Msg_CleanerConfirmPrompt", "Tem certeza de que deseja realizar as ações de limpeza selecionadas e revisadas?"));
+            confirmSb.AppendLine();
+            confirmSb.AppendLine(string.Format(
+                T("Msg_CleanerConfirmDetails", "• Módulos a processar: {0}\n• Espaço estimado a ser recuperado: {1}"),
+                selected.Count, BaseCleaner.FormatBytes(estimatedSpace)));
+            confirmSb.AppendLine();
+            confirmSb.AppendLine(T("Msg_CleanerConfirmNote", "Todos os arquivos temporários, caches e itens identificados serão excluídos permanentemente."));
 
             if (warnings.Count > 0)
             {
                 confirmSb.AppendLine();
-                confirmSb.AppendLine();
-                confirmSb.AppendLine(T("Cleaner_Warn_Header", "⚠️ Sensitive / Caution Items Selected:"));
+                confirmSb.AppendLine(T("Cleaner_Warn_Header", "⚠️ Itens Sensíveis / Com Alerta Selecionados:"));
                 foreach (string w in warnings)
                 {
                     confirmSb.AppendLine(w);
                 }
             }
 
-            if (MessageBox.Show(confirmSb.ToString(), "OptiAssist - System Cleaner", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            if (MessageBox.Show(confirmSb.ToString(), confirmTitle, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             {
                 return;
             }
@@ -3521,6 +3808,8 @@ namespace OptiAssist.Addons.SystemCleaner
                     totalSkipped += cr.ErrorOrLockedCount;
 
                     cleaner.SizeBytes = 0;
+                    cleaner.FoundCount = 0;
+                    cleaner.LastScanResult = null;
                     cleaner.SizeDisplay = "Cleaned";
                     cleaner.StatusDisplay = "Cleaned";
                     cleanedItems.Add(cleaner);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
@@ -219,6 +219,22 @@ namespace OptiAssist.Addons.Toolbox
         /// </summary>
         public static List<ToolboxCommandItem> CreateDefaultPresets()
         {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string jsonPath = Path.Combine(baseDir, "Config", "Addons", "Toolbox", "toolbox.json");
+                if (File.Exists(jsonPath))
+                {
+                    string json = File.ReadAllText(jsonPath, Encoding.UTF8);
+                    List<ToolboxCommandItem> fromFile = ParseJsonArray(json);
+                    if (fromFile != null && fromFile.Count > 0)
+                    {
+                        return fromFile;
+                    }
+                }
+            }
+            catch { }
+
             List<ToolboxCommandItem> presets = new List<ToolboxCommandItem>();
 
             // Ferramentas da Comunidade
