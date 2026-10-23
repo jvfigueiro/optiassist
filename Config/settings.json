@@ -1,4 +1,4 @@
-﻿{
+{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
   "Language": "en-US",
@@ -11,5 +11,5 @@
   "EnableMaintenanceReport": false,
   "OpenExternalLogsByDefault": false,
   "CustomLogoPath": "",
-  "DisabledAddons": "app-manager"
+  "DisabledAddons": ""
 }
