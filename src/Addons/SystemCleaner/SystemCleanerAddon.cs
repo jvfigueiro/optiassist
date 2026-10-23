@@ -2652,13 +2652,15 @@ namespace OptiAssist.Addons.SystemCleaner
 
             _pbProgress = new ProgressBar
             {
-                Height = 14,
+                Height = 6,
                 Minimum = 0,
                 Maximum = 100,
                 Value = 0,
-                Template = CreateGreenProgressBarTemplate(),
+                BorderThickness = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center
             };
+            _pbProgress.SetResourceReference(ProgressBar.ForegroundProperty, "BrushAccent");
+            _pbProgress.SetResourceReference(ProgressBar.BackgroundProperty, "BrushBgPrimary");
             Grid.SetColumn(_pbProgress, 0);
             topProgressGrid.Children.Add(_pbProgress);
 

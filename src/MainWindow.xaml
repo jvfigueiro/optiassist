@@ -368,18 +368,24 @@
                                            Margin="0,0,0,8"
                                            TextTrimming="CharacterEllipsis"/>
                                 <UniformGrid Columns="3" HorizontalAlignment="Stretch">
-                                    <Button x:Name="btnRunPostInstallTask"
-                                            Content="🚀 Run Post-Install"
-                                            Style="{StaticResource BtnAccent}"
+                                    <Button x:Name="btnTaskToolbox"
+                                            Content="🧰 Toolbox"
+                                            Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open App Manager and install all selected applications"
-                                            Click="BtnRunPostInstallTask_Click"/>
+                                            ToolTip="Open Toolbox custom actions and tools"
+                                            Click="BtnTaskToolbox_Click"/>
                                     <Button x:Name="btnTaskPostInstall"
                                             Content="📦 App Manager"
                                             Style="{StaticResource BtnDefault}"
                                             Height="34" Margin="3" FontSize="11"
                                             ToolTip="Go to application and installer manager"
                                             Click="BtnTaskPostInstall_Click"/>
+                                    <Button x:Name="btnRunPostInstallTask"
+                                            Content="🚀 Run Post-Install"
+                                            Style="{StaticResource BtnAccent}"
+                                            Height="34" Margin="3" FontSize="11"
+                                            ToolTip="Open App Manager and install all selected applications"
+                                            Click="BtnRunPostInstallTask_Click"/>
                                     <Button x:Name="btnTaskMaintenanceFolder"
                                             Content="📁 Maintenance Folder"
                                             Style="{StaticResource BtnDefault}"
@@ -410,12 +416,6 @@
                                             Height="34" Margin="3" FontSize="11"
                                             ToolTip="Open System Properties (sysdm.cpl)"
                                             Click="BtnSysDm_Click"/>
-                                    <Button x:Name="btnTaskToolbox"
-                                            Content="🧰 Toolbox"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open Toolbox custom actions and tools"
-                                            Click="BtnTaskToolbox_Click"/>
                                     <Button x:Name="btnRebootBios"
                                             Content="⚡ Reboot to UEFI"
                                             Style="{StaticResource BtnDanger}"
@@ -758,21 +758,13 @@
                                            TextWrapping="Wrap"/>
 
                                 <WrapPanel>
-                                    <Button x:Name="btnCreateAutorun"
-                                            Content="💿 Create USB AutoRun"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="32"
-                                            Padding="14,0"
-                                            Margin="0,0,8,8"
-                                            ToolTip="Create autorun.inf on drive root to display application icon and AutoPlay entry"
-                                            Click="BtnCreateAutorun_Click"/>
                                     <Button x:Name="btnInstallApp"
                                             Content="📥 Install OptiAssist"
                                             Style="{StaticResource BtnDefault}"
                                             Height="32"
                                             Padding="14,0"
                                             Margin="0,0,8,8"
-                                            ToolTip="Install OptiAssist to C:\Program Files\OptiAssist with Desktop and Start Menu shortcuts"
+                                            ToolTip="Open installation &amp; portable deployment options for OptiAssist"
                                             Click="BtnInstallApp_Click"/>
                                     <Button x:Name="btnUninstallApp"
                                             Content="🗑️ Uninstall OptiAssist"
@@ -780,6 +772,7 @@
                                             Height="32"
                                             Padding="14,0"
                                             Margin="0,0,8,8"
+                                            Visibility="Collapsed"
                                             ToolTip="Uninstall OptiAssist from this device and remove all shortcuts"
                                             Click="BtnUninstallApp_Click"/>
                                 </WrapPanel>
@@ -1028,33 +1021,6 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- GPLv3 Notice Box -->
-                                <Border Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="12"
-                                        Margin="0,0,0,14">
-                                    <TextBlock TextWrapping="Wrap"
-                                               FontFamily="Consolas, Lucida Console, Segoe UI"
-                                               FontSize="11"
-                                               LineHeight="17"
-                                               Foreground="{DynamicResource BrushTextSecondary}">
-This program is free software: you can redistribute it and/or modify 
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, either version 3 of the License, or 
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful, 
-but WITHOUT ANY WARRANTY; without even the implied warranty of 
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
-                                    </TextBlock>
-                                </Border>
-
                                 <!-- Official Links / Buttons -->
                                 <WrapPanel>
                                     <Button x:Name="btnAboutGithub"
@@ -1078,6 +1044,13 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
                                             Padding="14,0"
                                             Margin="0,0,8,8"
                                             Click="BtnAboutDocumentation_Click"/>
+                                    <Button x:Name="btnAboutLicense"
+                                            Content="⚖️ License"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="32"
+                                            Padding="14,0"
+                                            Margin="0,0,8,8"
+                                            Click="BtnAboutLicense_Click"/>
                                 </WrapPanel>
                             </StackPanel>
                         </Border>

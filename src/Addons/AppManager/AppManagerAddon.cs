@@ -26,6 +26,8 @@ namespace OptiAssist.Addons.AppManager
         private WingetStatusState _wingetStatusState = WingetStatusState.Initial;
         private int _wingetFoundCount = 0;
         private int _wingetUpdatingCount = 0;
+        private int _wingetUpdatingCurrentIndex = 0;
+        private string _wingetCurrentAppName = "";
 
         // Tabs Controls
         private enum AppManagerTab { Updates, Install }
@@ -1107,9 +1109,17 @@ namespace OptiAssist.Addons.AppManager
         // =========================================================
         // AUTOMATED INSTALLATION HANDLERS
         // =========================================================
+        public void OpenInstallTab()
+        {
+            CreateView();
+            SwitchTab(AppManagerTab.Install);
+        }
+
         public void RunAutomatedPostInstall()
         {
             CreateView();
+            SwitchTab(AppManagerTab.Install);
+            if (_host != null) _host.OpenLogWindow();
             BtnInstallSelected_Click(null, null);
         }
 
@@ -1450,10 +1460,30 @@ namespace OptiAssist.Addons.AppManager
                     _lblWingetUpgradeStatus.Text = string.Format(T("Upgrade_Status_Found", "Updates found for {0} application(s):"), _wingetFoundCount);
                     break;
                 case WingetStatusState.Updating:
-                    _lblWingetUpgradeStatus.Text = string.Format(T("Upgrade_Status_Updating", "Updating {0} selected application(s)... Track progress in Logs."), _wingetUpdatingCount);
+                    if (!string.IsNullOrEmpty(_wingetCurrentAppName) && _wingetUpdatingCurrentIndex > 0)
+                    {
+                        _lblWingetUpgradeStatus.Text = string.Format(
+                            T("Upgrade_Status_UpdatingApp", "⏳ Updating ({0}/{1}): {2}... Track progress in Logs."),
+                            _wingetUpdatingCurrentIndex, _wingetUpdatingCount, _wingetCurrentAppName);
+                    }
+                    else
+                    {
+                        _lblWingetUpgradeStatus.Text = string.Format(
+                            T("Upgrade_Status_Updating", "Updating {0} selected application(s)... Track progress in Logs."),
+                            _wingetUpdatingCount);
+                    }
                     break;
                 case WingetStatusState.UpdatingAll:
-                    _lblWingetUpgradeStatus.Text = T("Upgrade_Status_UpdatingAll", "Running 'winget upgrade --all' in background... Track progress in Logs.");
+                    if (!string.IsNullOrEmpty(_wingetCurrentAppName))
+                    {
+                        _lblWingetUpgradeStatus.Text = string.Format(
+                            T("Upgrade_Status_UpdatingAllApp", "⏳ Updating: {0}... Track progress in Logs."),
+                            _wingetCurrentAppName);
+                    }
+                    else
+                    {
+                        _lblWingetUpgradeStatus.Text = T("Upgrade_Status_UpdatingAll", "Running 'winget upgrade --all' in background... Track progress in Logs.");
+                    }
                     break;
             }
         }
@@ -1536,6 +1566,8 @@ namespace OptiAssist.Addons.AppManager
             if (_pbWingetScan != null) _pbWingetScan.Visibility = Visibility.Visible;
             if (_pnlWingetLogsAction != null) _pnlWingetLogsAction.Visibility = Visibility.Visible;
             _wingetUpdatingCount = selected.Count;
+            _wingetUpdatingCurrentIndex = 1;
+            _wingetCurrentAppName = !string.IsNullOrWhiteSpace(selected[0].Name) ? selected[0].Name : selected[0].Id;
             _wingetStatusState = WingetStatusState.Updating;
             UpdateWingetStatusText();
 
@@ -1551,6 +1583,17 @@ namespace OptiAssist.Addons.AppManager
                 foreach (var item in selected)
                 {
                     current++;
+                    int curIdx = current;
+                    string appDisplayName = !string.IsNullOrWhiteSpace(item.Name) ? item.Name : item.Id;
+                    if (Application.Current != null)
+                    {
+                        Application.Current.Dispatcher.Invoke(new Action(() =>
+                        {
+                            _wingetUpdatingCurrentIndex = curIdx;
+                            _wingetCurrentAppName = appDisplayName;
+                            UpdateWingetStatusText();
+                        }));
+                    }
                     Log(string.Format("[{0}/{1}] Updating {2} ({3})...", current, selected.Count, item.Name, item.Id));
                     bool ok = InstallerHelper.UpgradeWingetPackage(item.Id, Log);
                     if (ok) successes++;
@@ -1565,6 +1608,8 @@ namespace OptiAssist.Addons.AppManager
                 {
                     Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
+                        _wingetUpdatingCurrentIndex = 0;
+                        _wingetCurrentAppName = "";
                         if (_btnUpgradeSelected != null) _btnUpgradeSelected.IsEnabled = true;
                         if (_btnUpgradeAll != null) _btnUpgradeAll.IsEnabled = true;
                         if (_pbWingetScan != null) _pbWingetScan.Visibility = Visibility.Collapsed;
@@ -1589,8 +1634,16 @@ namespace OptiAssist.Addons.AppManager
             if (_btnUpgradeAll != null) _btnUpgradeAll.IsEnabled = false;
             if (_pbWingetScan != null) _pbWingetScan.Visibility = Visibility.Visible;
             if (_pnlWingetLogsAction != null) _pnlWingetLogsAction.Visibility = Visibility.Visible;
+            _wingetUpdatingCurrentIndex = 0;
+            _wingetCurrentAppName = (_wingetUpgrades != null && _wingetUpgrades.Count > 0) ? _wingetUpgrades[0].Name : "";
             _wingetStatusState = WingetStatusState.UpdatingAll;
             UpdateWingetStatusText();
+
+            List<WingetUpgradeItem> knownItems = new List<WingetUpgradeItem>();
+            if (_wingetUpgrades != null)
+            {
+                foreach (var u in _wingetUpgrades) knownItems.Add(u);
+            }
 
             ThreadPool.QueueUserWorkItem(state =>
             {
@@ -1598,7 +1651,45 @@ namespace OptiAssist.Addons.AppManager
                 Log("   RUNNING BULK UPDATE: winget upgrade --all     ");
                 Log("=================================================\n");
 
-                bool ok = InstallerHelper.UpgradeAllWingetPackages(Log);
+                bool ok = InstallerHelper.UpgradeAllWingetPackages(msg =>
+                {
+                    Log(msg);
+                    if (!string.IsNullOrWhiteSpace(msg))
+                    {
+                        string detectedApp = null;
+                        foreach (var known in knownItems)
+                        {
+                            if ((!string.IsNullOrEmpty(known.Id) && msg.IndexOf(known.Id, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                                (!string.IsNullOrEmpty(known.Name) && msg.IndexOf(known.Name, StringComparison.OrdinalIgnoreCase) >= 0))
+                            {
+                                detectedApp = !string.IsNullOrWhiteSpace(known.Name) ? known.Name : known.Id;
+                                break;
+                            }
+                        }
+                        if (detectedApp == null && msg.Contains("[") && msg.Contains("]"))
+                        {
+                            int lb = msg.IndexOf('[');
+                            int rb = msg.IndexOf(']', lb + 1);
+                            if (lb > 0 && rb > lb + 1)
+                            {
+                                detectedApp = msg.Substring(0, lb).Trim();
+                                if (detectedApp.StartsWith("Found ", StringComparison.OrdinalIgnoreCase))
+                                    detectedApp = detectedApp.Substring(6).Trim();
+                                else if (detectedApp.StartsWith("Encontrada ", StringComparison.OrdinalIgnoreCase))
+                                    detectedApp = detectedApp.Substring(11).Trim();
+                            }
+                        }
+                        if (!string.IsNullOrWhiteSpace(detectedApp) && Application.Current != null)
+                        {
+                            string appToShow = detectedApp;
+                            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                            {
+                                _wingetCurrentAppName = appToShow;
+                                UpdateWingetStatusText();
+                            }));
+                        }
+                    }
+                });
 
                 Log("=================================================");
                 Log(ok ? "   BULK UPDATE FINISHED SUCCESSFULLY!            " : "   BULK UPDATE FINISHED WITH WARNINGS/ERRORS     ");
@@ -1608,6 +1699,7 @@ namespace OptiAssist.Addons.AppManager
                 {
                     Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
+                        _wingetCurrentAppName = "";
                         if (_btnUpgradeSelected != null) _btnUpgradeSelected.IsEnabled = true;
                         if (_btnUpgradeAll != null) _btnUpgradeAll.IsEnabled = true;
                         if (_pbWingetScan != null) _pbWingetScan.Visibility = Visibility.Collapsed;

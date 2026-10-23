@@ -30,7 +30,7 @@ namespace OptiAssist
             ReportSavePath = @"C:\MaintenanceReport.txt";
             AutoRefreshHardware = true;
             EnableWingetFallback = true;
-            Theme = "Dark";
+            Theme = "Light";
             AccentColor = "#0EA5E9";
             ServiceProviderMode = false;
             EnableMaintenanceReport = false;

@@ -3,12 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <!-- Modern Dark Theme Palette (Fluent style) -->
-        <Color x:Key="ColorBgPrimary">#18181B</Color>
-        <Color x:Key="ColorBgSidebar">#121214</Color>
-        <Color x:Key="ColorBgCard">#222228</Color>
-        <Color x:Key="ColorBorderCard">#33333D</Color>
-        <Color x:Key="ColorCardHover">#2C2C36</Color>
+        <!-- Modern Light Theme Palette (Default Fluent style) -->
+        <Color x:Key="ColorBgPrimary">#F1F5F9</Color>
+        <Color x:Key="ColorBgSidebar">#FFFFFF</Color>
+        <Color x:Key="ColorBgCard">#FFFFFF</Color>
+        <Color x:Key="ColorBorderCard">#CBD5E1</Color>
+        <Color x:Key="ColorCardHover">#F8FAFC</Color>
 
         <Color x:Key="ColorAccent">#0EA5E9</Color>
         <Color x:Key="ColorAccentHover">#38BDF8</Color>
@@ -18,12 +18,12 @@
         <Color x:Key="ColorWarning">#F59E0B</Color>
         <Color x:Key="ColorDanger">#EF4444</Color>
 
-        <Color x:Key="ColorTextPrimary">#F8FAFC</Color>
-        <Color x:Key="ColorTextSecondary">#94A3B8</Color>
-        <Color x:Key="ColorTextMuted">#64748B</Color>
+        <Color x:Key="ColorTextPrimary">#0F172A</Color>
+        <Color x:Key="ColorTextSecondary">#475569</Color>
+        <Color x:Key="ColorTextMuted">#94A3B8</Color>
 
-        <Color x:Key="ColorConsoleBg">#0C0C0F</Color>
-        <Color x:Key="ColorConsoleText">#E2E8F0</Color>
+        <Color x:Key="ColorConsoleBg">#0F172A</Color>
+        <Color x:Key="ColorConsoleText">#F8FAFC</Color>
 
         <SolidColorBrush x:Key="BrushBgPrimary" Color="{StaticResource ColorBgPrimary}"/>
         <SolidColorBrush x:Key="BrushBgSidebar" Color="{StaticResource ColorBgSidebar}"/>
@@ -47,13 +47,13 @@
         <SolidColorBrush x:Key="BrushConsoleText" Color="{StaticResource ColorConsoleText}"/>
 
         <!-- Dynamic Control Brushes for Theme Switching (Light / Dark) -->
-        <SolidColorBrush x:Key="BrushBtnBg" Color="#2A2A34"/>
-        <SolidColorBrush x:Key="BrushBtnHover" Color="#383848"/>
-        <SolidColorBrush x:Key="BrushBtnBorderHover" Color="#4B4B5E"/>
-        <SolidColorBrush x:Key="BrushBtnPressed" Color="#202028"/>
-        <SolidColorBrush x:Key="BrushNavHover" Color="#1A1A22"/>
-        <SolidColorBrush x:Key="BrushNavChecked" Color="#202430"/>
-        <SolidColorBrush x:Key="BrushInputBg" Color="#1C1C22"/>
+        <SolidColorBrush x:Key="BrushBtnBg" Color="#E2E8F0"/>
+        <SolidColorBrush x:Key="BrushBtnHover" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="BrushBtnBorderHover" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="BrushBtnPressed" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="BrushNavHover" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="BrushNavChecked" Color="#E2E8F0"/>
+        <SolidColorBrush x:Key="BrushInputBg" Color="#FFFFFF"/>
 
         <!-- Default Style for TextBlock -->
         <Style TargetType="TextBlock">

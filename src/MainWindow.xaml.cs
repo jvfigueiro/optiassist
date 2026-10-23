@@ -352,14 +352,14 @@ namespace OptiAssist
                 txtSettingAccentColor.Text = accent;
                 ApplyThemeAccentColor(accent);
 
-                // Load and apply theme (Dark / Light)
-                if (!string.IsNullOrEmpty(_settings.Theme) && _settings.Theme.Equals("Light", StringComparison.OrdinalIgnoreCase))
+                // Load and apply theme (Light is default)
+                if (!string.IsNullOrEmpty(_settings.Theme) && _settings.Theme.Equals("Dark", StringComparison.OrdinalIgnoreCase))
                 {
-                    ApplyTheme(false);
+                    ApplyTheme(true);
                 }
                 else
                 {
-                    ApplyTheme(true);
+                    ApplyTheme(false);
                 }
             }
             finally
@@ -528,11 +528,21 @@ namespace OptiAssist
 
         private void BtnRunPostInstallTask_Click(object sender, RoutedEventArgs e)
         {
+            MessageBoxResult confirm = MessageBox.Show(
+                LocalizationHelper.Get("Msg_RunPostInstallConfirm", "Are you sure you want to run the automated application installation now?\n\nOptiAssist will navigate to App Manager (Automated Application Installation), open the external Logs window, and start installing the selected programs."),
+                LocalizationHelper.Get("Task_RunPostInstall", "🚀 Run Post-Install"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (confirm != MessageBoxResult.Yes) return;
+
             if (!NavigateToAddon("app-manager"))
             {
                 MessageBox.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
+
+            OpenExternalLogWindow();
 
             if (_addons != null)
             {
@@ -1293,14 +1303,9 @@ namespace OptiAssist
             // Additional Settings card
             if (txtAdditionalSettingsTitle != null) txtAdditionalSettingsTitle.Text = LocalizationHelper.Get("Settings_Card_AdditionalSettings", "🛠️ Additional Settings");
             if (txtAdditionalSettingsSub != null) txtAdditionalSettingsSub.Text = LocalizationHelper.Get("Settings_Sub_AdditionalSettings", "Device integration, system installation, and portable drive options:");
-            if (btnCreateAutorun != null)
-            {
-                btnCreateAutorun.Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun");
-                btnCreateAutorun.ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry");
-            }
             if (btnInstallApp != null)
             {
-                btnInstallApp.ToolTip = LocalizationHelper.Get("Tooltip_InstallApp", "Install OptiAssist to C:\\Program Files\\OptiAssist with Desktop and Start Menu shortcuts");
+                btnInstallApp.ToolTip = LocalizationHelper.Get("Tooltip_InstallApp", "Open installation & portable deployment options for OptiAssist");
             }
             if (btnUninstallApp != null)
             {
@@ -1321,6 +1326,11 @@ namespace OptiAssist
             {
                 btnAboutDocumentation.Content = LocalizationHelper.Get("Btn_AboutDocumentation", "📖 Documentation");
                 btnAboutDocumentation.ToolTip = LocalizationHelper.Get("Tooltip_AboutDocumentation", "Access the official OptiAssist documentation");
+            }
+            if (btnAboutLicense != null)
+            {
+                btnAboutLicense.Content = LocalizationHelper.Get("Btn_AboutLicense", "⚖️ License");
+                btnAboutLicense.ToolTip = LocalizationHelper.Get("Tooltip_AboutLicense", "View GNU GPLv3 license notice");
             }
             if (txtAboutAddonsTitle != null) txtAboutAddonsTitle.Text = LocalizationHelper.Get("About_Addons_Title", "🧩 About Installed Modules & Plugins");
             if (txtAboutAddonsSubtitle != null) txtAboutAddonsSubtitle.Text = LocalizationHelper.Get("About_Addons_Subtitle", "Quick summary and AssemblyInfo metadata of all modular add-ons integrated into OptiAssist:");
@@ -1698,7 +1708,9 @@ namespace OptiAssist
 
                 if (btnUninstallApp != null)
                 {
-                    btnUninstallApp.IsEnabled = isInstalled || runningFromInstalled;
+                    bool showUninstall = isInstalled || runningFromInstalled;
+                    btnUninstallApp.Visibility = showUninstall ? Visibility.Visible : Visibility.Collapsed;
+                    btnUninstallApp.IsEnabled = showUninstall;
                 }
             }
             catch { }
@@ -1706,8 +1718,8 @@ namespace OptiAssist
 
         private void BtnInstallApp_Click(object sender, RoutedEventArgs e)
         {
-            Log("[INSTALL] Starting OptiAssist installation to Program Files...");
-            AppDeploymentHelper.InstallOptiAssist(Log);
+            Log("[INSTALL] Opening OptiAssist installation & deployment window...");
+            AppDeploymentHelper.ShowInstallDialog(this, Log);
             UpdateDeploymentButtonsUI();
         }
 
@@ -1854,7 +1866,7 @@ namespace OptiAssist
             }
         }
 
-        private bool _isDarkMode = true;
+        private bool _isDarkMode = false;
         public bool IsDarkMode { get { return _isDarkMode; } }
 
         public void ApplyTheme(bool isDark)
@@ -1958,6 +1970,11 @@ namespace OptiAssist
                     LocalizationHelper.Get("Msg_DocumentationInDevelopment", "The documentation page is currently under development and will be available in an upcoming update."),
                     "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        private void BtnAboutLicense_Click(object sender, RoutedEventArgs e)
+        {
+            AppDeploymentHelper.ShowLicenseDialog(this);
         }
         #endregion
         #endregion

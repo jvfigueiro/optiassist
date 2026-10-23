@@ -32,6 +32,8 @@ namespace OptiAssist.Addons.StartupManager
         private TextBlock _txtHeaderSubtitle;
         private Button _btnNewProgram;
         private Button _btnRefresh;
+        private TextBlock _lblSearchFilter;
+        private TextBlock _txtSearchWatermark;
         private TextBox _txtSearchFilter;
         private CheckBox _chkHideMicrosoft;
 
@@ -99,11 +101,11 @@ namespace OptiAssist.Addons.StartupManager
             switch (type)
             {
                 case StartupLocationType.RegistryCurrentUser:
-                    return T("Startup_Scope_User", "Current User (HKCU - Run)");
+                    return T("Startup_Scope_User", "Current User");
                 case StartupLocationType.RegistryLocalMachine:
-                    return T("Startup_Scope_Machine", "All Users (HKLM - Run)");
+                    return T("Startup_Scope_Machine", "All Users");
                 case StartupLocationType.RegistryLocalMachine32:
-                    return T("Startup_Scope_Machine32", "All Users 32-bit (HKLM - Run)");
+                    return T("Startup_Scope_Machine32", "All Users 32-bit");
                 case StartupLocationType.StartupFolderUser:
                     return T("Startup_Scope_StartupFolderUser", "Startup Folder (User)");
                 case StartupLocationType.StartupFolderCommon:
@@ -237,10 +239,22 @@ namespace OptiAssist.Addons.StartupManager
             filterCard.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
             filterCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
+            StackPanel filterStack = new StackPanel();
+            _lblSearchFilter = new TextBlock
+            {
+                Text = T("Startup_Filter_Label", "🔍 Search for the application you want:"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            _lblSearchFilter.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            filterStack.Children.Add(_lblSearchFilter);
+
             Grid filterGrid = new Grid();
             filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+            Grid searchInputGrid = new Grid();
             _txtSearchFilter = new TextBox
             {
                 Height = 28,
@@ -251,10 +265,31 @@ namespace OptiAssist.Addons.StartupManager
             _txtSearchFilter.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
             _txtSearchFilter.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
             _txtSearchFilter.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
-            _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Filter items by name, command, or publisher...");
-            _txtSearchFilter.TextChanged += (s, e) => RenderCurrentTabList();
-            Grid.SetColumn(_txtSearchFilter, 0);
-            filterGrid.Children.Add(_txtSearchFilter);
+            _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
+
+            _txtSearchWatermark = new TextBlock
+            {
+                Text = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want..."),
+                FontSize = 11,
+                Margin = new Thickness(10, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                IsHitTestVisible = false
+            };
+            _txtSearchWatermark.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+
+            _txtSearchFilter.TextChanged += (s, e) =>
+            {
+                if (_txtSearchWatermark != null)
+                {
+                    _txtSearchWatermark.Visibility = string.IsNullOrEmpty(_txtSearchFilter.Text) ? Visibility.Visible : Visibility.Collapsed;
+                }
+                RenderCurrentTabList();
+            };
+
+            searchInputGrid.Children.Add(_txtSearchFilter);
+            searchInputGrid.Children.Add(_txtSearchWatermark);
+            Grid.SetColumn(searchInputGrid, 0);
+            filterGrid.Children.Add(searchInputGrid);
 
             _chkHideMicrosoft = new CheckBox
             {
@@ -271,7 +306,8 @@ namespace OptiAssist.Addons.StartupManager
             Grid.SetColumn(_chkHideMicrosoft, 1);
             filterGrid.Children.Add(_chkHideMicrosoft);
 
-            filterCard.Child = filterGrid;
+            filterStack.Children.Add(filterGrid);
+            filterCard.Child = filterStack;
             mainStack.Children.Add(filterCard);
 
             // 4. Stats Summary Bar
@@ -491,9 +527,10 @@ namespace OptiAssist.Addons.StartupManager
             StackPanel spLeft = new StackPanel();
 
             StackPanel spTitleRow = new StackPanel { Orientation = Orientation.Horizontal };
+            string displayTitle = !string.IsNullOrWhiteSpace(prog.FileDescription) ? prog.FileDescription : prog.Name;
             TextBlock tbName = new TextBlock
             {
-                Text = prog.Name,
+                Text = displayTitle,
                 FontSize = 12.5,
                 FontWeight = FontWeights.Bold,
                 VerticalAlignment = VerticalAlignment.Center
@@ -543,15 +580,15 @@ namespace OptiAssist.Addons.StartupManager
 
             spLeft.Children.Add(spTitleRow);
 
-            // Publisher, Executable Description & Size Row
+            // Entry Name (left of Publisher), Publisher & Size Row
             string pub = !string.IsNullOrWhiteSpace(prog.Publisher) ? prog.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
             string size = !string.IsNullOrWhiteSpace(prog.FileSizeDisplay) ? prog.FileSizeDisplay : "-";
             StringBuilder sbPub = new StringBuilder();
-            sbPub.Append(T("Startup_Label_Publisher", "Publisher:")).Append(" ").Append(pub);
-            if (!string.IsNullOrWhiteSpace(prog.FileDescription))
+            if (!string.IsNullOrWhiteSpace(prog.Name))
             {
-                sbPub.Append(" • ").Append(T("Startup_Label_Description", "Description:")).Append(" ").Append(prog.FileDescription);
+                sbPub.Append(prog.Name).Append(" • ");
             }
+            sbPub.Append(T("Startup_Label_Publisher", "Publisher:")).Append(" ").Append(pub);
             sbPub.Append(" • ").Append(T("Startup_Label_Size", "Size:")).Append(" ").Append(size);
 
             TextBlock tbPub = new TextBlock
@@ -1300,8 +1337,8 @@ namespace OptiAssist.Addons.StartupManager
                 FontSize = 11.5,
                 Margin = new Thickness(0, 0, 0, 16)
             };
-            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_User", "Current User (HKCU - Run)"), Tag = StartupLocationType.RegistryCurrentUser });
-            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_Machine", "All Users (HKLM - Run)"), Tag = StartupLocationType.RegistryLocalMachine });
+            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_User", "Current User"), Tag = StartupLocationType.RegistryCurrentUser });
+            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_Machine", "All Users"), Tag = StartupLocationType.RegistryLocalMachine });
             _cmbModalScope.SelectedIndex = 0;
             modalStack.Children.Add(_cmbModalScope);
 
@@ -1649,7 +1686,16 @@ namespace OptiAssist.Addons.StartupManager
             if (_tabProgramsText != null) _tabProgramsText.Text = "🚀 " + T("Startup_Tab_Programs", "Startup Programs");
             if (_tabTasksText != null) _tabTasksText.Text = "⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks");
             if (_tabServicesText != null) _tabServicesText.Text = "⚙️ " + T("Startup_Tab_Services", "Startup Services");
-            if (_txtSearchFilter != null) _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Filter items by name, command, or publisher...");
+            if (_lblSearchFilter != null) _lblSearchFilter.Text = T("Startup_Filter_Label", "🔍 Search for the application you want:");
+            if (_txtSearchWatermark != null) _txtSearchWatermark.Text = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
+            if (_txtSearchFilter != null) _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
+            if (_cmbModalScope != null && _cmbModalScope.Items.Count >= 2)
+            {
+                ComboBoxItem item0 = _cmbModalScope.Items[0] as ComboBoxItem;
+                ComboBoxItem item1 = _cmbModalScope.Items[1] as ComboBoxItem;
+                if (item0 != null) item0.Content = T("Startup_Scope_User", "Current User");
+                if (item1 != null) item1.Content = T("Startup_Scope_Machine", "All Users");
+            }
             if (_btnModalCancel != null) _btnModalCancel.Content = T("Startup_Btn_Cancel", "Cancel");
             if (_btnModalSave != null) _btnModalSave.Content = T("Startup_Btn_Save", "Save");
             if (_btnModalDelete != null) _btnModalDelete.Content = T("Startup_Btn_Delete", "🗑️ Delete");
