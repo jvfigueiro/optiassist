@@ -1,6 +1,8 @@
 {
   "Nav_PostInstall": "Gerenciador de Apps",
   "Nav_AppManager": "Gerenciador de Apps",
+  "AppManager_Tab_Updates": "Atualizações de Aplicativos",
+  "AppManager_Tab_Install": "Instalação Automatizada de Aplicativos",
   "PostInstall_Title": "📦 Gerenciador de Apps",
   "PostInstall_Subtitle": "Instalação automatizada de softwares essenciais e atualização de programas instalados",
   "Upgrade_Card_Title": "🔄 Atualização de Aplicativos",

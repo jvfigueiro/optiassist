@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -50,12 +51,20 @@ namespace OptiAssist.Addons.StartupManager
         private Grid _modalOverlay;
         private TextBlock _txtModalTitle;
         private TextBox _txtModalName;
+        private TextBlock _lblPath;
         private TextBox _txtModalPath;
+        private TextBlock _lblModalArgs;
+        private TextBox _txtModalArgs;
+        private TextBlock _lblScope;
         private ComboBox _cmbModalScope;
         private Button _btnModalBrowse;
+        private Button _btnModalRunTask;
+        private Button _btnModalExplorer;
+        private Button _btnModalDelete;
         private Button _btnModalSave;
         private Button _btnModalCancel;
         private StartupProgramItem _editingProgram = null;
+        private StartupTaskItem _editingTask = null;
 
         public string Id { get { return "startup-manager"; } }
         public string Name { get { return T("Nav_StartupManager", "Startup Manager"); } }
@@ -146,7 +155,7 @@ namespace OptiAssist.Addons.StartupManager
             StackPanel titlePanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _txtHeaderTitle = new TextBlock
             {
-                Text = T("Startup_Title", "Startup Manager"),
+                Text = string.Format("{0}  {1}", Icon, Name),
                 FontSize = 15,
                 FontWeight = FontWeights.Bold,
                 TextTrimming = TextTrimming.CharacterEllipsis
@@ -443,6 +452,7 @@ namespace OptiAssist.Addons.StartupManager
                 if (string.IsNullOrEmpty(query) ||
                     (p.Name != null && p.Name.ToLowerInvariant().Contains(query)) ||
                     (p.Publisher != null && p.Publisher.ToLowerInvariant().Contains(query)) ||
+                    (p.FileDescription != null && p.FileDescription.ToLowerInvariant().Contains(query)) ||
                     (p.Command != null && p.Command.ToLowerInvariant().Contains(query)))
                 {
                     filtered.Add(p);
@@ -533,16 +543,20 @@ namespace OptiAssist.Addons.StartupManager
 
             spLeft.Children.Add(spTitleRow);
 
-            // Publisher & Size Row
+            // Publisher, Executable Description & Size Row
             string pub = !string.IsNullOrWhiteSpace(prog.Publisher) ? prog.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
             string size = !string.IsNullOrWhiteSpace(prog.FileSizeDisplay) ? prog.FileSizeDisplay : "-";
+            StringBuilder sbPub = new StringBuilder();
+            sbPub.Append(T("Startup_Label_Publisher", "Publisher:")).Append(" ").Append(pub);
+            if (!string.IsNullOrWhiteSpace(prog.FileDescription))
+            {
+                sbPub.Append(" • ").Append(T("Startup_Label_Description", "Description:")).Append(" ").Append(prog.FileDescription);
+            }
+            sbPub.Append(" • ").Append(T("Startup_Label_Size", "Size:")).Append(" ").Append(size);
+
             TextBlock tbPub = new TextBlock
             {
-                Text = string.Format("{0} {1} • {2} {3}",
-                    T("Startup_Label_Publisher", "Publisher:"),
-                    pub,
-                    T("Startup_Label_Size", "Size:"),
-                    size),
+                Text = sbPub.ToString(),
                 FontSize = 10,
                 Margin = new Thickness(0, 2, 0, 2)
             };
@@ -564,7 +578,7 @@ namespace OptiAssist.Addons.StartupManager
             Grid.SetColumn(spLeft, 0);
             g.Children.Add(spLeft);
 
-            // Right: Status Badge + Action Buttons
+            // Right: Status Badge + Action Buttons (Enable/Disable and Edit only)
             StackPanel spRight = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -621,84 +635,18 @@ namespace OptiAssist.Addons.StartupManager
             };
             spRight.Children.Add(btnToggle);
 
-            // Edit Button
+            // Edit Button (Delete and Open Folder are now inside Edit dialog)
             Button btnEdit = new Button
             {
                 Content = T("Startup_Btn_Edit", "✏️ Edit"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand
             };
             btnEdit.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnEdit.Click += (s, e) => OpenEditProgramModal(prog);
             spRight.Children.Add(btnEdit);
-
-            // Delete Button
-            Button btnDelete = new Button
-            {
-                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
-                FontSize = 10.5,
-                Height = 26,
-                Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 4, 0),
-                Cursor = Cursors.Hand
-            };
-            btnDelete.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnDelete.Click += (s, e) =>
-            {
-                string msg = string.Format(
-                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically."),
-                    prog.Name);
-
-                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    string err;
-                    if (!StartupEngine.DeleteStartupProgram(prog, out err))
-                    {
-                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
-                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                    else
-                    {
-                        _allPrograms.Remove(prog);
-                        RenderCurrentTabList();
-                    }
-                }
-            };
-            spRight.Children.Add(btnDelete);
-
-            // Open Folder in Explorer Button
-            Button btnExplorer = new Button
-            {
-                Content = "📂",
-                Width = 26,
-                Height = 26,
-                FontSize = 11,
-                Padding = new Thickness(0),
-                ToolTip = T("Startup_Tooltip_Explorer", "Open target folder in Windows Explorer"),
-                Cursor = Cursors.Hand
-            };
-            btnExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnExplorer.Click += (s, e) =>
-            {
-                try
-                {
-                    string target = prog.ExePath;
-                    if (File.Exists(target))
-                    {
-                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", target));
-                    }
-                    else if (File.Exists(prog.SourcePath))
-                    {
-                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", prog.SourcePath));
-                    }
-                }
-                catch { }
-            };
-            spRight.Children.Add(btnExplorer);
 
             Grid.SetColumn(spRight, 1);
             g.Children.Add(spRight);
@@ -735,6 +683,7 @@ namespace OptiAssist.Addons.StartupManager
                 if (string.IsNullOrEmpty(query) ||
                     (t.Name != null && t.Name.ToLowerInvariant().Contains(query)) ||
                     (t.Publisher != null && t.Publisher.ToLowerInvariant().Contains(query)) ||
+                    (t.FileDescription != null && t.FileDescription.ToLowerInvariant().Contains(query)) ||
                     (t.ActionPath != null && t.ActionPath.ToLowerInvariant().Contains(query)))
                 {
                     filtered.Add(t);
@@ -802,15 +751,19 @@ namespace OptiAssist.Addons.StartupManager
 
             spLeft.Children.Add(spTitleRow);
 
-            // Author / Publisher & Task Path
+            // Author / Publisher, Executable Description & Task Path
             string pub = !string.IsNullOrWhiteSpace(task.Publisher) ? task.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
+            StringBuilder sbPub = new StringBuilder();
+            sbPub.Append(T("Startup_Label_Publisher", "Publisher:")).Append(" ").Append(pub);
+            if (!string.IsNullOrWhiteSpace(task.FileDescription))
+            {
+                sbPub.Append(" • ").Append(T("Startup_Label_Description", "Description:")).Append(" ").Append(task.FileDescription);
+            }
+            sbPub.Append(" • ").Append(T("Startup_Label_TaskPath", "Task Path:")).Append(" ").Append(task.FullTaskPath);
+
             TextBlock tbPub = new TextBlock
             {
-                Text = string.Format("{0} {1} • {2} {3}",
-                    T("Startup_Label_Publisher", "Publisher:"),
-                    pub,
-                    T("Startup_Label_TaskPath", "Task Path:"),
-                    task.FullTaskPath),
+                Text = sbPub.ToString(),
                 FontSize = 10,
                 Margin = new Thickness(0, 2, 0, 2)
             };
@@ -832,7 +785,7 @@ namespace OptiAssist.Addons.StartupManager
             Grid.SetColumn(spLeft, 0);
             g.Children.Add(spLeft);
 
-            // Right: Status + Actions
+            // Right: Status Badge + Action Buttons (Enable/Disable and Edit only)
             StackPanel spRight = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -889,91 +842,18 @@ namespace OptiAssist.Addons.StartupManager
             };
             spRight.Children.Add(btnToggle);
 
-            // Run Now Button
-            Button btnRun = new Button
+            // Edit Button (Run, Delete, and Open Folder are now inside Edit dialog)
+            Button btnEdit = new Button
             {
-                Content = T("Startup_Btn_Run", "▶️ Run"),
+                Content = T("Startup_Btn_Edit", "✏️ Edit"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand
             };
-            btnRun.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnRun.Click += (s, e) =>
-            {
-                string err;
-                if (!StartupEngine.RunTask(task, out err))
-                {
-                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunError", "Error running task: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                else
-                {
-                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunSuccess", "Task '{0}' started successfully."), task.Name), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-            };
-            spRight.Children.Add(btnRun);
-
-            // Delete Task Button
-            Button btnDelete = new Button
-            {
-                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
-                FontSize = 10.5,
-                Height = 26,
-                Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 4, 0),
-                Cursor = Cursors.Hand
-            };
-            btnDelete.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnDelete.Click += (s, e) =>
-            {
-                string msg = string.Format(
-                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete scheduled task '{0}'?"),
-                    task.Name);
-
-                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    string err;
-                    if (!StartupEngine.DeleteTask(task, out err))
-                    {
-                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
-                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                    else
-                    {
-                        _allTasks.Remove(task);
-                        RenderCurrentTabList();
-                    }
-                }
-            };
-            spRight.Children.Add(btnDelete);
-
-            // Explorer Button
-            Button btnExplorer = new Button
-            {
-                Content = "📂",
-                Width = 26,
-                Height = 26,
-                FontSize = 11,
-                Padding = new Thickness(0),
-                ToolTip = T("Startup_Tooltip_Explorer", "Open target folder in Windows Explorer"),
-                Cursor = Cursors.Hand
-            };
-            btnExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnExplorer.Click += (s, e) =>
-            {
-                try
-                {
-                    string clean = StartupEngine.ExtractExePath(task.ActionPath);
-                    if (File.Exists(clean))
-                    {
-                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", clean));
-                    }
-                }
-                catch { }
-            };
-            spRight.Children.Add(btnExplorer);
+            btnEdit.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnEdit.Click += (s, e) => OpenEditTaskModal(task);
+            spRight.Children.Add(btnEdit);
 
             Grid.SetColumn(spRight, 1);
             g.Children.Add(spRight);
@@ -1010,7 +890,8 @@ namespace OptiAssist.Addons.StartupManager
                 if (string.IsNullOrEmpty(query) ||
                     (s.DisplayName != null && s.DisplayName.ToLowerInvariant().Contains(query)) ||
                     (s.ServiceName != null && s.ServiceName.ToLowerInvariant().Contains(query)) ||
-                    (s.Publisher != null && s.Publisher.ToLowerInvariant().Contains(query)))
+                    (s.Publisher != null && s.Publisher.ToLowerInvariant().Contains(query)) ||
+                    (s.FileDescription != null && s.FileDescription.ToLowerInvariant().Contains(query)))
                 {
                     filtered.Add(s);
                 }
@@ -1077,15 +958,19 @@ namespace OptiAssist.Addons.StartupManager
 
             spLeft.Children.Add(spTitleRow);
 
-            // Service internal name & publisher
+            // Service internal name, publisher & executable description
             string pub = !string.IsNullOrWhiteSpace(service.Publisher) ? service.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
+            StringBuilder sbPub = new StringBuilder();
+            sbPub.Append(T("Startup_Label_ServiceName", "Service:")).Append(" ").Append(service.ServiceName);
+            sbPub.Append(" • ").Append(T("Startup_Label_Publisher", "Publisher:")).Append(" ").Append(pub);
+            if (!string.IsNullOrWhiteSpace(service.FileDescription))
+            {
+                sbPub.Append(" • ").Append(T("Startup_Label_Description", "Description:")).Append(" ").Append(service.FileDescription);
+            }
+
             TextBlock tbPub = new TextBlock
             {
-                Text = string.Format("{0} {1} • {2} {3}",
-                    T("Startup_Label_ServiceName", "Service:"),
-                    service.ServiceName,
-                    T("Startup_Label_Publisher", "Publisher:"),
-                    pub),
+                Text = sbPub.ToString(),
                 FontSize = 10,
                 Margin = new Thickness(0, 2, 0, 2)
             };
@@ -1247,7 +1132,7 @@ namespace OptiAssist.Addons.StartupManager
             return b;
         }
 
-        #region MODAL ADD / EDIT PROGRAM
+        #region MODAL ADD / EDIT (PROGRAM & TASK)
 
         private void CreateModalOverlay(Grid root)
         {
@@ -1259,7 +1144,7 @@ namespace OptiAssist.Addons.StartupManager
 
             Border modalCard = new Border
             {
-                Width = 520,
+                Width = 540,
                 CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(24),
@@ -1306,15 +1191,15 @@ namespace OptiAssist.Addons.StartupManager
             modalStack.Children.Add(_txtModalName);
 
             // Field 2: Command / Path
-            TextBlock lblPath = new TextBlock
+            _lblPath = new TextBlock
             {
                 Text = T("Startup_Field_Path", "Executable Path / Command * :"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 4)
             };
-            lblPath.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            modalStack.Children.Add(lblPath);
+            _lblPath.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            modalStack.Children.Add(_lblPath);
 
             Grid pathGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
             pathGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1353,10 +1238,17 @@ namespace OptiAssist.Addons.StartupManager
                 };
                 if (ofd.ShowDialog() == true)
                 {
-                    _txtModalPath.Text = string.Format("\"{0}\"", ofd.FileName);
-                    if (string.IsNullOrWhiteSpace(_txtModalName.Text))
+                    if (_editingTask != null)
                     {
-                        _txtModalName.Text = Path.GetFileNameWithoutExtension(ofd.FileName);
+                        _txtModalPath.Text = ofd.FileName;
+                    }
+                    else
+                    {
+                        _txtModalPath.Text = string.Format("\"{0}\"", ofd.FileName);
+                        if (string.IsNullOrWhiteSpace(_txtModalName.Text))
+                        {
+                            _txtModalName.Text = Path.GetFileNameWithoutExtension(ofd.FileName);
+                        }
                     }
                 }
             };
@@ -1364,30 +1256,105 @@ namespace OptiAssist.Addons.StartupManager
             pathGrid.Children.Add(_btnModalBrowse);
             modalStack.Children.Add(pathGrid);
 
-            // Field 3: Scope ComboBox
-            TextBlock lblScope = new TextBlock
+            // Field 2.5: Optional Arguments (for Scheduled Tasks)
+            _lblModalArgs = new TextBlock
+            {
+                Text = T("Startup_Field_Args", "Arguments / Parameters (optional):"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 4),
+                Visibility = Visibility.Collapsed
+            };
+            _lblModalArgs.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            modalStack.Children.Add(_lblModalArgs);
+
+            _txtModalArgs = new TextBox
+            {
+                Height = 30,
+                FontSize = 11,
+                FontFamily = new FontFamily("Consolas, Segoe UI"),
+                Padding = new Thickness(8, 4, 8, 4),
+                Margin = new Thickness(0, 0, 0, 12),
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Collapsed
+            };
+            _txtModalArgs.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
+            _txtModalArgs.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
+            _txtModalArgs.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
+            modalStack.Children.Add(_txtModalArgs);
+
+            // Field 3: Scope ComboBox (for Startup Programs)
+            _lblScope = new TextBlock
             {
                 Text = T("Startup_Field_Scope", "Startup Scope * :"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 4)
             };
-            lblScope.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            modalStack.Children.Add(lblScope);
+            _lblScope.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            modalStack.Children.Add(_lblScope);
 
             _cmbModalScope = new ComboBox
             {
                 Height = 30,
                 FontSize = 11.5,
-                Margin = new Thickness(0, 0, 0, 20)
+                Margin = new Thickness(0, 0, 0, 16)
             };
             _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_User", "Current User (HKCU - Run)"), Tag = StartupLocationType.RegistryCurrentUser });
             _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_Machine", "All Users (HKLM - Run)"), Tag = StartupLocationType.RegistryLocalMachine });
             _cmbModalScope.SelectedIndex = 0;
             modalStack.Children.Add(_cmbModalScope);
 
-            // Modal Action Buttons
-            StackPanel modalBtns = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            // Modal Action Buttons (Bottom Bar: Left = Delete, Folder, Run / Right = Cancel, Save)
+            Grid modalBtnsGrid = new Grid { Margin = new Thickness(0, 4, 0, 0) };
+            modalBtnsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            modalBtnsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            StackPanel leftBtns = new StackPanel { Orientation = Orientation.Horizontal };
+
+            _btnModalDelete = new Button
+            {
+                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
+                Height = 32,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 6, 0),
+                Cursor = Cursors.Hand
+            };
+            _btnModalDelete.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnModalDelete.Click += (s, e) => HandleModalDelete();
+            leftBtns.Children.Add(_btnModalDelete);
+
+            _btnModalExplorer = new Button
+            {
+                Content = "📂 " + T("Startup_Btn_OpenFolder", "Open Folder"),
+                Height = 32,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 6, 0),
+                Cursor = Cursors.Hand
+            };
+            _btnModalExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnModalExplorer.Click += (s, e) => HandleModalExplorer();
+            leftBtns.Children.Add(_btnModalExplorer);
+
+            _btnModalRunTask = new Button
+            {
+                Content = T("Startup_Btn_Run", "▶️ Run Now"),
+                Height = 32,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 6, 0),
+                Cursor = Cursors.Hand
+            };
+            _btnModalRunTask.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnModalRunTask.Click += (s, e) => HandleModalRunTask();
+            leftBtns.Children.Add(_btnModalRunTask);
+
+            Grid.SetColumn(leftBtns, 0);
+            modalBtnsGrid.Children.Add(leftBtns);
+
+            StackPanel rightBtns = new StackPanel { Orientation = Orientation.Horizontal };
 
             _btnModalCancel = new Button
             {
@@ -1400,7 +1367,7 @@ namespace OptiAssist.Addons.StartupManager
             };
             _btnModalCancel.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnModalCancel.Click += (s, e) => CloseModal();
-            modalBtns.Children.Add(_btnModalCancel);
+            rightBtns.Children.Add(_btnModalCancel);
 
             _btnModalSave = new Button
             {
@@ -1411,10 +1378,13 @@ namespace OptiAssist.Addons.StartupManager
                 Cursor = Cursors.Hand
             };
             _btnModalSave.SetResourceReference(Button.StyleProperty, "BtnAccent");
-            _btnModalSave.Click += (s, e) => SaveProgramModal();
-            modalBtns.Children.Add(_btnModalSave);
+            _btnModalSave.Click += (s, e) => SaveModal();
+            rightBtns.Children.Add(_btnModalSave);
 
-            modalStack.Children.Add(modalBtns);
+            Grid.SetColumn(rightBtns, 1);
+            modalBtnsGrid.Children.Add(rightBtns);
+
+            modalStack.Children.Add(modalBtnsGrid);
             modalCard.Child = modalStack;
             _modalOverlay.Children.Add(modalCard);
             root.Children.Add(_modalOverlay);
@@ -1423,14 +1393,23 @@ namespace OptiAssist.Addons.StartupManager
         private void OpenAddProgramModal()
         {
             _editingProgram = null;
+            _editingTask = null;
             if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_New_Title", "Add New Program to Startup");
-            if (_txtModalName != null) _txtModalName.Text = "";
+            if (_txtModalName != null) { _txtModalName.Text = ""; _txtModalName.IsReadOnly = false; }
+            if (_lblPath != null) _lblPath.Text = T("Startup_Field_Path", "Executable Path / Command * :");
             if (_txtModalPath != null) _txtModalPath.Text = "";
+            if (_lblModalArgs != null) _lblModalArgs.Visibility = Visibility.Collapsed;
+            if (_txtModalArgs != null) _txtModalArgs.Visibility = Visibility.Collapsed;
+            if (_lblScope != null) _lblScope.Visibility = Visibility.Visible;
             if (_cmbModalScope != null)
             {
+                _cmbModalScope.Visibility = Visibility.Visible;
                 _cmbModalScope.IsEnabled = true;
                 _cmbModalScope.SelectedIndex = 0;
             }
+            if (_btnModalDelete != null) _btnModalDelete.Visibility = Visibility.Collapsed;
+            if (_btnModalExplorer != null) _btnModalExplorer.Visibility = Visibility.Collapsed;
+            if (_btnModalRunTask != null) _btnModalRunTask.Visibility = Visibility.Collapsed;
             if (_modalOverlay != null) _modalOverlay.Visibility = Visibility.Visible;
             if (_txtModalName != null) _txtModalName.Focus();
         }
@@ -1438,28 +1417,192 @@ namespace OptiAssist.Addons.StartupManager
         private void OpenEditProgramModal(StartupProgramItem prog)
         {
             _editingProgram = prog;
+            _editingTask = null;
             if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_Edit_Title", "Edit Startup Entry");
-            if (_txtModalName != null) _txtModalName.Text = prog.Name;
+            if (_txtModalName != null) { _txtModalName.Text = prog.Name; _txtModalName.IsReadOnly = false; }
+            if (_lblPath != null) _lblPath.Text = T("Startup_Field_Path", "Executable Path / Command * :");
             if (_txtModalPath != null) _txtModalPath.Text = prog.Command;
+            if (_lblModalArgs != null) _lblModalArgs.Visibility = Visibility.Collapsed;
+            if (_txtModalArgs != null) _txtModalArgs.Visibility = Visibility.Collapsed;
+            if (_lblScope != null) _lblScope.Visibility = Visibility.Visible;
             if (_cmbModalScope != null)
             {
+                _cmbModalScope.Visibility = Visibility.Visible;
                 _cmbModalScope.IsEnabled = false; // Keep existing scope when editing
                 _cmbModalScope.SelectedIndex = (prog.LocationType == StartupLocationType.RegistryCurrentUser) ? 0 : 1;
             }
+            if (_btnModalDelete != null) _btnModalDelete.Visibility = Visibility.Visible;
+            if (_btnModalExplorer != null)
+            {
+                bool canExplore = (!string.IsNullOrEmpty(prog.ExePath) && File.Exists(prog.ExePath)) ||
+                                  (!string.IsNullOrEmpty(prog.SourcePath) && File.Exists(prog.SourcePath));
+                _btnModalExplorer.Visibility = canExplore ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_btnModalRunTask != null) _btnModalRunTask.Visibility = Visibility.Collapsed;
             if (_modalOverlay != null) _modalOverlay.Visibility = Visibility.Visible;
             if (_txtModalName != null) _txtModalName.Focus();
+        }
+
+        private void OpenEditTaskModal(StartupTaskItem task)
+        {
+            _editingProgram = null;
+            _editingTask = task;
+            if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_EditTask_Title", "Edit Scheduled Task");
+            if (_txtModalName != null) { _txtModalName.Text = task.Name; _txtModalName.IsReadOnly = true; }
+            if (_lblPath != null) _lblPath.Text = T("Startup_Field_ActionPath", "Executable / Action Path * :");
+            if (_txtModalPath != null) _txtModalPath.Text = task.ActionPath ?? "";
+            if (_lblModalArgs != null) _lblModalArgs.Visibility = Visibility.Visible;
+            if (_txtModalArgs != null)
+            {
+                _txtModalArgs.Visibility = Visibility.Visible;
+                _txtModalArgs.Text = task.Arguments ?? "";
+            }
+            if (_lblScope != null) _lblScope.Visibility = Visibility.Collapsed;
+            if (_cmbModalScope != null) _cmbModalScope.Visibility = Visibility.Collapsed;
+
+            if (_btnModalDelete != null) _btnModalDelete.Visibility = Visibility.Visible;
+            if (_btnModalExplorer != null)
+            {
+                string clean = StartupEngine.ExtractExePath(task.ActionPath);
+                _btnModalExplorer.Visibility = (!string.IsNullOrEmpty(clean) && File.Exists(clean)) ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_btnModalRunTask != null) _btnModalRunTask.Visibility = Visibility.Visible;
+
+            if (_modalOverlay != null) _modalOverlay.Visibility = Visibility.Visible;
+            if (_txtModalPath != null) _txtModalPath.Focus();
         }
 
         private void CloseModal()
         {
             if (_modalOverlay != null) _modalOverlay.Visibility = Visibility.Collapsed;
             _editingProgram = null;
+            _editingTask = null;
         }
 
-        private void SaveProgramModal()
+        private void HandleModalDelete()
         {
-            string name = _txtModalName.Text.Trim();
-            string path = _txtModalPath.Text.Trim();
+            if (_editingProgram != null)
+            {
+                string msg = string.Format(
+                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically."),
+                    _editingProgram.Name);
+
+                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    string err;
+                    if (!StartupEngine.DeleteStartupProgram(_editingProgram, out err))
+                    {
+                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
+                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    else
+                    {
+                        _allPrograms.Remove(_editingProgram);
+                        CloseModal();
+                        RenderCurrentTabList();
+                    }
+                }
+            }
+            else if (_editingTask != null)
+            {
+                string msg = string.Format(
+                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete scheduled task '{0}'?"),
+                    _editingTask.Name);
+
+                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    string err;
+                    if (!StartupEngine.DeleteTask(_editingTask, out err))
+                    {
+                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
+                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    else
+                    {
+                        _allTasks.Remove(_editingTask);
+                        CloseModal();
+                        RenderCurrentTabList();
+                    }
+                }
+            }
+        }
+
+        private void HandleModalExplorer()
+        {
+            try
+            {
+                if (_editingProgram != null)
+                {
+                    string target = _editingProgram.ExePath;
+                    if (File.Exists(target))
+                    {
+                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", target));
+                    }
+                    else if (File.Exists(_editingProgram.SourcePath))
+                    {
+                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", _editingProgram.SourcePath));
+                    }
+                }
+                else if (_editingTask != null)
+                {
+                    string clean = StartupEngine.ExtractExePath(_editingTask.ActionPath);
+                    if (File.Exists(clean))
+                    {
+                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", clean));
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void HandleModalRunTask()
+        {
+            if (_editingTask != null)
+            {
+                string err;
+                if (!StartupEngine.RunTask(_editingTask, out err))
+                {
+                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunError", "Error running task: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunSuccess", "Task '{0}' started successfully."), _editingTask.Name), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+        }
+
+        private void SaveModal()
+        {
+            if (_editingTask != null)
+            {
+                string newPath = _txtModalPath != null ? _txtModalPath.Text.Trim() : "";
+                string newArgs = _txtModalArgs != null ? _txtModalArgs.Text.Trim() : "";
+
+                if (string.IsNullOrEmpty(newPath))
+                {
+                    MessageBox.Show(T("Startup_Msg_PathRequired", "Please specify the action path for the scheduled task."),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string err;
+                if (!StartupEngine.UpdateTask(_editingTask, newPath, newArgs, out err))
+                {
+                    MessageBox.Show(string.Format(T("Startup_Msg_TaskUpdateError", "Error updating scheduled task: {0}"), err),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                CloseModal();
+                ReloadActiveTabData();
+                return;
+            }
+
+            // Program save / add
+            string name = _txtModalName != null ? _txtModalName.Text.Trim() : "";
+            string path = _txtModalPath != null ? _txtModalPath.Text.Trim() : "";
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(path))
             {
@@ -1483,10 +1626,10 @@ namespace OptiAssist.Addons.StartupManager
             }
 
             string oldName = (_editingProgram != null) ? _editingProgram.Name : null;
-            string err;
-            if (!StartupEngine.AddOrUpdateStartupProgram(name, path, scope, oldName, out err))
+            string errProg;
+            if (!StartupEngine.AddOrUpdateStartupProgram(name, path, scope, oldName, out errProg))
             {
-                MessageBox.Show(string.Format(T("Startup_Msg_SaveError", "Error saving startup program: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(T("Startup_Msg_SaveError", "Error saving startup program: {0}"), errProg), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -1498,7 +1641,7 @@ namespace OptiAssist.Addons.StartupManager
 
         public void OnLanguageChanged(string langCode)
         {
-            if (_txtHeaderTitle != null) _txtHeaderTitle.Text = T("Startup_Title", "Startup Manager");
+            if (_txtHeaderTitle != null) _txtHeaderTitle.Text = string.Format("{0}  {1}", Icon, Name);
             if (_txtHeaderSubtitle != null) _txtHeaderSubtitle.Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services");
             if (_btnNewProgram != null) _btnNewProgram.Content = T("Startup_Btn_New", "➕ Add Program");
             if (_btnRefresh != null) _btnRefresh.Content = T("Startup_Btn_Refresh", "🔄 Refresh");
@@ -1507,6 +1650,11 @@ namespace OptiAssist.Addons.StartupManager
             if (_tabTasksText != null) _tabTasksText.Text = "⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks");
             if (_tabServicesText != null) _tabServicesText.Text = "⚙️ " + T("Startup_Tab_Services", "Startup Services");
             if (_txtSearchFilter != null) _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Filter items by name, command, or publisher...");
+            if (_btnModalCancel != null) _btnModalCancel.Content = T("Startup_Btn_Cancel", "Cancel");
+            if (_btnModalSave != null) _btnModalSave.Content = T("Startup_Btn_Save", "Save");
+            if (_btnModalDelete != null) _btnModalDelete.Content = T("Startup_Btn_Delete", "🗑️ Delete");
+            if (_btnModalRunTask != null) _btnModalRunTask.Content = T("Startup_Btn_Run", "▶️ Run Now");
+            if (_btnModalBrowse != null) _btnModalBrowse.Content = T("Startup_Btn_Browse", "Browse...");
 
             ReloadActiveTabData();
         }

@@ -27,6 +27,18 @@ namespace OptiAssist.Addons.AppManager
         private int _wingetFoundCount = 0;
         private int _wingetUpdatingCount = 0;
 
+        // Tabs Controls
+        private enum AppManagerTab { Updates, Install }
+        private AppManagerTab _activeTab = AppManagerTab.Updates;
+
+        private Border _tabUpdatesBorder;
+        private TextBlock _tabUpdatesText;
+        private Border _tabInstallBorder;
+        private TextBlock _tabInstallText;
+
+        private StackPanel _pnlTabUpdates;
+        private StackPanel _pnlTabInstall;
+
         // Main Header controls
         private TextBlock _txtPostInstallTitle;
         private TextBlock _txtPostInstallSubtitle;
@@ -135,6 +147,61 @@ namespace OptiAssist.Addons.AppManager
             }
         }
 
+        private Border CreateTabButton(string label, Action onClick, out TextBlock textBlock)
+        {
+            Border b = new Border
+            {
+                Padding = new Thickness(14, 8, 14, 8),
+                Margin = new Thickness(0, 0, 6, 0),
+                BorderThickness = new Thickness(0, 0, 0, 2),
+                BorderBrush = Brushes.Transparent,
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+
+            textBlock = new TextBlock
+            {
+                Text = label,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold
+            };
+            textBlock.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            b.Child = textBlock;
+
+            b.MouseLeftButtonDown += (s, e) => onClick();
+            return b;
+        }
+
+        private void HighlightTab(Border b, TextBlock tb, bool active)
+        {
+            if (b == null || tb == null) return;
+            if (active)
+            {
+                b.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+                tb.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            }
+            else
+            {
+                b.BorderBrush = Brushes.Transparent;
+                tb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            }
+        }
+
+        private void SwitchTab(AppManagerTab tab)
+        {
+            _activeTab = tab;
+            HighlightTab(_tabUpdatesBorder, _tabUpdatesText, tab == AppManagerTab.Updates);
+            HighlightTab(_tabInstallBorder, _tabInstallText, tab == AppManagerTab.Install);
+
+            if (_pnlTabUpdates != null)
+            {
+                _pnlTabUpdates.Visibility = (tab == AppManagerTab.Updates) ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_pnlTabInstall != null)
+            {
+                _pnlTabInstall.Visibility = (tab == AppManagerTab.Install) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
         public FrameworkElement CreateView()
         {
             if (_rootView != null)
@@ -154,7 +221,7 @@ namespace OptiAssist.Addons.AppManager
             StackPanel titlePanel = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
             _txtPostInstallTitle = new TextBlock()
             {
-                Text = T("PostInstall_Title", "App Manager"),
+                Text = string.Format("{0}  {1}", Icon, Name),
                 FontSize = 15,
                 FontWeight = FontWeights.Bold,
                 TextTrimming = TextTrimming.CharacterEllipsis
@@ -175,6 +242,28 @@ namespace OptiAssist.Addons.AppManager
             Grid.SetColumn(titlePanel, 0);
             headerGrid.Children.Add(titlePanel);
             root.Children.Add(headerGrid);
+
+            // =========================================================
+            // NAVIGATION TABS BAR
+            // =========================================================
+            Border tabStrip = new Border
+            {
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Margin = new Thickness(0, 0, 0, 14)
+            };
+            tabStrip.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spTabs = new StackPanel { Orientation = Orientation.Horizontal };
+            _tabUpdatesBorder = CreateTabButton("🔄 " + T("AppManager_Tab_Updates", "Application Updates"), () => SwitchTab(AppManagerTab.Updates), out _tabUpdatesText);
+            _tabInstallBorder = CreateTabButton("📦 " + T("AppManager_Tab_Install", "Automated Application Installation"), () => SwitchTab(AppManagerTab.Install), out _tabInstallText);
+
+            spTabs.Children.Add(_tabUpdatesBorder);
+            spTabs.Children.Add(_tabInstallBorder);
+            tabStrip.Child = spTabs;
+            root.Children.Add(tabStrip);
+
+            _pnlTabUpdates = new StackPanel();
+            _pnlTabInstall = new StackPanel();
 
             // =========================================================
             // SECTION 1: APPLICATION UPDATES (Always Visible)
@@ -350,7 +439,7 @@ namespace OptiAssist.Addons.AppManager
 
             upgStack.Children.Add(_gridUpgradeActions);
             _cardWingetUpgrades.Child = upgStack;
-            root.Children.Add(_cardWingetUpgrades);
+            _pnlTabUpdates.Children.Add(_cardWingetUpgrades);
 
             UpdateWingetStatusText();
 
@@ -664,7 +753,7 @@ namespace OptiAssist.Addons.AppManager
 
             custStack.Children.Add(editorFooterGrid);
             _cardCustomizePostInstall.Child = custStack;
-            root.Children.Add(_cardCustomizePostInstall);
+            _pnlTabInstall.Children.Add(_cardCustomizePostInstall);
 
             // =========================================================
             // SECTION 3: AUTOMATED APPLICATION INSTALLATION LIST
@@ -791,7 +880,12 @@ namespace OptiAssist.Addons.AppManager
 
             installStack.Children.Add(installActionsGrid);
             cardAppsInstall.Child = installStack;
-            root.Children.Add(cardAppsInstall);
+            _pnlTabInstall.Children.Add(cardAppsInstall);
+
+            root.Children.Add(_pnlTabUpdates);
+            root.Children.Add(_pnlTabInstall);
+
+            SwitchTab(AppManagerTab.Updates);
 
             _rootView = root;
             return _rootView;
@@ -1532,8 +1626,10 @@ namespace OptiAssist.Addons.AppManager
         // =========================================================
         public void OnLanguageChanged(string langCode)
         {
-            if (_txtPostInstallTitle != null) _txtPostInstallTitle.Text = T("PostInstall_Title", "App Manager");
+            if (_txtPostInstallTitle != null) _txtPostInstallTitle.Text = string.Format("{0}  {1}", Icon, Name);
             if (_txtPostInstallSubtitle != null) _txtPostInstallSubtitle.Text = T("PostInstall_Subtitle", "Automated installation of essential software and update of installed applications");
+            if (_tabUpdatesText != null) _tabUpdatesText.Text = "🔄 " + T("AppManager_Tab_Updates", "Application Updates");
+            if (_tabInstallText != null) _tabInstallText.Text = "📦 " + T("AppManager_Tab_Install", "Automated Application Installation");
             if (_txtWingetCardTitle != null) _txtWingetCardTitle.Text = T("Upgrade_Card_Title", "🔄 Application Updates");
             UpdateWingetStatusText();
             if (_btnCheckWingetUpgrades != null) _btnCheckWingetUpgrades.Content = T("Btn_CheckUpdates", "🔄 Check for Updates");

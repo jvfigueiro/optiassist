@@ -136,7 +136,7 @@ namespace OptiAssist.Addons.Toolbox
 
             _txtTitle = new TextBlock()
             {
-                Text = T("Toolbox_Title", "Toolbox"),
+                Text = string.Format("{0}  {1}", Icon, Name),
                 FontSize = 15,
                 FontWeight = FontWeights.Bold,
                 TextTrimming = TextTrimming.CharacterEllipsis
@@ -1416,7 +1416,7 @@ namespace OptiAssist.Addons.Toolbox
 
         public void OnLanguageChanged(string langCode)
         {
-            if (_txtTitle != null) _txtTitle.Text = T("Toolbox_Title", "🧰 Toolbox");
+            if (_txtTitle != null) _txtTitle.Text = string.Format("{0}  {1}", Icon, Name);
             if (_txtSubtitle != null) _txtSubtitle.Text = T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist");
             if (_btnOptions != null) _btnOptions.Content = T("Btn_ToolboxOptions", "⚙️ Options");
             if (_txtOptionsTitle != null) _txtOptionsTitle.Text = T("Toolbox_Options_Title", "⚙️ Toolbox Options");

@@ -438,7 +438,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock x:Name="txtToolsTitle"
-                                           Text="Windows Tools"
+                                           Text="🛠️  Windows Tools"
                                            FontSize="15"
                                            FontWeight="Bold"
                                            Foreground="{DynamicResource BrushTextPrimary}"
@@ -528,7 +528,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock x:Name="txtSettingsTitle"
-                                           Text="OptiAssist Settings"
+                                           Text="⚙️  Settings"
                                            FontSize="15"
                                            FontWeight="Bold"
                                            Foreground="{DynamicResource BrushTextPrimary}"
@@ -945,7 +945,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock x:Name="txtAboutTitle"
-                                           Text="ℹ️ About OptiAssist"
+                                           Text="ℹ️  About"
                                            FontSize="15"
                                            FontWeight="Bold"
                                            Foreground="{DynamicResource BrushTextPrimary}"
@@ -1199,7 +1199,7 @@ along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                             <TextBlock x:Name="txtLogsTitle"
-                                       Text="📜 Logs"
+                                       Text="📜  Logs"
                                        FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource BrushTextPrimary}"

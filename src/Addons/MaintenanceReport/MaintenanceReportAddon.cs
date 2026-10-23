@@ -455,7 +455,7 @@ namespace OptiAssist.Addons.MaintenanceReport
 
             StackPanel titlePanel = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
             _txtTitle = new TextBlock();
-            _txtTitle.Text = T("Report_Title", "Maintenance Service Record");
+            _txtTitle.Text = string.Format("{0}  {1}", Icon, Name);
             _txtTitle.FontSize = 15;
             _txtTitle.FontWeight = FontWeights.Bold;
             _txtTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
@@ -891,7 +891,7 @@ namespace OptiAssist.Addons.MaintenanceReport
 
         public void OnLanguageChanged(string langCode)
         {
-            if (_txtTitle != null) _txtTitle.Text = T("Report_Title", "Maintenance Service Record");
+            if (_txtTitle != null) _txtTitle.Text = string.Format("{0}  {1}", Icon, Name);
             if (_txtSubtitle != null) _txtSubtitle.Text = T("Report_Subtitle", "Generates a report with machine specs, motherboard, serial number, and performed services");
             if (_btnOptions != null) _btnOptions.Content = T("Report_Btn_Options", "⚙️ Options");
             if (_txtOptionsTitle != null) _txtOptionsTitle.Text = T("Report_Card_Options", "⚙️ Service Provider & Contact Information");

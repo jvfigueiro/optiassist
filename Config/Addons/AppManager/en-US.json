@@ -1,6 +1,8 @@
 {
   "Nav_PostInstall": "App Manager",
   "Nav_AppManager": "App Manager",
+  "AppManager_Tab_Updates": "Application Updates",
+  "AppManager_Tab_Install": "Automated Application Installation",
   "PostInstall_Title": "📦 App Manager",
   "PostInstall_Subtitle": "Automated installation of essential software and update of installed applications",
   "Upgrade_Card_Title": "🔄 Application Updates",

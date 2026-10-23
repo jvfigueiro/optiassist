@@ -1167,7 +1167,7 @@ namespace OptiAssist
             }
 
             // 5. Windows Administrative Tools
-            if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Tools_Title", "Windows Administrative Tools");
+            if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
             if (txtToolsSubtitle != null) txtToolsSubtitle.Text = LocalizationHelper.Get("Tools_Subtitle", "Quick access to primary management consoles and native system utilities");
             if (txtAdminToolsTitle != null) txtAdminToolsTitle.Text = LocalizationHelper.Get("Tools_Section_Title", "🛠️ Administrative Tools");
             if (btnDevMgmtTool != null) btnDevMgmtTool.Content = LocalizationHelper.Get("Tool_DevMgmt", "🔌 Device Manager");
@@ -1230,7 +1230,7 @@ namespace OptiAssist
             }
 
             // 7. Logs
-            if (txtLogsTitle != null) txtLogsTitle.Text = LocalizationHelper.Get("Logs_Title", "📜 Logs");
+            if (txtLogsTitle != null) txtLogsTitle.Text = LocalizationHelper.Get("Nav_Terminal", "📜  Logs");
             if (txtLogsSub != null) txtLogsSub.Text = LocalizationHelper.Get("Logs_Subtitle", "Real-time log of diagnostics, scripts, and system executions");
             if (btnPopoutLog != null)
             {
@@ -1242,7 +1242,7 @@ namespace OptiAssist
             if (btnClearLog != null) btnClearLog.Content = LocalizationHelper.Get("Btn_ClearLog", "🗑️ Clear Console");
 
             // 8. Settings
-            if (txtSettingsTitle != null) txtSettingsTitle.Text = LocalizationHelper.Get("Settings_Title", "OptiAssist Settings");
+            if (txtSettingsTitle != null) txtSettingsTitle.Text = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
             if (txtSettingsSub != null) txtSettingsSub.Text = LocalizationHelper.Get("Settings_Subtitle", "Settings saved in Config\\settings.json on the portable drive");
             if (txtLangLabel != null) txtLangLabel.Text = LocalizationHelper.Get("Settings_Label_Language", "Application Language:");
             SetupLanguageButtons(langCode);
@@ -1310,7 +1310,7 @@ namespace OptiAssist
             UpdateDeploymentButtonsUI();
 
             // 9. About
-            if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("About_Title", "About OptiAssist");
+            if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("Nav_About", "ℹ️  About");
             if (txtAboutSub != null) txtAboutSub.Text = LocalizationHelper.Get("About_Subtitle", "Version information, copyright, and open-source license");
             if (txtAboutLicenseTag != null) txtAboutLicenseTag.Text = LocalizationHelper.Get("About_License_Tag", "⚖️ License: GNU General Public License v3.0 (GNU GPLv3)");
             if (txtAboutCreditsTitle != null) txtAboutCreditsTitle.Text = LocalizationHelper.Get("About_Credits_Title", "🤝 Acknowledgments & Credits");

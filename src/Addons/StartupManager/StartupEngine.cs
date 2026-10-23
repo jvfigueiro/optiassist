@@ -80,7 +80,8 @@ namespace OptiAssist.Addons.StartupManager
                         string exePath = ExtractExePath(command);
                         bool fileExists = !string.IsNullOrEmpty(exePath) && File.Exists(exePath);
 
-                        string publisher = "Desconhecido";
+                        string publisher = "Unknown";
+                        string fileDesc = "";
                         string fileSize = "—";
                         if (fileExists)
                         {
@@ -88,7 +89,8 @@ namespace OptiAssist.Addons.StartupManager
                             {
                                 FileVersionInfo vi = FileVersionInfo.GetVersionInfo(exePath);
                                 if (!string.IsNullOrWhiteSpace(vi.CompanyName)) publisher = vi.CompanyName;
-                                else if (!string.IsNullOrWhiteSpace(vi.FileDescription)) publisher = vi.FileDescription;
+                                if (!string.IsNullOrWhiteSpace(vi.FileDescription)) fileDesc = vi.FileDescription;
+                                else if (!string.IsNullOrWhiteSpace(vi.ProductName)) fileDesc = vi.ProductName;
                                 FileInfo fi = new FileInfo(exePath);
                                 fileSize = FormatBytes(fi.Length);
                             }
@@ -104,6 +106,7 @@ namespace OptiAssist.Addons.StartupManager
                             Command = command,
                             ExePath = exePath,
                             Publisher = publisher,
+                            FileDescription = fileDesc,
                             LocationType = locType,
                             LocationDisplay = locDisplay,
                             SourcePath = subKeyPath,
@@ -145,7 +148,8 @@ namespace OptiAssist.Addons.StartupManager
                     }
 
                     bool fileExists = File.Exists(targetPath);
-                    string publisher = "Desconhecido";
+                    string publisher = "Unknown";
+                    string fileDesc = "";
                     string fileSize = "—";
                     if (fileExists)
                     {
@@ -153,6 +157,8 @@ namespace OptiAssist.Addons.StartupManager
                         {
                             FileVersionInfo vi = FileVersionInfo.GetVersionInfo(targetPath);
                             if (!string.IsNullOrWhiteSpace(vi.CompanyName)) publisher = vi.CompanyName;
+                            if (!string.IsNullOrWhiteSpace(vi.FileDescription)) fileDesc = vi.FileDescription;
+                            else if (!string.IsNullOrWhiteSpace(vi.ProductName)) fileDesc = vi.ProductName;
                             FileInfo fi = new FileInfo(targetPath);
                             fileSize = FormatBytes(fi.Length);
                         }
@@ -169,6 +175,7 @@ namespace OptiAssist.Addons.StartupManager
                         Command = targetPath,
                         ExePath = targetPath,
                         Publisher = publisher,
+                        FileDescription = fileDesc,
                         LocationType = locType,
                         LocationDisplay = locDisplay,
                         SourcePath = file,
@@ -436,7 +443,8 @@ namespace OptiAssist.Addons.StartupManager
                         string author = "";
                         try { author = task.Definition.RegistrationInfo.Author ?? ""; } catch { }
 
-                        string publisher = "Desconhecido";
+                        string publisher = "Unknown";
+                        string fileDesc = "";
                         bool fileExists = false;
                         if (!string.IsNullOrEmpty(actionPath))
                         {
@@ -448,6 +456,8 @@ namespace OptiAssist.Addons.StartupManager
                                 {
                                     FileVersionInfo vi = FileVersionInfo.GetVersionInfo(cleanExe);
                                     if (!string.IsNullOrWhiteSpace(vi.CompanyName)) publisher = vi.CompanyName;
+                                    if (!string.IsNullOrWhiteSpace(vi.FileDescription)) fileDesc = vi.FileDescription;
+                                    else if (!string.IsNullOrWhiteSpace(vi.ProductName)) fileDesc = vi.ProductName;
                                 }
                                 catch { }
                             }
@@ -468,7 +478,8 @@ namespace OptiAssist.Addons.StartupManager
                                 Arguments = args,
                                 TriggerDisplay = triggerDisplay,
                                 Author = author,
-                                Publisher = !string.IsNullOrEmpty(publisher) && publisher != "Desconhecido" ? publisher : (string.IsNullOrEmpty(author) ? "Desconhecido" : author),
+                                Publisher = !string.IsNullOrEmpty(publisher) && publisher != "Unknown" ? publisher : (string.IsNullOrEmpty(author) ? "Unknown" : author),
+                                FileDescription = fileDesc,
                                 IsUserProgram = !isMicrosoft,
                                 FileExists = fileExists,
                                 IsEnabled = enabled
@@ -582,6 +593,76 @@ namespace OptiAssist.Addons.StartupManager
             }
         }
 
+        public static bool UpdateTask(StartupTaskItem taskItem, string newActionPath, string newArgs, out string error)
+        {
+            error = null;
+            if (taskItem == null) return false;
+
+            try
+            {
+                Type serviceType = Type.GetTypeFromProgID("Schedule.Service");
+                dynamic service = Activator.CreateInstance(serviceType);
+                service.Connect();
+
+                dynamic folder = service.GetFolder(taskItem.FolderPath);
+                dynamic task = folder.GetTask(taskItem.Name);
+                dynamic definition = task.Definition;
+
+                if (definition.Actions != null && definition.Actions.Count > 0)
+                {
+                    definition.Actions[1].Path = newActionPath;
+                    definition.Actions[1].Arguments = newArgs ?? "";
+                }
+                else
+                {
+                    dynamic action = definition.Actions.Create(0); // 0 = TASK_ACTION_EXEC
+                    action.Path = newActionPath;
+                    action.Arguments = newArgs ?? "";
+                }
+
+                // 4 = TASK_UPDATE, 0 = TASK_LOGON_NONE
+                folder.RegisterTaskDefinition(taskItem.Name, definition, 4, null, null, 0, null);
+
+                taskItem.ActionPath = newActionPath;
+                taskItem.Arguments = newArgs ?? "";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Fallback to schtasks command line if COM registration requires different logon flags
+                try
+                {
+                    string cleanPath = newActionPath;
+                    if (!cleanPath.StartsWith("\"") && cleanPath.Contains(" "))
+                    {
+                        cleanPath = "\"" + cleanPath + "\"";
+                    }
+                    string fullTr = string.IsNullOrEmpty(newArgs) ? cleanPath : (cleanPath + " " + newArgs);
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "schtasks.exe",
+                        Arguments = string.Format("/change /tn \"{0}\" /tr \"{1}\"", taskItem.FullTaskPath.TrimStart('\\'), fullTr.Replace("\"", "\\\"")),
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    };
+                    using (Process p = Process.Start(psi))
+                    {
+                        p.WaitForExit(5000);
+                        if (p.ExitCode == 0)
+                        {
+                            taskItem.ActionPath = newActionPath;
+                            taskItem.Arguments = newArgs ?? "";
+                            return true;
+                        }
+                    }
+                }
+                catch { }
+
+                error = ex.Message;
+                return false;
+            }
+        }
+
         #endregion
 
         #region STARTUP SERVICES (USER / THIRD-PARTY AUTOMATIC SERVICES)
@@ -621,13 +702,16 @@ namespace OptiAssist.Addons.StartupManager
                                 string imagePath = sKey.GetValue("ImagePath") as string ?? "";
                                 string exePath = ExtractExePath(imagePath);
 
-                                string publisher = "Desconhecido";
+                                string publisher = "Unknown";
+                                string fileDesc = "";
                                 if (File.Exists(exePath))
                                 {
                                     try
                                     {
                                         FileVersionInfo vi = FileVersionInfo.GetVersionInfo(exePath);
                                         if (!string.IsNullOrWhiteSpace(vi.CompanyName)) publisher = vi.CompanyName;
+                                        if (!string.IsNullOrWhiteSpace(vi.FileDescription)) fileDesc = vi.FileDescription;
+                                        else if (!string.IsNullOrWhiteSpace(vi.ProductName)) fileDesc = vi.ProductName;
                                     }
                                     catch { }
                                 }
@@ -657,6 +741,7 @@ namespace OptiAssist.Addons.StartupManager
                                     ImagePath = imagePath,
                                     ExePath = exePath,
                                     Publisher = publisher,
+                                    FileDescription = fileDesc,
                                     StartupType = startupTypeDisplay,
                                     IsUserProgram = !isMicrosoft,
                                     IsRunning = isRunning,

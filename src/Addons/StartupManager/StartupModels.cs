@@ -40,6 +40,7 @@ namespace OptiAssist.Addons.StartupManager
 
         public string ExePath { get; set; }
         public string Publisher { get; set; }
+        public string FileDescription { get; set; }
         public StartupLocationType LocationType { get; set; }
         public string LocationDisplay { get; set; }
         public string SourcePath { get; set; }
@@ -86,6 +87,7 @@ namespace OptiAssist.Addons.StartupManager
         public string TriggerDisplay { get; set; }
         public string Author { get; set; }
         public string Publisher { get; set; }
+        public string FileDescription { get; set; }
         public bool IsUserProgram { get; set; }
         public bool FileExists { get; set; }
 
@@ -128,6 +130,7 @@ namespace OptiAssist.Addons.StartupManager
         public string ImagePath { get; set; }
         public string ExePath { get; set; }
         public string Publisher { get; set; }
+        public string FileDescription { get; set; }
         public string Description { get; set; }
         public bool IsUserProgram { get; set; }
 
