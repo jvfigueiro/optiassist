@@ -13,6 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Microsoft.Win32;
 
 namespace OptiAssist.Addons.SystemCleaner
@@ -264,6 +265,10 @@ namespace OptiAssist.Addons.SystemCleaner
         public bool IsDangerous { get; protected set; }
         public string WarningMessage { get; set; }
         public bool IsRecommended { get; protected set; }
+        public string TabId { get; set; }
+        public string SectionId { get; set; }
+        public string SectionTitle { get; set; }
+        public string SectionIcon { get; set; }
 
         public string Name
         {
@@ -335,6 +340,10 @@ namespace OptiAssist.Addons.SystemCleaner
             IsDangerous = isDangerous;
             WarningMessage = warningMessage;
             IsRecommended = isRecommended;
+            TabId = "windows";
+            SectionId = categoryId;
+            SectionTitle = category;
+            SectionIcon = icon;
             _isSelected = isRecommended && !isDangerous;
             _sizeBytes = 0;
             _sizeDisplay = "—";
@@ -1170,36 +1179,36 @@ namespace OptiAssist.Addons.SystemCleaner
         [DllImport("winsqlite3.dll", EntryPoint = "sqlite3_close", CallingConvention = CallingConvention.Cdecl)]
         private static extern int sqlite3_close(IntPtr db);
 
-        public static List<string> GetRunningChromiumBrowsers()
+        public static List<string> GetRunningChromiumBrowsers(string browserFilter = "all")
         {
             List<string> running = new List<string>();
             try
             {
-                if (Process.GetProcessesByName("chrome").Length > 0)
+                if ((browserFilter == "all" || browserFilter == "chrome") && Process.GetProcessesByName("chrome").Length > 0)
                     running.Add("Google Chrome (chrome.exe)");
-                if (Process.GetProcessesByName("msedge").Length > 0)
+                if ((browserFilter == "all" || browserFilter == "edge") && Process.GetProcessesByName("msedge").Length > 0)
                     running.Add("Microsoft Edge (msedge.exe)");
             }
             catch { }
             return running;
         }
 
-        public static List<string> GetBrowserUserDataRoots()
+        public static List<string> GetBrowserUserDataRoots(string browserFilter = "all")
         {
             List<string> roots = new List<string>();
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string chromeRoot = Path.Combine(localAppData, "Google", "Chrome", "User Data");
             string edgeRoot = Path.Combine(localAppData, "Microsoft", "Edge", "User Data");
 
-            if (Directory.Exists(chromeRoot)) roots.Add(chromeRoot);
-            if (Directory.Exists(edgeRoot)) roots.Add(edgeRoot);
+            if ((browserFilter == "all" || browserFilter == "chrome") && Directory.Exists(chromeRoot)) roots.Add(chromeRoot);
+            if ((browserFilter == "all" || browserFilter == "edge") && Directory.Exists(edgeRoot)) roots.Add(edgeRoot);
             return roots;
         }
 
-        public static List<string> DiscoverAllProfiles()
+        public static List<string> DiscoverAllProfiles(string browserFilter = "all")
         {
             List<string> profiles = new List<string>();
-            foreach (string userDataDir in GetBrowserUserDataRoots())
+            foreach (string userDataDir in GetBrowserUserDataRoots(browserFilter))
             {
                 try
                 {
@@ -1357,6 +1366,7 @@ namespace OptiAssist.Addons.SystemCleaner
         private readonly string[] _profileRelativeDirs;
         private readonly string[] _profileRelativeFiles;
         private readonly string[] _userDataRelativeDirs;
+        private readonly string _browserFilter;
 
         public ChromiumSubpathCleaner(
             string id,
@@ -1368,18 +1378,26 @@ namespace OptiAssist.Addons.SystemCleaner
             bool isRecommended,
             string[] profileRelativeDirs,
             string[] profileRelativeFiles,
-            string[] userDataRelativeDirs = null)
-            : base(id, "chromium", "Chromium Browsers", name, description, icon, false, isDangerous, warningMessage, isRecommended)
+            string[] userDataRelativeDirs = null,
+            string browserFilter = "all")
+            : base(id, (browserFilter == "edge" ? "edge" : (browserFilter == "chrome" ? "chrome" : "chromium")),
+                   (browserFilter == "edge" ? "Microsoft Edge" : (browserFilter == "chrome" ? "Google Chrome" : "Chromium Browsers")),
+                   name, description, icon, false, isDangerous, warningMessage, isRecommended)
         {
             _profileRelativeDirs = profileRelativeDirs;
             _profileRelativeFiles = profileRelativeFiles;
             _userDataRelativeDirs = userDataRelativeDirs;
+            _browserFilter = browserFilter;
+            TabId = browserFilter == "edge" ? "windows" : "apps";
+            SectionId = browserFilter == "edge" ? "edge" : "chrome";
+            SectionTitle = browserFilter == "edge" ? "Microsoft Edge" : "Google Chrome";
+            SectionIcon = "🌐";
         }
 
         public override ScanResult Scan(CleanerContext context)
         {
             ScanResult res = new ScanResult() { CleanerId = Id };
-            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers();
+            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers(_browserFilter);
             if (running.Count > 0)
             {
                 res.Warnings.Add("Running browsers detected: " + string.Join(", ", running.ToArray()));
@@ -1387,7 +1405,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
             if (_userDataRelativeDirs != null)
             {
-                foreach (string root in ChromiumHelper.GetBrowserUserDataRoots())
+                foreach (string root in ChromiumHelper.GetBrowserUserDataRoots(_browserFilter))
                 {
                     foreach (string relDir in _userDataRelativeDirs)
                     {
@@ -1396,7 +1414,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
             }
 
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles())
+            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
             {
                 if (_profileRelativeDirs != null)
                 {
@@ -1424,7 +1442,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public override CleanResult Clean(CleanerContext context)
         {
             CleanResult res = new CleanResult() { CleanerId = Id };
-            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers();
+            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers(_browserFilter);
             if (running.Count > 0)
             {
                 context.Log("[CLEANER WARNING] Browser process active (" + string.Join(", ", running.ToArray()) + "). Locked files will be skipped safely.");
@@ -1432,7 +1450,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
             if (_userDataRelativeDirs != null)
             {
-                foreach (string root in ChromiumHelper.GetBrowserUserDataRoots())
+                foreach (string root in ChromiumHelper.GetBrowserUserDataRoots(_browserFilter))
                 {
                     foreach (string relDir in _userDataRelativeDirs)
                     {
@@ -1441,7 +1459,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
             }
 
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles())
+            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
             {
                 if (_profileRelativeDirs != null)
                 {
@@ -1480,19 +1498,26 @@ namespace OptiAssist.Addons.SystemCleaner
             @"Network\Cookies",
             "Cookies"
         };
+        private readonly string _browserFilter;
 
-        public ChromiumSqliteVacuumCleaner()
-            : base("chromium_vacuum", "chromium", "Chromium Browsers",
+        public ChromiumSqliteVacuumCleaner(string id = "chromium_vacuum", string browserFilter = "all")
+            : base(id, (browserFilter == "edge" ? "edge" : (browserFilter == "chrome" ? "chrome" : "chromium")),
+                   (browserFilter == "edge" ? "Microsoft Edge" : (browserFilter == "chrome" ? "Google Chrome" : "Chromium Browsers")),
                    "Browser SQLite Database Vacuum",
-                   "Executes SQLite 'VACUUM;' on Chrome & Edge databases (History, Web Data, Favicons, Cookies) to defragment and compact without data loss",
+                   "Executes SQLite 'VACUUM;' on browser databases to defragment and compact without data loss",
                    "🗜️", false, false, "", true)
         {
+            _browserFilter = browserFilter;
+            TabId = browserFilter == "edge" ? "windows" : "apps";
+            SectionId = browserFilter == "edge" ? "edge" : "chrome";
+            SectionTitle = browserFilter == "edge" ? "Microsoft Edge" : "Google Chrome";
+            SectionIcon = "🌐";
         }
 
         public override ScanResult Scan(CleanerContext context)
         {
             ScanResult res = new ScanResult() { CleanerId = Id };
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles())
+            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
             {
                 foreach (string relDb in SqliteTargets)
                 {
@@ -1516,7 +1541,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public override CleanResult Clean(CleanerContext context)
         {
             CleanResult res = new CleanResult() { CleanerId = Id };
-            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers();
+            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers(_browserFilter);
             if (running.Count > 0)
             {
                 string warn = "Cannot vacuum locked SQLite databases while browser is open: " + string.Join(", ", running.ToArray());
@@ -1524,7 +1549,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 res.Errors.Add(warn);
             }
 
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles())
+            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
             {
                 foreach (string relDb in SqliteTargets)
                 {
@@ -1757,38 +1782,204 @@ namespace OptiAssist.Addons.SystemCleaner
             List<BaseCleaner> list = new List<BaseCleaner>();
 
             // =================================================================
-            // CATEGORY 1: WINDOWS CORE
+            // TAB 1: WINDOWS
             // =================================================================
+
+            // SECTION 1.1: MICROSOFT EDGE
+            list.Add(new ChromiumSubpathCleaner(
+                "edge_cache",
+                T("Cleaner_Item_EdgeCache", "Internet Cache (Temporary Files)"),
+                T("Cleaner_Desc_EdgeCache", "Temporary files, GPU cache, and shader cache in Microsoft Edge"),
+                "🌐", false, "", true,
+                new string[] { @"Cache\Cache_Data", "Code Cache", "GPUCache", @"Service Worker\CacheStorage", @"Service Worker\ScriptCache", "DawnCache", "GrShaderCache", "ShaderCache" },
+                null,
+                new string[] { "ShaderCache", "GrShaderCache", "GraphiteDawnCache" },
+                "edge")
+            {
+                TabId = "windows",
+                SectionId = "edge",
+                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSubpathCleaner(
+                "edge_history",
+                T("Cleaner_Item_EdgeHistory", "Browsing History"),
+                T("Cleaner_Desc_EdgeHistory", "Visited links, download history, and top sites in Microsoft Edge"),
+                "📜", true,
+                T("Cleaner_Warn_EdgeHistory", "Deletes your browsing and download history in Microsoft Edge."),
+                false,
+                null,
+                new string[] { "History", "History-journal", "Visited Links", "Top Sites", "Top Sites-journal" },
+                null,
+                "edge")
+            {
+                TabId = "windows",
+                SectionId = "edge",
+                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSubpathCleaner(
+                "edge_cookies",
+                T("Cleaner_Item_EdgeCookies", "Cookies"),
+                T("Cleaner_Desc_EdgeCookies", "Active website cookies and login sessions in Microsoft Edge"),
+                "🍪", true,
+                T("Cleaner_Warn_EdgeCookies", "Clearing cookies will sign you out of websites in Microsoft Edge."),
+                false,
+                null,
+                new string[] { "Cookies", "Cookies-journal", @"Network\Cookies", @"Network\Cookies-journal" },
+                null,
+                "edge")
+            {
+                TabId = "windows",
+                SectionId = "edge",
+                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSubpathCleaner(
+                "edge_form_data",
+                T("Cleaner_Item_EdgeFormData", "Autofill Form Information"),
+                T("Cleaner_Desc_EdgeFormData", "Saved autofill form entries and search suggestions in Microsoft Edge"),
+                "📝", true,
+                "Cleaning Form Data removes saved autofill text entries in Microsoft Edge.",
+                false,
+                null,
+                new string[] { "Web Data", "Web Data-journal" },
+                null,
+                "edge")
+            {
+                TabId = "windows",
+                SectionId = "edge",
+                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSubpathCleaner(
+                "edge_sessions",
+                T("Cleaner_Item_EdgeSessions", "Saved Sessions & Tabs"),
+                T("Cleaner_Desc_EdgeSessions", "Previously open tabs and session recovery in Microsoft Edge"),
+                "🗂️", true,
+                T("Cleaner_Warn_EdgeSessions", "Closes and forgets currently open tabs in Microsoft Edge."),
+                false,
+                new string[] { "Sessions" },
+                new string[] { "Current Session", "Current Tabs", "Last Session", "Last Tabs" },
+                null,
+                "edge")
+            {
+                TabId = "windows",
+                SectionId = "edge",
+                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSqliteVacuumCleaner("edge_vacuum", "edge")
+            {
+                Name = T("Cleaner_Item_EdgeVacuum", "Compact SQLite Databases (Vacuum)"),
+                Description = T("Cleaner_Desc_EdgeVacuum", "Defragments and compacts Microsoft Edge SQLite database files without losing data"),
+                TabId = "windows",
+                SectionId = "edge",
+                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
+                SectionIcon = "🌐"
+            });
+
+            // SECTION 1.2: WINDOWS EXPLORER
+            list.Add(new ExplorerRecentDocsCleaner()
+            {
+                Name = T("Cleaner_Item_RecentDocs", "Recent Documents & Jump Lists"),
+                Description = T("Cleaner_Desc_RecentDocs", "Shortcuts in %APPDATA%\\Microsoft\\Windows\\Recent, AutomaticDestinations, and CustomDestinations"),
+                TabId = "windows",
+                SectionId = "explorer",
+                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
+                SectionIcon = "📁"
+            });
+
+            list.Add(new ExplorerRunMruCleaner()
+            {
+                Name = T("Cleaner_Item_RunMru", "Run (in Start menu) History"),
+                Description = T("Cleaner_Desc_RunMru", "Clears Win+R Run command history in HKCU\\...\\Explorer\\RunMRU"),
+                TabId = "windows",
+                SectionId = "explorer",
+                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
+                SectionIcon = "📁"
+            });
+
+            list.Add(new ExplorerShellbagsCleaner()
+            {
+                Name = T("Cleaner_Item_Shellbags", "Other Explorer MRUs & Shellbags"),
+                Description = T("Cleaner_Desc_Shellbags", "Clears BagMRU, Bags, and Explorer search box history (WordWheelQuery)"),
+                TabId = "windows",
+                SectionId = "explorer",
+                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
+                SectionIcon = "📁"
+            });
+
             list.Add(new DirectoryPatternCleaner(
-                "user_temp", "win_core", T("Cleaner_Cat_WinCore", "Windows Core"),
-                T("Cleaner_Item_UserTemp", "User Temporary Files (%TEMP%)"),
-                T("Cleaner_Desc_UserTemp", "Temporary files and caches in %TEMP% and local app temp folders"),
+                "thumbnails", "explorer", T("Cleaner_Section_Explorer", "Windows Explorer"),
+                T("Cleaner_Item_Thumbnails", "Thumbnail Cache"),
+                T("Cleaner_Desc_Thumbnails", "Deletes thumbcache_*.db and iconcache_*.db in %LOCALAPPDATA%\\Microsoft\\Windows\\Explorer"),
+                "🖼️", false, false, "", true,
+                () => new List<string>() { Path.Combine(localAppData, "Microsoft", "Windows", "Explorer") },
+                "thumbcache_*.db", false)
+            {
+                TabId = "windows",
+                SectionId = "explorer",
+                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
+                SectionIcon = "📁"
+            });
+
+            // SECTION 1.3: SYSTEM
+            list.Add(new RecycleBinCleaner()
+            {
+                Name = T("Cleaner_Item_RecycleBin", "Empty Recycle Bin"),
+                Description = T("Cleaner_Desc_RecycleBin", "Permanently empties Recycle Bins across all drives via SHEmptyRecycleBin"),
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
+
+            list.Add(new DirectoryPatternCleaner(
+                "user_temp", "system", T("Cleaner_Section_System", "System"),
+                T("Cleaner_Item_UserTemp", "Temporary Files (%TEMP%)"),
+                T("Cleaner_Desc_UserTemp", "Temporary files and application caches in %TEMP% and %LOCALAPPDATA%\\Temp"),
                 "📁", false, false, "", true,
-                () => new List<string>() { Path.GetTempPath(), Path.Combine(localAppData, "Temp") }));
+                () => new List<string>() { Path.GetTempPath(), Path.Combine(localAppData, "Temp") })
+            {
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
 
             list.Add(new DirectoryPatternCleaner(
-                "system_temp", "win_core", T("Cleaner_Cat_WinCore", "Windows Core"),
-                T("Cleaner_Item_SystemTemp", "Windows System Temp (C:\\Windows\\Temp)"),
-                T("Cleaner_Desc_SystemTemp", "Temporary system files located in C:\\Windows\\Temp"),
+                "system_temp", "system", T("Cleaner_Section_System", "System"),
+                T("Cleaner_Item_SystemTemp", "System Temp (Windows\\Temp)"),
+                T("Cleaner_Desc_SystemTemp", "System-wide temporary files and installer leftovers in C:\\Windows\\Temp"),
                 "📁", true, false, "", true,
-                () => new List<string>() { Path.Combine(winDir, "Temp") }));
+                () => new List<string>() { Path.Combine(winDir, "Temp") })
+            {
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
+
+            list.Add(new ClipboardCleaner()
+            {
+                Name = T("Cleaner_Item_Clipboard", "Clipboard"),
+                Description = T("Cleaner_Desc_Clipboard", "Clears all currently copied text, images, and data from memory clipboard"),
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
 
             list.Add(new DirectoryPatternCleaner(
-                "win_update", "win_core", T("Cleaner_Cat_WinCore", "Windows Core"),
-                T("Cleaner_Item_WinUpdate", "Windows Update & Delivery Cache"),
-                T("Cleaner_Desc_WinUpdate", "Downloaded Windows Update packages in SoftwareDistribution\\Download and DeliveryOptimization"),
-                "🔄", true, false, "", true,
-                () => new List<string>()
-                {
-                    Path.Combine(winDir, "SoftwareDistribution", "Download"),
-                    Path.Combine(winDir, "SoftwareDistribution", "DeliveryOptimization"),
-                    Path.Combine(winDir, "ServiceProfiles", "NetworkService", "AppData", "Local", "Microsoft", "Windows", "DeliveryOptimization", "Cache")
-                }));
-
-            list.Add(new DirectoryPatternCleaner(
-                "memory_dumps", "win_core", T("Cleaner_Cat_WinCore", "Windows Core"),
-                T("Cleaner_Item_MemoryDumps", "Memory Dumps & BSOD Reports (*.dmp)"),
-                T("Cleaner_Desc_MemoryDumps", "Crash memory dumps (MEMORY.DMP), Minidump, LiveKernelReports, and user CrashDumps"),
+                "memory_dumps", "system", T("Cleaner_Section_System", "System"),
+                T("Cleaner_Item_MemoryDumps", "Memory Dumps"),
+                T("Cleaner_Desc_MemoryDumps", "Kernel/Complete crash dumps (MEMORY.DMP), Minidumps, and LiveKernelReports"),
                 "💥", true, false, "", true,
                 () => new List<string>()
                 {
@@ -1797,11 +1988,58 @@ namespace OptiAssist.Addons.SystemCleaner
                     Path.Combine(localAppData, "CrashDumps")
                 },
                 "*", true,
-                new List<string>() { Path.Combine(winDir, "MEMORY.DMP") }));
+                new List<string>() { Path.Combine(winDir, "MEMORY.DMP") })
+            {
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
 
             list.Add(new DirectoryPatternCleaner(
-                "error_reports", "win_core", T("Cleaner_Cat_WinCore", "Windows Core"),
-                T("Cleaner_Item_ErrorReports", "Windows Error Reporting (WER)"),
+                "win_update", "system", T("Cleaner_Section_System", "System"),
+                T("Cleaner_Item_WinUpdate", "Windows Update Cache"),
+                T("Cleaner_Desc_WinUpdate", "Downloaded update packages in SoftwareDistribution\\Download and Delivery Optimization cache"),
+                "🔄", true, false, "", true,
+                () => new List<string>()
+                {
+                    Path.Combine(winDir, "SoftwareDistribution", "Download"),
+                    Path.Combine(winDir, "SoftwareDistribution", "DeliveryOptimization"),
+                    Path.Combine(winDir, "ServiceProfiles", "NetworkService", "AppData", "Local", "Microsoft", "Windows", "DeliveryOptimization", "Cache")
+                })
+            {
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
+
+            list.Add(new DirectoryPatternCleaner(
+                "prefetch", "system", T("Cleaner_Section_System", "System"),
+                T("Cleaner_Item_Prefetch", "Windows Prefetch"),
+                T("Cleaner_Desc_Prefetch", "Application preloading traces (*.pf) in C:\\Windows\\Prefetch"),
+                "🚀", true, false, "", false,
+                () => new List<string>() { Path.Combine(winDir, "Prefetch") }, "*.pf", false)
+            {
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
+
+            list.Add(new EventLogsCleaner()
+            {
+                Name = T("Cleaner_Item_SystemLogs", "Windows Event Logs"),
+                Description = T("Cleaner_Desc_SystemLogs", "Clears Windows Event Logs (Application, System, Setup), CBS logs, Panther, and WER reports"),
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
+            });
+
+            list.Add(new DirectoryPatternCleaner(
+                "error_reports", "system", T("Cleaner_Section_System", "System"),
+                T("Cleaner_Item_ErrorReports", "Windows Error Reporting"),
                 T("Cleaner_Desc_ErrorReports", "Archived crash reports, mini-dumps, and error reporting queues"),
                 "📊", false, false, "", true,
                 () => new List<string>()
@@ -1810,159 +2048,172 @@ namespace OptiAssist.Addons.SystemCleaner
                     Path.Combine(progData, "Microsoft", "Windows", "WER", "ReportQueue"),
                     Path.Combine(localAppData, "Microsoft", "Windows", "WER", "ReportArchive"),
                     Path.Combine(localAppData, "Microsoft", "Windows", "WER", "ReportQueue")
-                }));
-
-            list.Add(new DirectoryPatternCleaner(
-                "prefetch", "win_core", T("Cleaner_Cat_WinCore", "Windows Core"),
-                T("Cleaner_Item_Prefetch", "Windows Prefetch (C:\\Windows\\Prefetch)"),
-                T("Cleaner_Desc_Prefetch", "Application pre-launch cache files (*.pf) in C:\\Windows\\Prefetch"),
-                "🚀", true, false, "", false,
-                () => new List<string>() { Path.Combine(winDir, "Prefetch") }, "*.pf", false));
-
-            list.Add(new RecycleBinCleaner()
+                })
             {
-                Name = T("Cleaner_Item_RecycleBin", "Empty Recycle Bin"),
-                Description = T("Cleaner_Desc_RecycleBin", "Permanently deletes all files from recycle bins on all connected drives via SHEmptyRecycleBin")
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
             });
-            list.Add(new ClipboardCleaner()
-            {
-                Name = T("Cleaner_Item_Clipboard", "Windows Clipboard"),
-                Description = T("Cleaner_Desc_Clipboard", "Clears all currently copied text, images, and data from system memory clipboard")
-            });
+
             list.Add(new DnsCacheCleaner()
             {
-                Name = T("Cleaner_Item_DnsCache", "DNS Resolver Cache"),
-                Description = T("Cleaner_Desc_DnsCache", "Flushes the local DNS resolver cache via DnsFlushResolverCache API and ipconfig /flushdns")
+                Name = T("Cleaner_Item_DnsCache", "DNS Cache (Flush DNS)"),
+                Description = T("Cleaner_Desc_DnsCache", "Flushes the local DNS cache via DnsFlushResolverCache / ipconfig /flushdns"),
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
             });
+
             list.Add(new MuiCacheCleaner()
             {
                 Name = T("Cleaner_Item_MuiCache", "Registry MUICache"),
-                Description = T("Cleaner_Desc_MuiCache", "Clears cached application names and executable strings in HKCU\\...\\Shell\\MuiCache")
-            });
-            list.Add(new EventLogsCleaner()
-            {
-                Name = T("Cleaner_Item_SystemLogs", "System Event & Setup Logs"),
-                Description = T("Cleaner_Desc_SystemLogs", "Clears Windows Event Logs (Application, System, Security, Setup) and CBS/Panther logs")
-            });
-
-            // =================================================================
-            // CATEGORY 2: WINDOWS EXPLORER & SHELL
-            // =================================================================
-            list.Add(new DirectoryPatternCleaner(
-                "thumbnails", "explorer_shell", T("Cleaner_Cat_Explorer", "Windows Explorer & Shell"),
-                T("Cleaner_Item_Thumbnails", "Thumbnail Cache (thumbcache_*.db)"),
-                T("Cleaner_Desc_Thumbnails", "Explorer thumbnail cache databases in %LOCALAPPDATA%\\Microsoft\\Windows\\Explorer"),
-                "🖼️", false, false, "", true,
-                () => new List<string>() { Path.Combine(localAppData, "Microsoft", "Windows", "Explorer") },
-                "thumbcache_*.db", false));
-
-            list.Add(new ExplorerRunMruCleaner()
-            {
-                Name = T("Cleaner_Item_RunMru", "Run Dialog MRU History"),
-                Description = T("Cleaner_Desc_RunMru", "Clears command history in the Windows Run (Win+R) dialog (HKCU\\...\\Explorer\\RunMRU)")
-            });
-            list.Add(new ExplorerRecentDocsCleaner()
-            {
-                Name = T("Cleaner_Item_RecentDocs", "Recent Documents & Jump Lists"),
-                Description = T("Cleaner_Desc_RecentDocs", "Clears %APPDATA%\\Microsoft\\Windows\\Recent shortcuts, Jump Lists, and RecentDocs registry")
-            });
-            list.Add(new ExplorerShellbagsCleaner()
-            {
-                Name = T("Cleaner_Item_Shellbags", "Explorer Shellbags & Search History"),
-                Description = T("Cleaner_Desc_Shellbags", "Clears folder view preferences, window size/position history (BagMRU/Bags), and Explorer search history")
+                Description = T("Cleaner_Desc_MuiCache", "Clears cached application display names in HKCU\\...\\Shell\\MuiCache"),
+                TabId = "windows",
+                SectionId = "system",
+                SectionTitle = T("Cleaner_Section_System", "System"),
+                SectionIcon = "🪟"
             });
 
             // =================================================================
-            // CATEGORY 3: CHROMIUM BROWSERS (CHROME & EDGE)
+            // TAB 2: APPLICATIONS ("apps")
             // =================================================================
+
+            // SECTION 2.1: GOOGLE CHROME
             list.Add(new ChromiumSubpathCleaner(
-                "chromium_cache",
-                T("Cleaner_Item_ChromCache", "Chromium Network & GPU Cache (Chrome & Edge)"),
-                T("Cleaner_Desc_ChromCache", "Clears Cache_Data, Code Cache, GPUCache, ShaderCache, and Service Worker Cache across all profiles"),
+                "chrome_cache",
+                T("Cleaner_Item_ChromeCache", "Internet Cache"),
+                T("Cleaner_Desc_ChromeCache", "Web cache, code cache, GPUCache, and shaders in Google Chrome"),
                 "🌐", false, "", true,
                 new string[] { @"Cache\Cache_Data", "Code Cache", "GPUCache", @"Service Worker\CacheStorage", @"Service Worker\ScriptCache", "DawnCache", "GrShaderCache", "ShaderCache" },
                 null,
-                new string[] { "ShaderCache", "GrShaderCache", "GraphiteDawnCache" }));
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chromium_crash_reports",
-                T("Cleaner_Item_ChromCrash", "Browser Crashpad & Crash Reports"),
-                T("Cleaner_Desc_ChromCrash", "Deletes diagnostic crash dumps in Crashpad\\reports and pending queues for Chrome and Edge"),
-                "🚑", false, "", true,
-                null, null,
-                new string[] { @"Crashpad\reports", @"Crashpad\completed", @"Crashpad\pending" }));
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chromium_ai_models",
-                T("Cleaner_Item_ChromAiModels", "Browser Local AI Models (Gemini Nano / On-Device AI)"),
-                T("Cleaner_Desc_ChromAiModels", "Removes downloaded local AI model weights (OptGuideOnDeviceModel & optimization_guide_model_store)"),
-                "🤖", false, "", false,
-                new string[] { "optimization_guide_model_store", "optimization_guide_prediction_model_downloads" },
-                null,
-                new string[] { "OptGuideOnDeviceModel" }));
-
-            list.Add(new ChromiumSqliteVacuumCleaner()
+                new string[] { "ShaderCache", "GrShaderCache", "GraphiteDawnCache" },
+                "chrome")
             {
-                Name = T("Cleaner_Item_ChromVacuum", "Browser SQLite Database Vacuum"),
-                Description = T("Cleaner_Desc_ChromVacuum", "Executes SQLite 'VACUUM;' on Chrome & Edge databases (History, Web Data, Favicons, Cookies) to defragment and compact without data loss")
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
             });
 
             list.Add(new ChromiumSubpathCleaner(
-                "chromium_cookies",
-                T("Cleaner_Item_ChromCookies", "Browser Cookies (Chrome & Edge)"),
-                T("Cleaner_Desc_ChromCookies", "Deletes browser cookies across all profiles (will sign you out of websites)"),
-                "🍪", true,
-                "Cleaning Cookies will sign you out of active web sessions.",
-                false,
-                null,
-                new string[] { "Cookies", "Cookies-journal", @"Network\Cookies", @"Network\Cookies-journal" }));
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chromium_history",
-                T("Cleaner_Item_ChromHistory", "Browsing & Download History"),
-                T("Cleaner_Desc_ChromHistory", "Deletes browsing history, download logs, visited links, and top sites across all profiles"),
+                "chrome_history",
+                T("Cleaner_Item_ChromeHistory", "Browsing History"),
+                T("Cleaner_Desc_ChromeHistory", "Visited links, download history, and top sites in Google Chrome"),
                 "📜", true,
-                "Cleaning Browsing History permanently removes your visited URLs and download history.",
+                T("Cleaner_Warn_ChromeHistory", "Deletes your browsing and download history in Google Chrome."),
                 false,
                 null,
-                new string[] { "History", "History-journal", "Visited Links", "Top Sites", "Top Sites-journal" }));
+                new string[] { "History", "History-journal", "Visited Links", "Top Sites", "Top Sites-journal" },
+                null,
+                "chrome")
+            {
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
 
             list.Add(new ChromiumSubpathCleaner(
-                "chromium_form_data",
-                T("Cleaner_Item_ChromFormData", "Autofill Form Data (Web Data)"),
-                T("Cleaner_Desc_ChromFormData", "Clears saved autofill form entries and search suggestions"),
+                "chrome_cookies",
+                T("Cleaner_Item_ChromeCookies", "Cookies"),
+                T("Cleaner_Desc_ChromeCookies", "Active website cookies and login sessions in Google Chrome"),
+                "🍪", true,
+                T("Cleaner_Warn_ChromeCookies", "Clearing cookies will sign you out of websites in Google Chrome."),
+                false,
+                null,
+                new string[] { "Cookies", "Cookies-journal", @"Network\Cookies", @"Network\Cookies-journal" },
+                null,
+                "chrome")
+            {
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSubpathCleaner(
+                "chrome_form_data",
+                T("Cleaner_Item_ChromeFormData", "Autofill Form Information"),
+                T("Cleaner_Desc_ChromeFormData", "Saved autofill form entries and search suggestions in Google Chrome"),
                 "📝", true,
-                "Cleaning Form Data removes saved autofill text entries in Chrome and Edge.",
+                "Cleaning Form Data removes saved autofill text entries in Google Chrome.",
                 false,
                 null,
-                new string[] { "Web Data", "Web Data-journal" }));
+                new string[] { "Web Data", "Web Data-journal" },
+                null,
+                "chrome")
+            {
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
 
             list.Add(new ChromiumSubpathCleaner(
-                "chromium_site_data",
-                T("Cleaner_Item_ChromSiteData", "Site Data (LocalStorage & IndexedDB)"),
-                T("Cleaner_Desc_ChromSiteData", "Clears HTML5 LocalStorage, IndexedDB, Session Storage, and File System databases"),
+                "chrome_site_data",
+                T("Cleaner_Item_ChromeSiteData", "Site Storage (LocalStorage & IndexedDB)"),
+                T("Cleaner_Desc_ChromeSiteData", "HTML5 LocalStorage, IndexedDB, and offline web app caches in Google Chrome"),
                 "🗄️", true,
-                "Cleaning Site Data deletes offline web app storage (LocalStorage/IndexedDB).",
+                T("Cleaner_Warn_ChromeSiteData", "Clears offline web app storage and site settings in Google Chrome."),
                 false,
                 new string[] { @"Local Storage\leveldb", "IndexedDB", "Session Storage", "File System" },
-                null));
+                null,
+                null,
+                "chrome")
+            {
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
 
             list.Add(new ChromiumSubpathCleaner(
-                "chromium_sessions",
-                T("Cleaner_Item_ChromSessions", "Saved Browser Sessions & Open Tabs"),
-                T("Cleaner_Desc_ChromSessions", "Deletes saved session state and last open tabs in Chrome and Edge"),
-                "🗂️", true,
-                "Cleaning Sessions will clear your previously open browser tabs.",
-                false,
-                new string[] { "Sessions" },
-                new string[] { "Current Session", "Current Tabs", "Last Session", "Last Tabs" }));
+                "chrome_ai_models",
+                T("Cleaner_Item_ChromeAiModels", "Local AI Models (Gemini Nano)"),
+                T("Cleaner_Desc_ChromeAiModels", "Downloaded on-device AI models in Google Chrome"),
+                "🤖", false, "", false,
+                new string[] { "optimization_guide_model_store", "optimization_guide_prediction_model_downloads" },
+                null,
+                new string[] { "OptGuideOnDeviceModel" },
+                "chrome")
+            {
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
 
-            // =================================================================
-            // CATEGORY 4: WINDOWS DEFENDER
-            // =================================================================
+            list.Add(new ChromiumSqliteVacuumCleaner("chrome_vacuum", "chrome")
+            {
+                Name = T("Cleaner_Item_ChromeVacuum", "Compact SQLite Databases (Vacuum)"),
+                Description = T("Cleaner_Desc_ChromeVacuum", "Defragments and compacts Google Chrome SQLite database files without losing data"),
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
+
+            list.Add(new ChromiumSubpathCleaner(
+                "chrome_crash",
+                T("Cleaner_Item_ChromeCrash", "Crash Reports (Crashpad)"),
+                T("Cleaner_Desc_ChromeCrash", "Diagnostic crash reports and telemetry queues in Google Chrome"),
+                "🚑", false, "", true,
+                null, null,
+                new string[] { @"Crashpad\reports", @"Crashpad\completed", @"Crashpad\pending" },
+                "chrome")
+            {
+                TabId = "apps",
+                SectionId = "chrome",
+                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
+                SectionIcon = "🌐"
+            });
+
+            // SECTION 2.2: WINDOWS DEFENDER
             list.Add(new DirectoryPatternCleaner(
-                "defender_temp", "defender", T("Cleaner_Cat_Defender", "Windows Defender"),
-                T("Cleaner_Item_DefenderTemp", "Windows Defender Scan Logs & Support Temp"),
+                "defender_temp", "defender", T("Cleaner_Section_Defender", "Windows Defender"),
+                T("Cleaner_Item_DefenderTemp", "Scan Logs & History"),
                 T("Cleaner_Desc_DefenderTemp", "Temporary detection histories, operational support logs, and engine cache in ProgramData"),
                 "🛡️", true, false, "", true,
                 () => new List<string>()
@@ -1971,45 +2222,71 @@ namespace OptiAssist.Addons.SystemCleaner
                     Path.Combine(progData, "Microsoft", "Windows Defender", "Scans", "History", "Results"),
                     Path.Combine(progData, "Microsoft", "Windows Defender", "Support"),
                     Path.Combine(progData, "Microsoft", "Windows Defender", "Scans", "MetaStore")
-                }));
+                })
+            {
+                TabId = "apps",
+                SectionId = "defender",
+                SectionTitle = T("Cleaner_Section_Defender", "Windows Defender"),
+                SectionIcon = "🛡️"
+            });
 
             list.Add(new DirectoryPatternCleaner(
-                "defender_quarantine", "defender", T("Cleaner_Cat_Defender", "Windows Defender"),
-                T("Cleaner_Item_DefenderQuarantine", "Windows Defender Quarantine Files"),
+                "defender_quarantine", "defender", T("Cleaner_Section_Defender", "Windows Defender"),
+                T("Cleaner_Item_DefenderQuarantine", "Quarantined Files"),
                 T("Cleaner_Desc_DefenderQuarantine", "Deletes quarantined malware/threat files in C:\\ProgramData\\Microsoft\\Windows Defender\\Quarantine"),
                 "☣️", true, true,
-                "Deleting Quarantined files permanently removes isolated items so they can no longer be restored.",
+                T("Cleaner_Warn_DefenderQuarantine", "Quarantined files cannot be restored once deleted. Requires Administrator/SYSTEM privileges."),
                 false,
                 () => new List<string>()
                 {
                     Path.Combine(progData, "Microsoft", "Windows Defender", "Quarantine", "ResourceData"),
                     Path.Combine(progData, "Microsoft", "Windows Defender", "Quarantine", "Entries")
-                }));
+                })
+            {
+                TabId = "apps",
+                SectionId = "defender",
+                SectionTitle = T("Cleaner_Section_Defender", "Windows Defender"),
+                SectionIcon = "🛡️"
+            });
 
-            // =================================================================
-            // CATEGORY 5: DEEP SCAN (DEVELOPER & ORPHANED FILES)
-            // =================================================================
+            // SECTION 2.3: DEVELOPER & DEEP SCAN
             list.Add(new DeepScanOrphanFilesCleaner()
             {
-                Name = T("Cleaner_Item_DeepOrphans", "Orphaned Metadata & Editor Swap Files"),
-                Description = T("Cleaner_Desc_DeepOrphans", "Deep scans for .DS_Store, Thumbs.db, and Vim swap/temp files (*.swp, *.swo, *.tmp) within the selected root folder")
+                Name = T("Cleaner_Item_DeepOrphans", "Orphaned Files (.DS_Store, Thumbs.db)"),
+                Description = T("Cleaner_Desc_DeepOrphans", "Deep scans for .DS_Store, Thumbs.db, and Vim swap/temp files (*.swp, *.swo, *.tmp) within the selected root folder"),
+                TabId = "apps",
+                SectionId = "deep_scan",
+                SectionTitle = T("Cleaner_Section_DeepScan", "Developer & Deep Scan"),
+                SectionIcon = "📦"
             });
 
             list.Add(new DeepScanDirectoryCleaner(
                 "deep_node_modules",
-                T("Cleaner_Item_DeepNode", "Node.js & Angular Cache (node_modules / .angular)"),
+                T("Cleaner_Item_DeepNode", "Node.js & Angular Dependencies (node_modules, .angular)"),
                 T("Cleaner_Desc_DeepNode", "Finds and removes heavy node_modules and .angular build folders inside the Deep Scan root path"),
                 "📦",
                 "Deleting node_modules or .angular folders requires running 'npm install' again in those projects.",
-                new string[] { "node_modules", ".angular" }));
+                new string[] { "node_modules", ".angular" })
+            {
+                TabId = "apps",
+                SectionId = "deep_scan",
+                SectionTitle = T("Cleaner_Section_DeepScan", "Developer & Deep Scan"),
+                SectionIcon = "📦"
+            });
 
             list.Add(new DeepScanDirectoryCleaner(
                 "deep_python_cache",
-                T("Cleaner_Item_DeepPython", "Python Bytecode & VirtualEnvs (__pycache__ / venv)"),
+                T("Cleaner_Item_DeepPython", "Python Bytecode & Virtual Environments (__pycache__, venv)"),
                 T("Cleaner_Desc_DeepPython", "Finds and removes __pycache__ and Python virtual environments (venv / .venv) in the Deep Scan root path"),
                 "🐍",
                 "Deleting 'venv' or '.venv' directories removes installed Python packages for those virtual environments.",
-                new string[] { "__pycache__", "venv", ".venv" }));
+                new string[] { "__pycache__", "venv", ".venv" })
+            {
+                TabId = "apps",
+                SectionId = "deep_scan",
+                SectionTitle = T("Cleaner_Section_DeepScan", "Developer & Deep Scan"),
+                SectionIcon = "📦"
+            });
 
             return list;
         }
@@ -2026,25 +2303,52 @@ namespace OptiAssist.Addons.SystemCleaner
     {
         private IOptiAssistHost _host;
         private ObservableCollection<BaseCleaner> _allCleaners;
-        private ObservableCollection<BaseCleaner> _visibleCleaners;
-        private string _activeCategoryFilter = "all";
+        private string _activeTab = "windows"; // "windows" or "apps"
         private bool _isBusy = false;
+        private CancellationTokenSource _cts;
 
-        // UI Controls
-        private TextBlock _txtTitle;
-        private TextBlock _txtSubtitle;
-        private Button _btnAnalyze;
-        private Button _btnClean;
+        // UI Controls - Left Pane
+        private Border _tabWindowsBorder;
+        private TextBlock _tabWindowsText;
+        private Border _tabAppsBorder;
+        private TextBlock _tabAppsText;
         private Button _btnSelectAll;
         private Button _btnDeselectAll;
         private Button _btnSelectRecommended;
-        private TextBlock _lblDeepScanPath;
+        private StackPanel _pnlCategoriesContainer;
         private TextBox _txtDeepScanRoot;
         private Button _btnBrowseDeepScan;
-        private TextBlock _lblStatus;
-        private TextBlock _lblTotalSize;
+
+        // UI Controls - Right Pane Top Bar
         private ProgressBar _pbProgress;
-        private Dictionary<string, Button> _categoryButtons;
+        private TextBlock _txtPercent;
+
+        // UI Controls - Right Pane Center (4 States)
+        private enum ViewMode { Idle, Running, Scanned, Cleaned }
+        private StackPanel _pnlStateIdle;
+        private TextBlock _txtIdleTitle;
+        private TextBlock _txtIdleDesc;
+        private TextBlock _txtIdleSummaryBadge;
+
+        private StackPanel _pnlStateRunning;
+        private TextBlock _txtSpinner;
+        private TextBlock _txtRunningCategory;
+        private TextBlock _txtRunningItem;
+        private TextBlock _txtRunningStats;
+
+        private ScrollViewer _pnlStateScanned;
+        private TextBlock _txtScanHeader;
+        private TextBlock _txtScanSub;
+        private StackPanel _pnlScannedItemsList;
+
+        private StackPanel _pnlStateCleaned;
+        private TextBlock _txtCleanHeader;
+        private TextBlock _txtCleanSub;
+        private StackPanel _pnlCleanedItemsList;
+
+        // UI Controls - Right Pane Bottom Action Bar
+        private Button _btnLeftAction;  // "Analyze" or "Cancel"
+        private Button _btnRightAction; // "Run Cleaner"
 
         public string Id { get { return "system-cleaner"; } }
         public string Name { get { return T("Nav_SystemCleaner", "System Cleaner"); } }
@@ -2080,8 +2384,32 @@ namespace OptiAssist.Addons.SystemCleaner
         {
             List<BaseCleaner> list = CleanerRegistry.CreateAllCleaners(T);
             _allCleaners = new ObservableCollection<BaseCleaner>(list);
-            _visibleCleaners = new ObservableCollection<BaseCleaner>(list);
             ApplyLocalizedMetadata();
+        }
+
+        private static ControlTemplate CreateGreenProgressBarTemplate()
+        {
+            FrameworkElementFactory borderRoot = new FrameworkElementFactory(typeof(Border));
+            borderRoot.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+            borderRoot.SetResourceReference(Border.BackgroundProperty, "BrushBorderCard");
+            borderRoot.SetValue(Border.BorderThicknessProperty, new Thickness(0));
+
+            FrameworkElementFactory grid = new FrameworkElementFactory(typeof(Grid));
+
+            FrameworkElementFactory track = new FrameworkElementFactory(typeof(Border));
+            track.Name = "PART_Track";
+
+            FrameworkElementFactory indicator = new FrameworkElementFactory(typeof(Border));
+            indicator.Name = "PART_Indicator";
+            indicator.SetValue(Border.HorizontalAlignmentProperty, HorizontalAlignment.Left);
+            indicator.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+            indicator.SetValue(Border.BackgroundProperty, new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50))); // CCleaner vibrant green
+
+            grid.AppendChild(track);
+            grid.AppendChild(indicator);
+            borderRoot.AppendChild(grid);
+
+            return new ControlTemplate(typeof(ProgressBar)) { VisualTree = borderRoot };
         }
 
         public FrameworkElement CreateView()
@@ -2091,436 +2419,729 @@ namespace OptiAssist.Addons.SystemCleaner
                 InitCleaners();
             }
 
-            StackPanel root = new StackPanel();
-            root.Margin = new Thickness(0);
-
-            // 1. Header Section
-            StackPanel headerPanel = new StackPanel();
-            headerPanel.Margin = new Thickness(0, 0, 0, 8);
-
-            _txtTitle = new TextBlock()
+            Grid root = new Grid
             {
-                Text = T("Cleaner_Title", "System Cleaner & Optimizer"),
-                FontSize = 15,
-                FontWeight = FontWeights.Bold,
-                TextTrimming = TextTrimming.CharacterEllipsis
+                MinHeight = 560,
+                Margin = new Thickness(0)
             };
-            _txtTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
+            root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            _txtSubtitle = new TextBlock()
+            // -------------------------------------------------------------
+            // LEFT COLUMN: TABS + QUICK ACTIONS + CATEGORY TREE
+            // -------------------------------------------------------------
+            Border leftBorder = new Border
             {
-                Text = T("Cleaner_Subtitle", "Dry-run scan and safe cleaning of OS caches, Chromium browsers (with SQLite Vacuum), Explorer, Defender, and Deep Scan"),
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0),
-                TextTrimming = TextTrimming.CharacterEllipsis
-            };
-            _txtSubtitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-
-            headerPanel.Children.Add(_txtTitle);
-            headerPanel.Children.Add(_txtSubtitle);
-            root.Children.Add(headerPanel);
-
-            // 2. Main Action Toolbar Card
-            Border actionCard = new Border()
-            {
-                BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(10),
-                Margin = new Thickness(0, 0, 0, 8)
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 0, 10, 0)
             };
-            actionCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            actionCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            leftBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            leftBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            StackPanel actionStack = new StackPanel();
+            Grid leftGrid = new Grid();
+            leftGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Row 0: Tabs
+            leftGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Row 1: Quick actions
+            leftGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Row 2: Categories tree
 
-            Grid topBarGrid = new Grid();
-            topBarGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            topBarGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            // Row 0: Tabs Header ("Windows" vs "Applications")
+            Grid tabsGrid = new Grid();
+            tabsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            tabsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            StackPanel leftBtns = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-
-            _btnAnalyze = new Button()
+            _tabWindowsBorder = new Border
             {
-                Content = T("Btn_CleanerAnalyze", "🔍 Scan (Dry-Run)"),
-                Padding = new Thickness(14, 0, 14, 0),
-                Height = 32,
-                Margin = new Thickness(0, 0, 8, 0)
+                Height = 36,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                BorderThickness = new Thickness(0, 3, 0, 0),
+                CornerRadius = new CornerRadius(5, 0, 0, 0)
             };
-            _btnAnalyze.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            _btnAnalyze.Click += BtnAnalyze_Click;
+            _tabWindowsBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+            _tabWindowsBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
 
-            _btnClean = new Button()
+            _tabWindowsText = new TextBlock
             {
-                Content = T("Btn_CleanerClean", "🧹 Clean Selected"),
-                Padding = new Thickness(16, 0, 16, 0),
-                Height = 32
+                Text = T("Cleaner_Tab_Windows", "Windows"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
             };
-            _btnClean.SetResourceReference(Button.StyleProperty, "BtnAccent");
-            _btnClean.Click += BtnClean_Click;
+            _tabWindowsText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            _tabWindowsBorder.Child = _tabWindowsText;
+            _tabWindowsBorder.MouseLeftButtonDown += (s, e) => SetActiveTab("windows");
+            Grid.SetColumn(_tabWindowsBorder, 0);
+            tabsGrid.Children.Add(_tabWindowsBorder);
 
-            leftBtns.Children.Add(_btnAnalyze);
-            leftBtns.Children.Add(_btnClean);
-            Grid.SetColumn(leftBtns, 0);
-            topBarGrid.Children.Add(leftBtns);
-
-            StackPanel rightBtns = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-
-            _btnSelectAll = new Button()
+            _tabAppsBorder = new Border
             {
-                Content = T("Btn_CleanerSelectAll", "Select All"),
-                Padding = new Thickness(10, 0, 10, 0),
-                Height = 28,
-                Margin = new Thickness(0, 0, 4, 0),
-                FontSize = 11
+                Height = 36,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(0, 5, 0, 0)
+            };
+            _tabAppsBorder.SetResourceReference(Border.BorderBrushProperty, "Transparent");
+            _tabAppsBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+
+            _tabAppsText = new TextBlock
+            {
+                Text = T("Cleaner_Tab_Apps", "Applications"),
+                FontSize = 12,
+                FontWeight = FontWeights.Normal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _tabAppsText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            _tabAppsBorder.Child = _tabAppsText;
+            _tabAppsBorder.MouseLeftButtonDown += (s, e) => SetActiveTab("apps");
+            Grid.SetColumn(_tabAppsBorder, 1);
+            tabsGrid.Children.Add(_tabAppsBorder);
+
+            Grid.SetRow(tabsGrid, 0);
+            leftGrid.Children.Add(tabsGrid);
+
+            // Row 1: Quick Actions Toolbar
+            Border quickBar = new Border
+            {
+                BorderThickness = new Thickness(0, 1, 0, 1),
+                Padding = new Thickness(6, 4, 6, 4)
+            };
+            quickBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            quickBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+
+            StackPanel spQuick = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            _btnSelectAll = new Button
+            {
+                Content = T("Cleaner_Quick_All", "Select All"),
+                FontSize = 10,
+                Height = 22,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 4, 0)
             };
             _btnSelectAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnSelectAll.Click += (s, e) =>
             {
-                foreach (BaseCleaner c in _visibleCleaners) c.IsSelected = true;
+                foreach (BaseCleaner c in _allCleaners)
+                {
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                        c.IsSelected = true;
+                }
                 UpdateSelectedSummary();
             };
 
-            _btnDeselectAll = new Button()
+            _btnDeselectAll = new Button
             {
-                Content = T("Btn_CleanerDeselectAll", "Deselect All"),
-                Padding = new Thickness(10, 0, 10, 0),
-                Height = 28,
-                Margin = new Thickness(0, 0, 4, 0),
-                FontSize = 11
+                Content = T("Cleaner_Quick_None", "Deselect All"),
+                FontSize = 10,
+                Height = 22,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 4, 0)
             };
             _btnDeselectAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnDeselectAll.Click += (s, e) =>
             {
-                foreach (BaseCleaner c in _visibleCleaners) c.IsSelected = false;
+                foreach (BaseCleaner c in _allCleaners)
+                {
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                        c.IsSelected = false;
+                }
                 UpdateSelectedSummary();
             };
 
-            _btnSelectRecommended = new Button()
+            _btnSelectRecommended = new Button
             {
-                Content = T("Btn_CleanerSelectRecommended", "Safe Recommended"),
-                Padding = new Thickness(10, 0, 10, 0),
-                Height = 28,
-                FontSize = 11
+                Content = T("Cleaner_Quick_Default", "Defaults"),
+                FontSize = 10,
+                Height = 22,
+                Padding = new Thickness(8, 0, 8, 0)
             };
             _btnSelectRecommended.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnSelectRecommended.Click += (s, e) =>
             {
-                foreach (BaseCleaner c in _allCleaners) c.IsSelected = c.IsRecommended && !c.IsDangerous;
+                foreach (BaseCleaner c in _allCleaners)
+                {
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                        c.IsSelected = c.IsRecommended && !c.IsDangerous;
+                }
                 UpdateSelectedSummary();
             };
 
-            rightBtns.Children.Add(_btnSelectAll);
-            rightBtns.Children.Add(_btnDeselectAll);
-            rightBtns.Children.Add(_btnSelectRecommended);
-            Grid.SetColumn(rightBtns, 1);
-            topBarGrid.Children.Add(rightBtns);
+            spQuick.Children.Add(_btnSelectAll);
+            spQuick.Children.Add(_btnDeselectAll);
+            spQuick.Children.Add(_btnSelectRecommended);
+            quickBar.Child = spQuick;
 
-            actionStack.Children.Add(topBarGrid);
+            Grid.SetRow(quickBar, 1);
+            leftGrid.Children.Add(quickBar);
 
-            // Category Filter Tabs Row
-            WrapPanel catTabs = new WrapPanel() { Margin = new Thickness(0, 8, 0, 0) };
-            _categoryButtons = new Dictionary<string, Button>();
-
-            AddCategoryFilterButton(catTabs, "all", T("Cleaner_Cat_All", "All Modules"));
-            AddCategoryFilterButton(catTabs, "win_core", "🪟 " + T("Cleaner_Cat_WinCore", "Windows Core"));
-            AddCategoryFilterButton(catTabs, "explorer_shell", "🗂️ " + T("Cleaner_Cat_Explorer", "Explorer & Shell"));
-            AddCategoryFilterButton(catTabs, "chromium", "🌐 " + T("Cleaner_Cat_Chromium", "Chrome & Edge"));
-            AddCategoryFilterButton(catTabs, "defender", "🛡️ " + T("Cleaner_Cat_Defender", "Windows Defender"));
-            AddCategoryFilterButton(catTabs, "deep_scan", "🔎 " + T("Cleaner_Cat_DeepScan", "Deep Scan"));
-
-            actionStack.Children.Add(catTabs);
-
-            // Deep Scan Root Directory Configuration Row
-            Grid deepScanGrid = new Grid() { Margin = new Thickness(0, 8, 0, 0) };
-            deepScanGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-            deepScanGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            deepScanGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-
-            _lblDeepScanPath = new TextBlock()
+            // Row 2: Scrollable Categories Tree
+            ScrollViewer svCategories = new ScrollViewer
             {
-                Text = T("Cleaner_Label_DeepScanRoot", "Deep Scan Root Directory:"),
-                FontSize = 10,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Padding = new Thickness(8, 6, 8, 8)
             };
-            _lblDeepScanPath.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            Grid.SetColumn(_lblDeepScanPath, 0);
+            _pnlCategoriesContainer = new StackPanel();
+            svCategories.Content = _pnlCategoriesContainer;
+            Grid.SetRow(svCategories, 2);
+            leftGrid.Children.Add(svCategories);
 
-            _txtDeepScanRoot = new TextBox()
+            leftBorder.Child = leftGrid;
+            Grid.SetColumn(leftBorder, 0);
+            root.Children.Add(leftBorder);
+
+            // -------------------------------------------------------------
+            // RIGHT COLUMN: TOP GREEN PROGRESS BAR + CENTER DISPLAY + BOTTOM ACTIONS
+            // -------------------------------------------------------------
+            Border rightBorder = new Border
             {
-                Height = 24,
-                FontSize = 11,
-                Text = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                Margin = new Thickness(0, 0, 6, 0)
-            };
-            Grid.SetColumn(_txtDeepScanRoot, 1);
-
-            _btnBrowseDeepScan = new Button()
-            {
-                Content = "📁",
-                Width = 30,
-                Height = 24,
-                Padding = new Thickness(0)
-            };
-            _btnBrowseDeepScan.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            _btnBrowseDeepScan.Click += BtnBrowseDeepScan_Click;
-            Grid.SetColumn(_btnBrowseDeepScan, 2);
-
-            deepScanGrid.Children.Add(_lblDeepScanPath);
-            deepScanGrid.Children.Add(_txtDeepScanRoot);
-            deepScanGrid.Children.Add(_btnBrowseDeepScan);
-            actionStack.Children.Add(deepScanGrid);
-
-            actionCard.Child = actionStack;
-            root.Children.Add(actionCard);
-
-            // 3. Status & Progress Summary Card
-            Border statusCard = new Border()
-            {
-                BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12, 8, 12, 8),
-                Margin = new Thickness(0, 0, 0, 8)
+                BorderThickness = new Thickness(1)
             };
-            statusCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            statusCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            rightBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            rightBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            StackPanel statusStack = new StackPanel();
-            Grid statusGrid = new Grid();
-            statusGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            statusGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            Grid rightGrid = new Grid();
+            rightGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Row 0: Progress Bar
+            rightGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Row 1: Central Display
+            rightGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Row 2: Action Bar
 
-            _lblStatus = new TextBlock()
+            // Row 0: Progress Bar & Percentage
+            Border topProgressBorder = new Border
             {
-                Text = T("Cleaner_Status_Ready", "Ready for dry-run scan or cleanup. Select desired modules below."),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Padding = new Thickness(14, 10, 14, 10),
+                CornerRadius = new CornerRadius(5, 5, 0, 0)
+            };
+            topProgressBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            topProgressBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+
+            Grid topProgressGrid = new Grid();
+            topProgressGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            topProgressGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _pbProgress = new ProgressBar
+            {
+                Height = 14,
+                Minimum = 0,
+                Maximum = 100,
+                Value = 0,
+                Template = CreateGreenProgressBarTemplate(),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(_pbProgress, 0);
+            topProgressGrid.Children.Add(_pbProgress);
+
+            _txtPercent = new TextBlock
+            {
+                Text = "0%",
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(14, 0, 0, 0),
+                MinWidth = 36,
+                TextAlignment = TextAlignment.Right
+            };
+            _txtPercent.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            Grid.SetColumn(_txtPercent, 1);
+            topProgressGrid.Children.Add(_txtPercent);
+
+            topProgressBorder.Child = topProgressGrid;
+            Grid.SetRow(topProgressBorder, 0);
+            rightGrid.Children.Add(topProgressBorder);
+
+            // Row 1: Center Display
+            Grid centerGrid = new Grid { Margin = new Thickness(16, 12, 16, 12) };
+
+            // 1.1 Idle State
+            _pnlStateIdle = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Visibility = Visibility.Visible
+            };
+
+            TextBlock idleIcon = new TextBlock
+            {
+                Text = "🧹",
+                FontSize = 44,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            _txtIdleTitle = new TextBlock
+            {
+                Text = T("Cleaner_Status_Idle_Title", "System Cleaner & Optimizer"),
+                FontSize = 16,
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            _txtIdleTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+
+            _txtIdleDesc = new TextBlock
+            {
+                Text = T("Cleaner_Status_Idle_Desc", "Select the items you wish to clean on the left, then click 'Analyze' to check cleanable space or 'Run Cleaner' to begin."),
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center,
+                MaxWidth = 440,
+                Margin = new Thickness(0, 6, 0, 12)
+            };
+            _txtIdleDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+
+            _txtIdleSummaryBadge = new TextBlock
+            {
+                Text = "0 items selected",
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            _txtIdleSummaryBadge.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+
+            _pnlStateIdle.Children.Add(idleIcon);
+            _pnlStateIdle.Children.Add(_txtIdleTitle);
+            _pnlStateIdle.Children.Add(_txtIdleDesc);
+            _pnlStateIdle.Children.Add(_txtIdleSummaryBadge);
+            centerGrid.Children.Add(_pnlStateIdle);
+
+            // 1.2 Running State (with animated rotating spinner)
+            _pnlStateRunning = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(12, 16, 12, 12),
+                Visibility = Visibility.Collapsed
+            };
+
+            StackPanel spSpinnerRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            _lblStatus.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            Grid.SetColumn(_lblStatus, 0);
 
-            _lblTotalSize = new TextBlock()
+            _txtSpinner = new TextBlock
             {
-                Text = "0 B",
+                Text = "🔄",
+                FontSize = 24,
+                VerticalAlignment = VerticalAlignment.Center,
+                RenderTransformOrigin = new Point(0.5, 0.5),
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            RotateTransform rt = new RotateTransform(0);
+            _txtSpinner.RenderTransform = rt;
+            DoubleAnimation da = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(1.1)))
+            {
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            rt.BeginAnimation(RotateTransform.AngleProperty, da);
+
+            StackPanel spRunningText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            _txtRunningCategory = new TextBlock
+            {
+                Text = "Windows Explorer",
+                FontSize = 14,
+                FontWeight = FontWeights.Bold
+            };
+            _txtRunningCategory.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+
+            _txtRunningItem = new TextBlock
+            {
+                Text = "Taskleiste Jumplist",
                 FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                VerticalAlignment = VerticalAlignment.Center
+                Margin = new Thickness(0, 2, 0, 0)
             };
-            _lblTotalSize.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            Grid.SetColumn(_lblTotalSize, 1);
+            _txtRunningItem.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
-            statusGrid.Children.Add(_lblStatus);
-            statusGrid.Children.Add(_lblTotalSize);
+            spRunningText.Children.Add(_txtRunningCategory);
+            spRunningText.Children.Add(_txtRunningItem);
+            spSpinnerRow.Children.Add(_txtSpinner);
+            spSpinnerRow.Children.Add(spRunningText);
+            _pnlStateRunning.Children.Add(spSpinnerRow);
 
-            _pbProgress = new ProgressBar()
+            Border runningDivider = new Border
             {
-                Height = 4,
-                Margin = new Thickness(0, 6, 0, 0),
-                Visibility = Visibility.Collapsed,
-                IsIndeterminate = true
+                Height = 1,
+                Margin = new Thickness(0, 14, 0, 10)
+            };
+            runningDivider.SetResourceReference(Border.BackgroundProperty, "BrushBorderCard");
+            _pnlStateRunning.Children.Add(runningDivider);
+
+            _txtRunningStats = new TextBlock
+            {
+                Text = "Processing...",
+                FontSize = 11
+            };
+            _txtRunningStats.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+            _pnlStateRunning.Children.Add(_txtRunningStats);
+
+            centerGrid.Children.Add(_pnlStateRunning);
+
+            // 1.3 Scanned State (Results Breakdown)
+            _pnlStateScanned = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Visibility = Visibility.Collapsed
+            };
+            StackPanel spScannedContent = new StackPanel();
+
+            _txtScanHeader = new TextBlock
+            {
+                Text = "Analysis complete",
+                FontSize = 15,
+                FontWeight = FontWeights.Bold
+            };
+            _txtScanHeader.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+
+            _txtScanSub = new TextBlock
+            {
+                Text = "Click 'Run Cleaner' to remove these files.",
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 10)
+            };
+            _txtScanSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+
+            _pnlScannedItemsList = new StackPanel();
+
+            spScannedContent.Children.Add(_txtScanHeader);
+            spScannedContent.Children.Add(_txtScanSub);
+            spScannedContent.Children.Add(_pnlScannedItemsList);
+            _pnlStateScanned.Content = spScannedContent;
+            centerGrid.Children.Add(_pnlStateScanned);
+
+            // 1.4 Cleaned State (Summary Breakdown)
+            _pnlStateCleaned = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(4),
+                Visibility = Visibility.Collapsed
             };
 
-            statusStack.Children.Add(statusGrid);
-            statusStack.Children.Add(_pbProgress);
-            statusCard.Child = statusStack;
-            root.Children.Add(statusCard);
+            _txtCleanHeader = new TextBlock
+            {
+                Text = "Cleaning complete!",
+                FontSize = 15,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E))
+            };
 
-            // 4. Modules ItemsControl (2-column UniformGrid)
-            ItemsControl icCleaners = new ItemsControl();
-            icCleaners.ItemsSource = _visibleCleaners;
+            _txtCleanSub = new TextBlock
+            {
+                Text = "Your system has been cleaned.",
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 10)
+            };
+            _txtCleanSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
-            FrameworkElementFactory panelFactory = new FrameworkElementFactory(typeof(UniformGrid));
-            panelFactory.SetValue(UniformGrid.ColumnsProperty, 2);
-            icCleaners.ItemsPanel = new ItemsPanelTemplate(panelFactory);
+            _pnlCleanedItemsList = new StackPanel();
 
-            root.Children.Add( BuildCleanersGridContainer() );
+            _pnlStateCleaned.Children.Add(_txtCleanHeader);
+            _pnlStateCleaned.Children.Add(_txtCleanSub);
+            _pnlStateCleaned.Children.Add(_pnlCleanedItemsList);
+            centerGrid.Children.Add(_pnlStateCleaned);
 
-            UpdateCategoryButtonStyles();
+            Grid.SetRow(centerGrid, 1);
+            rightGrid.Children.Add(centerGrid);
+
+            // Row 2: Bottom Action Bar
+            Border bottomBar = new Border
+            {
+                BorderThickness = new Thickness(0, 1, 0, 0),
+                Padding = new Thickness(14, 10, 14, 10),
+                CornerRadius = new CornerRadius(0, 0, 5, 5)
+            };
+            bottomBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            bottomBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+
+            Grid bottomGrid = new Grid();
+            bottomGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            bottomGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            bottomGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _btnLeftAction = new Button
+            {
+                Content = T("Btn_CleanerAnalyze", "🔍 Analyze"),
+                Height = 32,
+                Padding = new Thickness(18, 0, 18, 0),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold
+            };
+            _btnLeftAction.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnLeftAction.Click += (s, e) =>
+            {
+                if (_isBusy)
+                {
+                    BtnCancel_Click(s, e);
+                }
+                else
+                {
+                    BtnAnalyze_Click(s, e);
+                }
+            };
+            Grid.SetColumn(_btnLeftAction, 0);
+
+            _btnRightAction = new Button
+            {
+                Content = T("Btn_CleanerClean", "🧹 Run Cleaner"),
+                Height = 32,
+                Padding = new Thickness(20, 0, 20, 0),
+                FontSize = 11,
+                FontWeight = FontWeights.Bold
+            };
+            _btnRightAction.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            _btnRightAction.Click += BtnClean_Click;
+            Grid.SetColumn(_btnRightAction, 2);
+
+            bottomGrid.Children.Add(_btnLeftAction);
+            bottomGrid.Children.Add(_btnRightAction);
+            bottomBar.Child = bottomGrid;
+
+            Grid.SetRow(bottomBar, 2);
+            rightGrid.Children.Add(bottomBar);
+
+            rightBorder.Child = rightGrid;
+            Grid.SetColumn(rightBorder, 1);
+            root.Children.Add(rightBorder);
+
+            SetActiveTab("windows");
             UpdateSelectedSummary();
             return root;
         }
 
-        private UniformGrid _cardsUniformGrid;
-
-        private UIElement BuildCleanersGridContainer()
+        private void SetActiveTab(string tabId)
         {
-            _cardsUniformGrid = new UniformGrid() { Columns = 2 };
-            RebuildCardsGrid();
-            return _cardsUniformGrid;
-        }
+            _activeTab = tabId;
+            bool isWindows = string.Equals(tabId, "windows", StringComparison.OrdinalIgnoreCase);
 
-        private void RebuildCardsGrid()
-        {
-            if (_cardsUniformGrid == null || _visibleCleaners == null) return;
-            _cardsUniformGrid.Children.Clear();
-            foreach (BaseCleaner cleaner in _visibleCleaners)
+            if (_tabWindowsBorder != null)
             {
-                _cardsUniformGrid.Children.Add(BuildCleanerItemCard(cleaner));
+                _tabWindowsBorder.BorderThickness = isWindows ? new Thickness(0, 3, 0, 0) : new Thickness(0);
+                _tabWindowsBorder.SetResourceReference(Border.BorderBrushProperty, isWindows ? "BrushAccent" : "Transparent");
+                _tabWindowsBorder.SetResourceReference(Border.BackgroundProperty, isWindows ? "BrushBgCard" : "BrushBgSidebar");
             }
+            if (_tabWindowsText != null)
+            {
+                _tabWindowsText.FontWeight = isWindows ? FontWeights.Bold : FontWeights.Normal;
+                _tabWindowsText.SetResourceReference(TextBlock.ForegroundProperty, isWindows ? "BrushTextPrimary" : "BrushTextSecondary");
+            }
+
+            if (_tabAppsBorder != null)
+            {
+                _tabAppsBorder.BorderThickness = !isWindows ? new Thickness(0, 3, 0, 0) : new Thickness(0);
+                _tabAppsBorder.SetResourceReference(Border.BorderBrushProperty, !isWindows ? "BrushAccent" : "Transparent");
+                _tabAppsBorder.SetResourceReference(Border.BackgroundProperty, !isWindows ? "BrushBgCard" : "BrushBgSidebar");
+            }
+            if (_tabAppsText != null)
+            {
+                _tabAppsText.FontWeight = !isWindows ? FontWeights.Bold : FontWeights.Normal;
+                _tabAppsText.SetResourceReference(TextBlock.ForegroundProperty, !isWindows ? "BrushTextPrimary" : "BrushTextSecondary");
+            }
+
+            BuildCategoriesTree();
         }
 
-        private void AddCategoryFilterButton(WrapPanel parent, string catId, string title)
+        private void BuildCategoriesTree()
         {
-            Button btn = new Button()
-            {
-                Content = title,
-                Height = 25,
-                Padding = new Thickness(10, 0, 10, 0),
-                Margin = new Thickness(0, 0, 5, 4),
-                FontSize = 10,
-                Tag = catId
-            };
-            btn.Click += (s, e) =>
-            {
-                _activeCategoryFilter = catId;
-                FilterVisibleCleaners();
-                UpdateCategoryButtonStyles();
-            };
-            _categoryButtons[catId] = btn;
-            parent.Children.Add(btn);
-        }
+            if (_pnlCategoriesContainer == null || _allCleaners == null) return;
+            _pnlCategoriesContainer.Children.Clear();
 
-        private void FilterVisibleCleaners()
-        {
-            if (_allCleaners == null || _visibleCleaners == null) return;
-            _visibleCleaners.Clear();
+            // Group cleaners of the active tab by SectionId
+            List<string> sections = new List<string>();
             foreach (BaseCleaner c in _allCleaners)
             {
-                if (_activeCategoryFilter == "all" || string.Equals(c.CategoryId, _activeCategoryFilter, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
                 {
-                    _visibleCleaners.Add(c);
+                    if (!sections.Contains(c.SectionId))
+                    {
+                        sections.Add(c.SectionId);
+                    }
                 }
             }
-            RebuildCardsGrid();
+
+            foreach (string secId in sections)
+            {
+                List<BaseCleaner> items = new List<BaseCleaner>();
+                string secTitle = "";
+                string secIcon = "";
+
+                foreach (BaseCleaner c in _allCleaners)
+                {
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(c.SectionId, secId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        items.Add(c);
+                        secTitle = c.SectionTitle;
+                        secIcon = c.SectionIcon;
+                    }
+                }
+
+                // Section Header
+                StackPanel secHeader = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 8, 0, 4)
+                };
+
+                TextBlock iconTb = new TextBlock
+                {
+                    Text = secIcon,
+                    FontSize = 13,
+                    Margin = new Thickness(0, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                TextBlock titleTb = new TextBlock
+                {
+                    Text = secTitle,
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                titleTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+
+                secHeader.Children.Add(iconTb);
+                secHeader.Children.Add(titleTb);
+                _pnlCategoriesContainer.Children.Add(secHeader);
+
+                // Checkboxes for each item
+                foreach (BaseCleaner cleaner in items)
+                {
+                    CheckBox cb = new CheckBox
+                    {
+                        Content = cleaner.IsDangerous ? (cleaner.Name + " ⚠️") : cleaner.Name,
+                        FontSize = 11,
+                        Margin = new Thickness(18, 2, 0, 2),
+                        Cursor = System.Windows.Input.Cursors.Hand,
+                        ToolTip = string.IsNullOrEmpty(cleaner.WarningMessage)
+                            ? (object)cleaner.Description
+                            : string.Format("{0}\n⚠️ {1}", cleaner.Description, cleaner.WarningMessage)
+                    };
+                    cb.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                    cb.SetBinding(CheckBox.IsCheckedProperty, new Binding("IsSelected")
+                    {
+                        Source = cleaner,
+                        Mode = BindingMode.TwoWay
+                    });
+                    cb.Checked += (s, e) => UpdateSelectedSummary();
+                    cb.Unchecked += (s, e) => UpdateSelectedSummary();
+
+                    _pnlCategoriesContainer.Children.Add(cb);
+                }
+
+                // If Deep Scan section, add root folder picker row
+                if (secId == "deep_scan")
+                {
+                    Border deepScanBox = new Border
+                    {
+                        Margin = new Thickness(18, 6, 0, 4),
+                        Padding = new Thickness(8),
+                        CornerRadius = new CornerRadius(4),
+                        BorderThickness = new Thickness(1)
+                    };
+                    deepScanBox.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                    deepScanBox.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                    StackPanel spDeep = new StackPanel();
+                    TextBlock lblRoot = new TextBlock
+                    {
+                        Text = T("Cleaner_Label_DeepScanRoot", "Deep Scan Root Directory:"),
+                        FontSize = 10,
+                        Margin = new Thickness(0, 0, 0, 4)
+                    };
+                    lblRoot.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                    spDeep.Children.Add(lblRoot);
+
+                    Grid gridPicker = new Grid();
+                    gridPicker.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    gridPicker.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                    _txtDeepScanRoot = new TextBox
+                    {
+                        Text = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        FontSize = 10,
+                        Height = 22,
+                        Margin = new Thickness(0, 0, 4, 0)
+                    };
+                    Grid.SetColumn(_txtDeepScanRoot, 0);
+
+                    _btnBrowseDeepScan = new Button
+                    {
+                        Content = "📁",
+                        Width = 26,
+                        Height = 22,
+                        Padding = new Thickness(0)
+                    };
+                    _btnBrowseDeepScan.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                    _btnBrowseDeepScan.Click += BtnBrowseDeepScan_Click;
+                    Grid.SetColumn(_btnBrowseDeepScan, 1);
+
+                    gridPicker.Children.Add(_txtDeepScanRoot);
+                    gridPicker.Children.Add(_btnBrowseDeepScan);
+                    spDeep.Children.Add(gridPicker);
+
+                    deepScanBox.Child = spDeep;
+                    _pnlCategoriesContainer.Children.Add(deepScanBox);
+                }
+            }
         }
 
-        private void UpdateCategoryButtonStyles()
+        private void ShowViewMode(ViewMode mode)
         {
-            if (_categoryButtons == null) return;
-            foreach (KeyValuePair<string, Button> kvp in _categoryButtons)
+            if (_pnlStateIdle != null) _pnlStateIdle.Visibility = mode == ViewMode.Idle ? Visibility.Visible : Visibility.Collapsed;
+            if (_pnlStateRunning != null) _pnlStateRunning.Visibility = mode == ViewMode.Running ? Visibility.Visible : Visibility.Collapsed;
+            if (_pnlStateScanned != null) _pnlStateScanned.Visibility = mode == ViewMode.Scanned ? Visibility.Visible : Visibility.Collapsed;
+            if (_pnlStateCleaned != null) _pnlStateCleaned.Visibility = mode == ViewMode.Cleaned ? Visibility.Visible : Visibility.Collapsed;
+
+            if (mode == ViewMode.Running)
             {
-                kvp.Value.SetResourceReference(
-                    Button.StyleProperty,
-                    string.Equals(kvp.Key, _activeCategoryFilter, StringComparison.OrdinalIgnoreCase) ? "BtnAccent" : "BtnDefault");
+                if (_btnLeftAction != null)
+                {
+                    _btnLeftAction.Content = T("Btn_CleanerCancel", "✕ Cancel");
+                    _btnLeftAction.BorderBrush = (Brush)Application.Current.FindResource("BrushAccent");
+                    _btnLeftAction.BorderThickness = new Thickness(1.5);
+                }
+                if (_btnRightAction != null)
+                {
+                    _btnRightAction.IsEnabled = false;
+                }
+            }
+            else
+            {
+                if (_btnLeftAction != null)
+                {
+                    _btnLeftAction.Content = T("Btn_CleanerAnalyze", "🔍 Analyze");
+                    _btnLeftAction.ClearValue(Button.BorderBrushProperty);
+                    _btnLeftAction.ClearValue(Button.BorderThicknessProperty);
+                    _btnLeftAction.IsEnabled = true;
+                }
+                if (_btnRightAction != null)
+                {
+                    _btnRightAction.IsEnabled = true;
+                }
             }
         }
 
-        private UIElement BuildCleanerItemCard(BaseCleaner item)
+        private void UpdateSelectedSummary()
         {
-            Border card = new Border()
+            if (_allCleaners == null) return;
+            long totalBytes = 0;
+            int count = 0;
+            foreach (BaseCleaner c in _allCleaners)
             {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(10, 8, 10, 8),
-                Margin = new Thickness(3),
-                DataContext = item
-            };
-            card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            Grid grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-
-            CheckBox cb = new CheckBox()
-            {
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, 3, 8, 0)
-            };
-            cb.SetBinding(CheckBox.IsCheckedProperty, new Binding("IsSelected") { Mode = BindingMode.TwoWay });
-            cb.Checked += (s, e) => UpdateSelectedSummary();
-            cb.Unchecked += (s, e) => UpdateSelectedSummary();
-            Grid.SetColumn(cb, 0);
-            grid.Children.Add(cb);
-
-            StackPanel details = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
-            WrapPanel titleRow = new WrapPanel() { Orientation = Orientation.Horizontal };
-
-            TextBlock txtIcon = new TextBlock() { FontSize = 12, Margin = new Thickness(0, 0, 5, 0) };
-            txtIcon.SetBinding(TextBlock.TextProperty, new Binding("Icon"));
-
-            TextBlock txtName = new TextBlock()
-            {
-                FontWeight = FontWeights.Bold,
-                FontSize = 11,
-                Margin = new Thickness(0, 0, 6, 0),
-                TextTrimming = TextTrimming.CharacterEllipsis
-            };
-            txtName.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            txtName.SetBinding(TextBlock.TextProperty, new Binding("Name"));
-
-            titleRow.Children.Add(txtIcon);
-            titleRow.Children.Add(txtName);
-
-            if (item.RequiresAdmin)
-            {
-                TextBlock badgeAdmin = new TextBlock()
+                if (c.IsSelected)
                 {
-                    Text = "🛡️ Admin",
-                    FontSize = 9,
-                    FontWeight = FontWeights.SemiBold,
-                    Margin = new Thickness(0, 1, 5, 0),
-                    ToolTip = "Requires Administrator privileges for full access"
-                };
-                badgeAdmin.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-                titleRow.Children.Add(badgeAdmin);
+                    count++;
+                    totalBytes += c.SizeBytes;
+                }
             }
-
-            if (item.IsDangerous)
+            if (_txtIdleSummaryBadge != null)
             {
-                TextBlock badgeWarn = new TextBlock()
-                {
-                    Text = "⚠️ Caution",
-                    FontSize = 9,
-                    FontWeight = FontWeights.SemiBold,
-                    Margin = new Thickness(0, 1, 0, 0),
-                    ToolTip = item.WarningMessage
-                };
-                badgeWarn.SetResourceReference(TextBlock.ForegroundProperty, "BrushWarning");
-                titleRow.Children.Add(badgeWarn);
+                _txtIdleSummaryBadge.Text = string.Format("{0} {1} • {2}",
+                    count, T("Cleaner_Results_Category", "modules selected"), BaseCleaner.FormatBytes(totalBytes));
             }
-
-            TextBlock txtDesc = new TextBlock()
-            {
-                FontSize = 10,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 2, 0, 0)
-            };
-            txtDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            txtDesc.SetBinding(TextBlock.TextProperty, new Binding("Description"));
-
-            details.Children.Add(titleRow);
-            details.Children.Add(txtDesc);
-            Grid.SetColumn(details, 1);
-            grid.Children.Add(details);
-
-            Border sizeBadge = new Border()
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(6, 2, 6, 2),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(6, 0, 0, 0)
-            };
-            sizeBadge.SetResourceReference(Border.BackgroundProperty, "BrushBtnBg");
-            sizeBadge.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            TextBlock txtSize = new TextBlock()
-            {
-                FontSize = 10,
-                FontWeight = FontWeights.SemiBold
-            };
-            txtSize.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            txtSize.SetBinding(TextBlock.TextProperty, new Binding("SizeDisplay"));
-
-            sizeBadge.Child = txtSize;
-            Grid.SetColumn(sizeBadge, 2);
-            grid.Children.Add(sizeBadge);
-
-            card.Child = grid;
-            return card;
         }
 
         private void BtnBrowseDeepScan_Click(object sender, RoutedEventArgs e)
@@ -2555,22 +3176,12 @@ namespace OptiAssist.Addons.SystemCleaner
             return ctx;
         }
 
-        private void UpdateSelectedSummary()
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            if (_allCleaners == null) return;
-            long totalBytes = 0;
-            int count = 0;
-            foreach (BaseCleaner c in _allCleaners)
+            if (_isBusy && _cts != null)
             {
-                if (c.IsSelected)
-                {
-                    count++;
-                    totalBytes += c.SizeBytes;
-                }
-            }
-            if (_lblTotalSize != null)
-            {
-                _lblTotalSize.Text = string.Format("{0} ({1})", BaseCleaner.FormatBytes(totalBytes), count);
+                _cts.Cancel();
+                if (_btnLeftAction != null) _btnLeftAction.IsEnabled = false;
             }
         }
 
@@ -2591,30 +3202,39 @@ namespace OptiAssist.Addons.SystemCleaner
             }
 
             CleanerContext ctx = CreateExecutionContext();
-
             _isBusy = true;
-            _btnAnalyze.IsEnabled = false;
-            _btnClean.IsEnabled = false;
-            _pbProgress.Visibility = Visibility.Visible;
-            _lblStatus.Text = T("Cleaner_Status_Scanning", "Running dry-run scan on selected modules...");
+            _cts = new CancellationTokenSource();
+            _pbProgress.Value = 0;
+            _txtPercent.Text = "0%";
+            ShowViewMode(ViewMode.Running);
 
             ThreadPool.QueueUserWorkItem(state =>
             {
                 long totalFoundBytes = 0;
                 int totalFoundItems = 0;
                 int totalSkipped = 0;
+                List<BaseCleaner> withFindings = new List<BaseCleaner>();
 
                 Log("=================================================");
                 Log("   STARTING SYSTEM CLEANER DRY-RUN SCAN          ");
                 Log(string.Format("   Selected modules: {0} | Elevated: {1}", selected.Count, ctx.IsProcessElevated));
                 Log("=================================================");
 
-                foreach (BaseCleaner cleaner in selected)
+                for (int i = 0; i < selected.Count; i++)
                 {
+                    if (_cts.IsCancellationRequested) break;
+
+                    BaseCleaner cleaner = selected[i];
+                    int pct = (int)Math.Min(100, Math.Round((i / (double)selected.Count) * 100));
+
                     Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
-                        cleaner.StatusDisplay = "Scanning...";
-                        cleaner.SizeDisplay = "...";
+                        _pbProgress.Value = pct;
+                        _txtPercent.Text = pct + "%";
+                        _txtRunningCategory.Text = cleaner.SectionTitle;
+                        _txtRunningItem.Text = cleaner.Name;
+                        _txtRunningStats.Text = string.Format("{0} • {1} {2}",
+                            BaseCleaner.FormatBytes(totalFoundBytes), totalFoundItems, T("Cleaner_Results_Found", "files found"));
                     }));
 
                     ScanResult sr = cleaner.Scan(ctx);
@@ -2622,33 +3242,159 @@ namespace OptiAssist.Addons.SystemCleaner
                     totalFoundItems += sr.FoundItems.Count;
                     totalSkipped += sr.SkippedOrLockedCount;
 
+                    cleaner.SizeBytes = sr.EstimatedBytes;
+                    cleaner.FoundCount = sr.FoundItems.Count;
+                    cleaner.StatusDisplay = sr.EstimatedBytes > 0 ? "Scanned" : "Clean";
+
+                    if (sr.EstimatedBytes > 0 || sr.FoundItems.Count > 0)
+                    {
+                        withFindings.Add(cleaner);
+                    }
+
                     Log(string.Format("[SCAN] {0}: {1} ({2} items found, {3} skipped/locked)",
                         cleaner.Name, BaseCleaner.FormatBytes(sr.EstimatedBytes), sr.FoundItems.Count, sr.SkippedOrLockedCount));
-
-                    Application.Current.Dispatcher.Invoke(new Action(() =>
-                    {
-                        cleaner.SizeBytes = sr.EstimatedBytes;
-                        cleaner.FoundCount = sr.FoundItems.Count;
-                        cleaner.StatusDisplay = sr.EstimatedBytes > 0 ? "Scanned" : "Clean";
-                    }));
                 }
 
                 Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     _isBusy = false;
-                    _btnAnalyze.IsEnabled = true;
-                    _btnClean.IsEnabled = true;
-                    _pbProgress.Visibility = Visibility.Collapsed;
+                    if (_cts.IsCancellationRequested)
+                    {
+                        _pbProgress.Value = 0;
+                        _txtPercent.Text = "0%";
+                        ShowViewMode(ViewMode.Idle);
+                        Log("[SCAN CANCELLED] Operation cancelled by user.");
+                        MessageBox.Show(T("Cleaner_Status_Cancelled", "Operation cancelled by user."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        return;
+                    }
 
-                    string summaryMsg = string.Format(
-                        T("Cleaner_Status_Scanned", "Dry-run complete: Found {0} ({2} items) across {1} modules."),
-                        BaseCleaner.FormatBytes(totalFoundBytes), selected.Count, totalFoundItems);
-
-                    _lblStatus.Text = summaryMsg;
-                    UpdateSelectedSummary();
-                    Log("[SCAN COMPLETE] " + summaryMsg);
+                    _pbProgress.Value = 100;
+                    _txtPercent.Text = "100%";
+                    ShowScannedResults(totalFoundBytes, totalFoundItems, withFindings, selected.Count);
                 }));
             });
+        }
+
+        private void ShowScannedResults(long totalBytes, int totalItems, List<BaseCleaner> withFindings, int totalChecked)
+        {
+            ShowViewMode(ViewMode.Scanned);
+
+            if (_txtScanHeader != null)
+            {
+                _txtScanHeader.Text = string.Format(
+                    T("Cleaner_Status_ScanDone", "Analysis complete - {0} to be removed (approximate)"),
+                    BaseCleaner.FormatBytes(totalBytes));
+            }
+            if (_txtScanSub != null)
+            {
+                _txtScanSub.Text = string.Format(
+                    T("Cleaner_Status_Scanned", "Dry-run complete: Found {0} ({2} items) across {1} modules."),
+                    BaseCleaner.FormatBytes(totalBytes), totalChecked, totalItems);
+            }
+
+            if (_pnlScannedItemsList != null)
+            {
+                _pnlScannedItemsList.Children.Clear();
+
+                if (withFindings == null || withFindings.Count == 0)
+                {
+                    Border cleanBox = new Border
+                    {
+                        Background = (Brush)Application.Current.FindResource("BrushBgSidebar"),
+                        BorderBrush = (Brush)Application.Current.FindResource("BrushBorderCard"),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(6),
+                        Padding = new Thickness(16),
+                        Margin = new Thickness(0, 10, 0, 0)
+                    };
+                    TextBlock tbClean = new TextBlock
+                    {
+                        Text = T("Cleaner_Results_NoJunk", "✔️ System is already clean! No unnecessary files were found in selected categories."),
+                        FontSize = 12,
+                        FontWeight = FontWeights.SemiBold,
+                        HorizontalAlignment = HorizontalAlignment.Center
+                    };
+                    tbClean.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                    cleanBox.Child = tbClean;
+                    _pnlScannedItemsList.Children.Add(cleanBox);
+                }
+                else
+                {
+                    // Group findings by section
+                    Dictionary<string, List<BaseCleaner>> grouped = new Dictionary<string, List<BaseCleaner>>();
+                    foreach (BaseCleaner c in withFindings)
+                    {
+                        string key = c.SectionTitle;
+                        if (!grouped.ContainsKey(key)) grouped[key] = new List<BaseCleaner>();
+                        grouped[key].Add(c);
+                    }
+
+                    foreach (KeyValuePair<string, List<BaseCleaner>> grp in grouped)
+                    {
+                        TextBlock grpHeader = new TextBlock
+                        {
+                            Text = grp.Key,
+                            FontSize = 12,
+                            FontWeight = FontWeights.Bold,
+                            Margin = new Thickness(0, 8, 0, 4)
+                        };
+                        grpHeader.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                        _pnlScannedItemsList.Children.Add(grpHeader);
+
+                        foreach (BaseCleaner item in grp.Value)
+                        {
+                            Border row = new Border
+                            {
+                                BorderThickness = new Thickness(1),
+                                CornerRadius = new CornerRadius(4),
+                                Padding = new Thickness(10, 6, 10, 6),
+                                Margin = new Thickness(0, 2, 0, 4)
+                            };
+                            row.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                            row.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                            Grid g = new Grid();
+                            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                            StackPanel spLeft = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                            TextBlock txtName = new TextBlock
+                            {
+                                Text = item.Name,
+                                FontSize = 11,
+                                FontWeight = FontWeights.SemiBold
+                            };
+                            txtName.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+
+                            TextBlock txtCount = new TextBlock
+                            {
+                                Text = string.Format("{0} files found", item.FoundCount),
+                                FontSize = 10
+                            };
+                            txtCount.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+
+                            spLeft.Children.Add(txtName);
+                            spLeft.Children.Add(txtCount);
+                            Grid.SetColumn(spLeft, 0);
+                            g.Children.Add(spLeft);
+
+                            TextBlock txtSize = new TextBlock
+                            {
+                                Text = item.SizeDisplay,
+                                FontSize = 12,
+                                FontWeight = FontWeights.Bold,
+                                VerticalAlignment = VerticalAlignment.Center
+                            };
+                            txtSize.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                            Grid.SetColumn(txtSize, 1);
+                            g.Children.Add(txtSize);
+
+                            row.Child = g;
+                            _pnlScannedItemsList.Children.Add(row);
+                        }
+                    }
+                }
+            }
         }
 
         private void BtnClean_Click(object sender, RoutedEventArgs e)
@@ -2657,7 +3403,8 @@ namespace OptiAssist.Addons.SystemCleaner
 
             List<BaseCleaner> selected = new List<BaseCleaner>();
             List<string> warnings = new List<string>();
-            bool hasChromiumSelected = false;
+            bool hasChromeSelected = false;
+            bool hasEdgeSelected = false;
             long estimatedSpace = 0;
 
             foreach (BaseCleaner c in _allCleaners)
@@ -2670,10 +3417,8 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         warnings.Add("• " + c.Name + ": " + c.WarningMessage);
                     }
-                    if (c.CategoryId == "chromium")
-                    {
-                        hasChromiumSelected = true;
-                    }
+                    if (string.Equals(c.SectionId, "chrome", StringComparison.OrdinalIgnoreCase)) hasChromeSelected = true;
+                    if (string.Equals(c.SectionId, "edge", StringComparison.OrdinalIgnoreCase)) hasEdgeSelected = true;
                 }
             }
 
@@ -2683,15 +3428,29 @@ namespace OptiAssist.Addons.SystemCleaner
                 return;
             }
 
-            // Alert if Chrome or Edge is open when cleaning Chromium targets
-            if (hasChromiumSelected)
+            // Check running browsers
+            if (hasChromeSelected)
             {
-                List<string> runningBrowsers = ChromiumHelper.GetRunningChromiumBrowsers();
-                if (runningBrowsers.Count > 0)
+                List<string> chromeRunning = ChromiumHelper.GetRunningChromiumBrowsers("chrome");
+                if (chromeRunning.Count > 0)
                 {
                     string browserMsg = string.Format(
                         T("Msg_CleanerBrowserRunning", "The following browsers are currently running:\n• {0}\n\nOpen browser databases (Cookies, History, SQLite Vacuum) may be locked. Close the browser first for a complete cleanup, or click Yes to continue and skip locked files."),
-                        string.Join("\n• ", runningBrowsers.ToArray()));
+                        string.Join("\n• ", chromeRunning.ToArray()));
+                    if (MessageBox.Show(browserMsg, "OptiAssist - Browser Running", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                }
+            }
+            if (hasEdgeSelected)
+            {
+                List<string> edgeRunning = ChromiumHelper.GetRunningChromiumBrowsers("edge");
+                if (edgeRunning.Count > 0)
+                {
+                    string browserMsg = string.Format(
+                        T("Msg_CleanerBrowserRunning", "The following browsers are currently running:\n• {0}\n\nOpen browser databases (Cookies, History, SQLite Vacuum) may be locked. Close the browser first for a complete cleanup, or click Yes to continue and skip locked files."),
+                        string.Join("\n• ", edgeRunning.ToArray()));
                     if (MessageBox.Show(browserMsg, "OptiAssist - Browser Running", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                     {
                         return;
@@ -2721,29 +3480,39 @@ namespace OptiAssist.Addons.SystemCleaner
             }
 
             CleanerContext ctx = CreateExecutionContext();
-
             _isBusy = true;
-            _btnAnalyze.IsEnabled = false;
-            _btnClean.IsEnabled = false;
-            _pbProgress.Visibility = Visibility.Visible;
+            _cts = new CancellationTokenSource();
+            _pbProgress.Value = 0;
+            _txtPercent.Text = "0%";
+            ShowViewMode(ViewMode.Running);
 
             ThreadPool.QueueUserWorkItem(state =>
             {
                 long totalFreed = 0;
                 int totalDeleted = 0;
                 int totalSkipped = 0;
+                List<BaseCleaner> cleanedItems = new List<BaseCleaner>();
 
                 Log("=================================================");
                 Log("   STARTING SYSTEM CLEANING & OPTIMIZATION       ");
                 Log(string.Format("   Modules to clean: {0}", selected.Count));
                 Log("=================================================");
 
-                foreach (BaseCleaner cleaner in selected)
+                for (int i = 0; i < selected.Count; i++)
                 {
+                    if (_cts.IsCancellationRequested) break;
+
+                    BaseCleaner cleaner = selected[i];
+                    int pct = (int)Math.Min(100, Math.Round((i / (double)selected.Count) * 100));
+
                     Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
-                        _lblStatus.Text = string.Format(T("Cleaner_Status_Cleaning", "Cleaning {0}..."), cleaner.Name);
-                        cleaner.StatusDisplay = "Cleaning...";
+                        _pbProgress.Value = pct;
+                        _txtPercent.Text = pct + "%";
+                        _txtRunningCategory.Text = cleaner.SectionTitle;
+                        _txtRunningItem.Text = cleaner.Name;
+                        _txtRunningStats.Text = string.Format("{0} freed • {1} files deleted",
+                            BaseCleaner.FormatBytes(totalFreed), totalDeleted);
                     }));
 
                     CleanResult cr = cleaner.Clean(ctx);
@@ -2751,57 +3520,108 @@ namespace OptiAssist.Addons.SystemCleaner
                     totalDeleted += cr.DeletedCount;
                     totalSkipped += cr.ErrorOrLockedCount;
 
-                    Application.Current.Dispatcher.Invoke(new Action(() =>
-                    {
-                        cleaner.SizeBytes = 0;
-                        cleaner.SizeDisplay = "Cleaned";
-                        cleaner.StatusDisplay = "Cleaned";
-                    }));
+                    cleaner.SizeBytes = 0;
+                    cleaner.SizeDisplay = "Cleaned";
+                    cleaner.StatusDisplay = "Cleaned";
+                    cleanedItems.Add(cleaner);
                 }
 
                 Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     _isBusy = false;
-                    _btnAnalyze.IsEnabled = true;
-                    _btnClean.IsEnabled = true;
-                    _pbProgress.Visibility = Visibility.Collapsed;
+                    if (_cts.IsCancellationRequested)
+                    {
+                        _pbProgress.Value = 0;
+                        _txtPercent.Text = "0%";
+                        ShowViewMode(ViewMode.Idle);
+                        Log("[CLEAN CANCELLED] Operation cancelled by user.");
+                        MessageBox.Show(T("Cleaner_Status_Cancelled", "Operation cancelled by user."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        return;
+                    }
 
-                    string doneMsg = string.Format(
-                        T("Cleaner_Status_Cleaned", "Cleaning completed: {0} freed across {1} modules! ({2} locked/skipped)"),
-                        BaseCleaner.FormatBytes(totalFreed), selected.Count, totalSkipped);
-
-                    _lblStatus.Text = doneMsg;
-                    UpdateSelectedSummary();
-                    Log("[CLEANER COMPLETE] " + doneMsg);
-
-                    MessageBox.Show(doneMsg, "System Cleaner", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _pbProgress.Value = 100;
+                    _txtPercent.Text = "100%";
+                    ShowCleanedResults(totalFreed, totalDeleted, totalSkipped, cleanedItems);
                 }));
             });
         }
 
-        public void OnLanguageChanged(string langCode)
+        private void ShowCleanedResults(long totalFreed, int totalDeleted, int totalSkipped, List<BaseCleaner> cleanedItems)
         {
-            if (_txtTitle != null) _txtTitle.Text = T("Cleaner_Title", "System Cleaner & Optimizer");
-            if (_txtSubtitle != null) _txtSubtitle.Text = T("Cleaner_Subtitle", "Dry-run scan and safe cleaning of OS caches, Chromium browsers (with SQLite Vacuum), Explorer, Defender, and Deep Scan");
-            if (_btnAnalyze != null) _btnAnalyze.Content = T("Btn_CleanerAnalyze", "🔍 Scan (Dry-Run)");
-            if (_btnClean != null) _btnClean.Content = T("Btn_CleanerClean", "🧹 Clean Selected");
-            if (_btnSelectAll != null) _btnSelectAll.Content = T("Btn_CleanerSelectAll", "Select All");
-            if (_btnDeselectAll != null) _btnDeselectAll.Content = T("Btn_CleanerDeselectAll", "Deselect All");
-            if (_btnSelectRecommended != null) _btnSelectRecommended.Content = T("Btn_CleanerSelectRecommended", "Safe Recommended");
-            if (_lblDeepScanPath != null) _lblDeepScanPath.Text = T("Cleaner_Label_DeepScanRoot", "Deep Scan Root Directory:");
-            if (_lblStatus != null && !_isBusy) _lblStatus.Text = T("Cleaner_Status_Ready", "Ready for dry-run scan or cleanup. Select desired modules below.");
+            ShowViewMode(ViewMode.Cleaned);
 
-            if (_categoryButtons != null)
+            if (_txtCleanHeader != null)
             {
-                if (_categoryButtons.ContainsKey("all")) _categoryButtons["all"].Content = T("Cleaner_Cat_All", "All Modules");
-                if (_categoryButtons.ContainsKey("win_core")) _categoryButtons["win_core"].Content = "🪟 " + T("Cleaner_Cat_WinCore", "Windows Core");
-                if (_categoryButtons.ContainsKey("explorer_shell")) _categoryButtons["explorer_shell"].Content = "🗂️ " + T("Cleaner_Cat_Explorer", "Explorer & Shell");
-                if (_categoryButtons.ContainsKey("chromium")) _categoryButtons["chromium"].Content = "🌐 " + T("Cleaner_Cat_Chromium", "Chrome & Edge");
-                if (_categoryButtons.ContainsKey("defender")) _categoryButtons["defender"].Content = "🛡️ " + T("Cleaner_Cat_Defender", "Windows Defender");
-                if (_categoryButtons.ContainsKey("deep_scan")) _categoryButtons["deep_scan"].Content = "🔎 " + T("Cleaner_Cat_DeepScan", "Deep Scan");
+                _txtCleanHeader.Text = string.Format(
+                    T("Cleaner_Status_CleanDone", "Cleaning complete - {0} freed successfully!"),
+                    BaseCleaner.FormatBytes(totalFreed));
+            }
+            if (_txtCleanSub != null)
+            {
+                _txtCleanSub.Text = string.Format(
+                    T("Cleaner_Status_Cleaned", "Cleaning completed: {0} freed across {1} modules! ({2} items skipped/locked)"),
+                    BaseCleaner.FormatBytes(totalFreed), cleanedItems.Count, totalSkipped);
             }
 
+            if (_pnlCleanedItemsList != null)
+            {
+                _pnlCleanedItemsList.Children.Clear();
+
+                Border successCard = new Border
+                {
+                    Background = (Brush)Application.Current.FindResource("BrushBgSidebar"),
+                    BorderBrush = (Brush)Application.Current.FindResource("BrushBorderCard"),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(16),
+                    Margin = new Thickness(0, 8, 0, 0)
+                };
+
+                StackPanel sp = new StackPanel();
+                TextBlock tb = new TextBlock
+                {
+                    Text = string.Format("✔️ {0} files deleted • {1} reclaimable space freed.", totalDeleted, BaseCleaner.FormatBytes(totalFreed)),
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                tb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                sp.Children.Add(tb);
+
+                if (totalSkipped > 0)
+                {
+                    TextBlock tbSkipped = new TextBlock
+                    {
+                        Text = string.Format("ℹ️ {0} files were skipped because they were currently locked or in use.", totalSkipped),
+                        FontSize = 10,
+                        Margin = new Thickness(0, 4, 0, 0),
+                        HorizontalAlignment = HorizontalAlignment.Center
+                    };
+                    tbSkipped.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+                    sp.Children.Add(tbSkipped);
+                }
+
+                successCard.Child = sp;
+                _pnlCleanedItemsList.Children.Add(successCard);
+            }
+
+            UpdateSelectedSummary();
+        }
+
+        public void OnLanguageChanged(string langCode)
+        {
+            if (_tabWindowsText != null) _tabWindowsText.Text = T("Cleaner_Tab_Windows", "Windows");
+            if (_tabAppsText != null) _tabAppsText.Text = T("Cleaner_Tab_Apps", "Applications");
+            if (_btnSelectAll != null) _btnSelectAll.Content = T("Cleaner_Quick_All", "Select All");
+            if (_btnDeselectAll != null) _btnDeselectAll.Content = T("Cleaner_Quick_None", "Deselect All");
+            if (_btnSelectRecommended != null) _btnSelectRecommended.Content = T("Cleaner_Quick_Default", "Defaults");
+            if (_txtIdleTitle != null) _txtIdleTitle.Text = T("Cleaner_Status_Idle_Title", "System Cleaner & Optimizer");
+            if (_txtIdleDesc != null) _txtIdleDesc.Text = T("Cleaner_Status_Idle_Desc", "Select the items you wish to clean on the left, then click 'Analyze' to check cleanable space or 'Run Cleaner' to begin.");
+            if (_btnLeftAction != null && !_isBusy) _btnLeftAction.Content = T("Btn_CleanerAnalyze", "🔍 Analyze");
+            if (_btnRightAction != null) _btnRightAction.Content = T("Btn_CleanerClean", "🧹 Run Cleaner");
+
             ApplyLocalizedMetadata();
+            BuildCategoriesTree();
             UpdateSelectedSummary();
         }
 
@@ -2809,7 +3629,6 @@ namespace OptiAssist.Addons.SystemCleaner
         {
             if (_allCleaners == null) return;
 
-            // Rebuild localized strings by matching cleaner IDs against a freshly localized template list
             List<BaseCleaner> localizedTemplates = CleanerRegistry.CreateAllCleaners(T);
             Dictionary<string, BaseCleaner> map = new Dictionary<string, BaseCleaner>();
             foreach (BaseCleaner tmpl in localizedTemplates)
@@ -2825,6 +3644,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     item.Name = tmpl.Name;
                     item.Description = tmpl.Description;
                     item.Category = tmpl.Category;
+                    item.SectionTitle = tmpl.SectionTitle;
                     item.WarningMessage = tmpl.WarningMessage;
                 }
             }
