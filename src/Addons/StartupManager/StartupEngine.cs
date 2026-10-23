@@ -31,25 +31,25 @@ namespace OptiAssist.Addons.StartupManager
 
             // 1. Current User (HKCU\Run)
             ScanRegistryRunKey(Registry.CurrentUser, RunRegPath, StartupLocationType.RegistryCurrentUser,
-                "HKCU (Usuário Atual)", StartupApprovedRunPath, list);
+                "HKCU (Current User)", StartupApprovedRunPath, list);
 
             // 2. All Users (HKLM\Run 64-bit / native)
             ScanRegistryRunKey(Registry.LocalMachine, RunRegPath, StartupLocationType.RegistryLocalMachine,
-                "HKLM (Todos os Usuários)", StartupApprovedRunPath, list);
+                "HKLM (All Users)", StartupApprovedRunPath, list);
 
             // 3. All Users (HKLM\WOW6432Node\Run 32-bit)
             ScanRegistryRunKey(Registry.LocalMachine, @"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run",
-                StartupLocationType.RegistryLocalMachine32, "HKLM 32-bit (Todos os Usuários)", StartupApprovedRun32Path, list);
+                StartupLocationType.RegistryLocalMachine32, "HKLM 32-bit (All Users)", StartupApprovedRun32Path, list);
 
             // 4. Startup Folder (Current User)
             string userStartup = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
             ScanStartupFolder(userStartup, StartupLocationType.StartupFolderUser,
-                "Pasta Inicializar (Usuário)", list);
+                "Startup Folder (User)", list);
 
             // 5. Startup Folder (Common / All Users)
             string commonStartup = Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup);
             ScanStartupFolder(commonStartup, StartupLocationType.StartupFolderCommon,
-                "Pasta Inicializar (Geral)", list);
+                "Startup Folder (Common)", list);
 
             // Sort by Name
             list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
@@ -636,8 +636,8 @@ namespace OptiAssist.Addons.StartupManager
                                 if (hideMicrosoft && isMicrosoft) continue;
 
                                 string startupTypeDisplay = (startType == 2)
-                                    ? (delayed ? "Automático (Atrasado)" : "Automático")
-                                    : (startType == 3 ? "Manual" : "Desativado");
+                                    ? (delayed ? "Automatic (Delayed)" : "Automatic")
+                                    : (startType == 3 ? "Manual" : "Disabled");
 
                                 bool isRunning = false;
                                 try
@@ -660,7 +660,7 @@ namespace OptiAssist.Addons.StartupManager
                                     StartupType = startupTypeDisplay,
                                     IsUserProgram = !isMicrosoft,
                                     IsRunning = isRunning,
-                                    StatusDisplay = isRunning ? "Em execução" : "Parado"
+                                    StatusDisplay = isRunning ? "Running" : "Stopped"
                                 };
                                 list.Add(item);
                             }
@@ -712,7 +712,7 @@ namespace OptiAssist.Addons.StartupManager
                     int newStart = willEnable ? 2 : 4; // 2 = Auto, 4 = Disabled
                     sKey.SetValue("Start", newStart, RegistryValueKind.DWord);
 
-                    serviceItem.StartupType = willEnable ? "Automático" : "Desativado";
+                    serviceItem.StartupType = willEnable ? "Automatic" : "Disabled";
                     return true;
                 }
             }
@@ -737,14 +737,14 @@ namespace OptiAssist.Addons.StartupManager
                         sc.Stop();
                         sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
                         serviceItem.IsRunning = false;
-                        serviceItem.StatusDisplay = "Parado";
+                        serviceItem.StatusDisplay = "Stopped";
                     }
                     else
                     {
                         sc.Start();
                         sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
                         serviceItem.IsRunning = true;
-                        serviceItem.StatusDisplay = "Em execução";
+                        serviceItem.StatusDisplay = "Running";
                     }
                 }
                 return true;
@@ -818,3 +818,4 @@ namespace OptiAssist.Addons.StartupManager
         #endregion
     }
 }
+

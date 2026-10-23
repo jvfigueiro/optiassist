@@ -2362,7 +2362,7 @@ namespace OptiAssist.Addons.SystemCleaner
         private TextBlock _txtScanSub;
         private StackPanel _pnlScannedItemsList;
 
-        private StackPanel _pnlStateCleaned;
+        private ScrollViewer _pnlStateCleaned;
         private TextBlock _txtCleanHeader;
         private TextBlock _txtCleanSub;
         private StackPanel _pnlCleanedItemsList;
@@ -2442,7 +2442,6 @@ namespace OptiAssist.Addons.SystemCleaner
 
             Grid root = new Grid
             {
-                MinHeight = 560,
                 Margin = new Thickness(0)
             };
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
@@ -2839,12 +2838,13 @@ namespace OptiAssist.Addons.SystemCleaner
             centerGrid.Children.Add(_pnlStateScanned);
 
             // 1.4 Cleaned State (Summary Breakdown)
-            _pnlStateCleaned = new StackPanel
+            _pnlStateCleaned = new ScrollViewer
             {
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(4),
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Visibility = Visibility.Collapsed
             };
+            StackPanel spCleanedContent = new StackPanel { Margin = new Thickness(4) };
 
             _txtCleanHeader = new TextBlock
             {
@@ -2864,9 +2864,10 @@ namespace OptiAssist.Addons.SystemCleaner
 
             _pnlCleanedItemsList = new StackPanel();
 
-            _pnlStateCleaned.Children.Add(_txtCleanHeader);
-            _pnlStateCleaned.Children.Add(_txtCleanSub);
-            _pnlStateCleaned.Children.Add(_pnlCleanedItemsList);
+            spCleanedContent.Children.Add(_txtCleanHeader);
+            spCleanedContent.Children.Add(_txtCleanSub);
+            spCleanedContent.Children.Add(_pnlCleanedItemsList);
+            _pnlStateCleaned.Content = spCleanedContent;
             centerGrid.Children.Add(_pnlStateCleaned);
 
             Grid.SetRow(centerGrid, 1);
@@ -3061,10 +3062,10 @@ namespace OptiAssist.Addons.SystemCleaner
                             string warn = !string.IsNullOrEmpty(cleaner.WarningMessage)
                                 ? cleaner.WarningMessage
                                 : cleaner.Description;
-                            string title = T("Msg_CleanerDangerousTitle", "OptiAssist - Aviso de Segurança");
+                            string title = T("Msg_CleanerDangerousTitle", "OptiAssist - Caution Warning");
                             string msg = string.Format(
                                 T("Msg_CleanerDangerousPrompt",
-                                  "⚠️ AVISO DE ATENÇÃO\n\nOpção selecionada: {0}\n\nRiscos e Consequências:\n{1}\n\nEsta opção pode remover dados de navegação, sessões salvas ou arquivos importantes.\n\nTem certeza de que deseja marcar esta opção para limpeza mesmo assim?"),
+                                  "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nThis option may clear active login sessions, browsing preferences, or sensitive caches.\n\nAre you sure you want to enable this option for cleaning anyway?"),
                                 cleaner.Name, warn);
 
                             MessageBoxResult res = MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -3471,7 +3472,7 @@ namespace OptiAssist.Addons.SystemCleaner
                             {
                                 Button btnToggleFiles = new Button
                                 {
-                                    Content = "👁️ " + T("Cleaner_Btn_ViewFiles", "Ver Arquivos") + " (" + item.LastScanResult.ScannedFiles.Count + ")",
+                                    Content = "👁️ " + T("Cleaner_Btn_ViewFiles", "View Files") + " (" + item.LastScanResult.ScannedFiles.Count + ")",
                                     FontSize = 10.5,
                                     Height = 24,
                                     Padding = new Thickness(8, 0, 8, 0),
@@ -3493,7 +3494,7 @@ namespace OptiAssist.Addons.SystemCleaner
                                     FontSize = 10.5,
                                     Padding = new Thickness(6, 2, 6, 2),
                                     VerticalContentAlignment = VerticalAlignment.Center,
-                                    ToolTip = T("Cleaner_Filter_Placeholder", "Filtrar arquivos por nome...")
+                                    ToolTip = T("Cleaner_Filter_Placeholder", "Filter files by name...")
                                 };
                                 txtFilter.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
                                 txtFilter.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
@@ -3503,7 +3504,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
                                 Button btnCopy = new Button
                                 {
-                                    Content = T("Cleaner_Btn_CopyList", "📋 Copiar Lista"),
+                                    Content = T("Cleaner_Btn_CopyList", "📋 Copy List"),
                                     Height = 24,
                                     FontSize = 10,
                                     Padding = new Thickness(8, 0, 8, 0),
@@ -3521,7 +3522,7 @@ namespace OptiAssist.Addons.SystemCleaner
                                             sb.AppendLine(fe.SizeDisplay + "\t" + fe.Path);
                                         }
                                         Clipboard.SetText(sb.ToString());
-                                        MessageBox.Show(T("Cleaner_Msg_Copied", "Caminho dos arquivos copiado para a área de transferência!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                                        MessageBox.Show(T("Cleaner_Msg_Copied", "File paths copied to clipboard!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                                     }
                                     catch { }
                                 };
@@ -3550,7 +3551,7 @@ namespace OptiAssist.Addons.SystemCleaner
                                         {
                                             TextBlock tbMore = new TextBlock
                                             {
-                                                Text = string.Format("... e mais {0} arquivos (use a caixa de busca para filtrar)", item.LastScanResult.ScannedFiles.Count - count),
+                                                Text = string.Format(T("Cleaner_Msg_MoreFiles", "... and {0} more files (use search filter)"), item.LastScanResult.ScannedFiles.Count - count),
                                                 FontSize = 10,
                                                 FontStyle = FontStyles.Italic,
                                                 Margin = new Thickness(4, 4, 0, 2)
@@ -3597,7 +3598,7 @@ namespace OptiAssist.Addons.SystemCleaner
                                             Height = 18,
                                             FontSize = 9,
                                             Padding = new Thickness(0),
-                                            ToolTip = T("Cleaner_Tooltip_OpenFolder", "Abrir pasta no Windows Explorer"),
+                                            ToolTip = T("Cleaner_Tooltip_OpenFolder", "Open folder in Windows Explorer"),
                                             Cursor = Cursors.Hand
                                         };
                                         btnOpen.SetResourceReference(Button.StyleProperty, "BtnDefault");
@@ -3625,7 +3626,7 @@ namespace OptiAssist.Addons.SystemCleaner
                                         fileRow.Children.Add(btnOpen);
 
                                         ContextMenu cm = new ContextMenu();
-                                        MenuItem miCopy = new MenuItem { Header = T("Cleaner_Ctx_CopyPath", "Copiar caminho do arquivo") };
+                                        MenuItem miCopy = new MenuItem { Header = T("Cleaner_Ctx_CopyPath", "Copy file path") };
                                         miCopy.Click += (s, e) => { try { Clipboard.SetText(capturedPath); } catch { } };
                                         cm.Items.Add(miCopy);
                                         fileRow.ContextMenu = cm;
@@ -3645,13 +3646,13 @@ namespace OptiAssist.Addons.SystemCleaner
                                     if (pnlFiles.Visibility == Visibility.Visible)
                                     {
                                         pnlFiles.Visibility = Visibility.Collapsed;
-                                        btnToggleFiles.Content = "👁️ " + T("Cleaner_Btn_ViewFiles", "Ver Arquivos") + " (" + item.LastScanResult.ScannedFiles.Count + ")";
+                                        btnToggleFiles.Content = "👁️ " + T("Cleaner_Btn_ViewFiles", "View Files") + " (" + item.LastScanResult.ScannedFiles.Count + ")";
                                     }
                                     else
                                     {
                                         renderList(txtFilter.Text);
                                         pnlFiles.Visibility = Visibility.Visible;
-                                        btnToggleFiles.Content = "✕ " + T("Cleaner_Btn_HideFiles", "Ocultar Arquivos");
+                                        btnToggleFiles.Content = "✕ " + T("Cleaner_Btn_HideFiles", "Hide Files");
                                     }
                                 };
 
@@ -3741,20 +3742,20 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
             }
 
-            string confirmTitle = T("Msg_CleanerConfirmTitle", "Confirmar Limpeza do Sistema");
+            string confirmTitle = T("Msg_CleanerConfirmTitle", "Confirm System Cleanup");
             StringBuilder confirmSb = new StringBuilder();
-            confirmSb.AppendLine(T("Msg_CleanerConfirmPrompt", "Tem certeza de que deseja realizar as ações de limpeza selecionadas e revisadas?"));
+            confirmSb.AppendLine(T("Msg_CleanerConfirmPrompt", "Are you sure you want to perform the selected and reviewed cleaning actions?"));
             confirmSb.AppendLine();
             confirmSb.AppendLine(string.Format(
-                T("Msg_CleanerConfirmDetails", "• Módulos a processar: {0}\n• Espaço estimado a ser recuperado: {1}"),
+                T("Msg_CleanerConfirmDetails", "• Modules to process: {0}\n• Estimated space to reclaim: {1}"),
                 selected.Count, BaseCleaner.FormatBytes(estimatedSpace)));
             confirmSb.AppendLine();
-            confirmSb.AppendLine(T("Msg_CleanerConfirmNote", "Todos os arquivos temporários, caches e itens identificados serão excluídos permanentemente."));
+            confirmSb.AppendLine(T("Msg_CleanerConfirmNote", "All identified temporary files, caches, and items will be permanently removed."));
 
             if (warnings.Count > 0)
             {
                 confirmSb.AppendLine();
-                confirmSb.AppendLine(T("Cleaner_Warn_Header", "⚠️ Itens Sensíveis / Com Alerta Selecionados:"));
+                confirmSb.AppendLine(T("Cleaner_Warn_Header", "⚠️ Warning / Sensitive Items Selected:"));
                 foreach (string w in warnings)
                 {
                     confirmSb.AppendLine(w);

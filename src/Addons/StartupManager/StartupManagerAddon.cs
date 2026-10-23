@@ -59,7 +59,7 @@ namespace OptiAssist.Addons.StartupManager
 
         public string Id { get { return "startup-manager"; } }
         public string Name { get { return T("Nav_StartupManager", "Startup Manager"); } }
-        public string Description { get { return T("Startup_Subtitle", "Monitore, habilite, desabilite ou remova programas, tarefas agendadas e serviços de inicialização"); } }
+        public string Description { get { return T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services"); } }
         public string Version { get { return "1.1.0.0"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🚀"; } }
@@ -83,6 +83,53 @@ namespace OptiAssist.Addons.StartupManager
             if (_host != null) _host.Log(msg);
         }
 
+        #region LOCALIZATION & FORMATTING HELPERS
+
+        private string FormatLocation(StartupLocationType type)
+        {
+            switch (type)
+            {
+                case StartupLocationType.RegistryCurrentUser:
+                    return T("Startup_Scope_User", "Current User (HKCU - Run)");
+                case StartupLocationType.RegistryLocalMachine:
+                    return T("Startup_Scope_Machine", "All Users (HKLM - Run)");
+                case StartupLocationType.RegistryLocalMachine32:
+                    return T("Startup_Scope_Machine32", "All Users 32-bit (HKLM - Run)");
+                case StartupLocationType.StartupFolderUser:
+                    return T("Startup_Scope_StartupFolderUser", "Startup Folder (User)");
+                case StartupLocationType.StartupFolderCommon:
+                    return T("Startup_Scope_StartupFolderCommon", "Startup Folder (Common)");
+                default:
+                    return T("Startup_Scope_Unknown", "Unknown Location");
+            }
+        }
+
+        private string FormatServiceStartupType(string type)
+        {
+            if (string.IsNullOrEmpty(type)) return "";
+            if (type.IndexOf("Delayed", StringComparison.OrdinalIgnoreCase) >= 0 || type.IndexOf("Atrasado", StringComparison.OrdinalIgnoreCase) >= 0)
+                return T("Startup_Type_Delayed", "Automatic (Delayed)");
+            if (type.IndexOf("Automatic", StringComparison.OrdinalIgnoreCase) >= 0 || type.IndexOf("Automático", StringComparison.OrdinalIgnoreCase) >= 0)
+                return T("Startup_Type_Automatic", "Automatic");
+            if (type.IndexOf("Manual", StringComparison.OrdinalIgnoreCase) >= 0)
+                return T("Startup_Type_Manual", "Manual");
+            if (type.IndexOf("Disabled", StringComparison.OrdinalIgnoreCase) >= 0 || type.IndexOf("Desativado", StringComparison.OrdinalIgnoreCase) >= 0)
+                return T("Startup_Type_Disabled", "Disabled");
+            return type;
+        }
+
+        private string FormatServiceStatus(bool isRunning)
+        {
+            return isRunning ? T("Startup_State_Running", "Running") : T("Startup_State_Stopped", "Stopped");
+        }
+
+        private string FormatStatus(bool isEnabled)
+        {
+            return isEnabled ? T("Startup_Status_Enabled", "Enabled") : T("Startup_Status_Disabled", "Disabled");
+        }
+
+        #endregion
+
         public FrameworkElement CreateView()
         {
             if (_rootView != null) return _rootView;
@@ -93,57 +140,48 @@ namespace OptiAssist.Addons.StartupManager
             ScrollViewer sv = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Padding = new Thickness(24, 20, 24, 24)
+                Padding = new Thickness(0, 0, 0, 16)
             };
 
             StackPanel mainStack = new StackPanel { MaxWidth = 1100 };
 
-            // 1. Header (Rocket Icon + Title + Subtitle)
-            Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 16) };
+            // 1. Header (Title + Subtitle in visual harmony with AppManager & MaintenanceReport)
+            Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            StackPanel titlePanel = new StackPanel();
-            StackPanel spTitleRow = new StackPanel { Orientation = Orientation.Horizontal };
-            TextBlock icoTb = new TextBlock
-            {
-                Text = "🚀",
-                FontSize = 26,
-                Margin = new Thickness(0, 0, 10, 0),
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            StackPanel titlePanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _txtHeaderTitle = new TextBlock
             {
-                Text = T("Startup_Title", "Gerenciador de Inicialização do Sistema"),
-                FontSize = 20,
+                Text = T("Startup_Title", "Startup Manager"),
+                FontSize = 15,
                 FontWeight = FontWeights.Bold,
-                VerticalAlignment = VerticalAlignment.Center
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             _txtHeaderTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            spTitleRow.Children.Add(icoTb);
-            spTitleRow.Children.Add(_txtHeaderTitle);
 
             _txtHeaderSubtitle = new TextBlock
             {
-                Text = T("Startup_Subtitle", "Monitore, habilite, desabilite ou remova programas, tarefas agendadas e serviços de inicialização"),
-                FontSize = 11.5,
-                Margin = new Thickness(36, 4, 0, 0)
+                Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services"),
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             _txtHeaderSubtitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
-            titlePanel.Children.Add(spTitleRow);
+            titlePanel.Children.Add(_txtHeaderTitle);
             titlePanel.Children.Add(_txtHeaderSubtitle);
             Grid.SetColumn(titlePanel, 0);
             headerGrid.Children.Add(titlePanel);
 
             // Right header buttons
-            StackPanel topActions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
+            StackPanel topActions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             _btnNewProgram = new Button
             {
-                Content = T("Startup_Btn_New", "➕ Adicionar Programa"),
-                Height = 32,
-                Padding = new Thickness(14, 0, 14, 0),
-                FontSize = 11.5,
+                Content = T("Startup_Btn_New", "➕ Add Program"),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11,
                 Margin = new Thickness(0, 0, 8, 0),
                 Cursor = Cursors.Hand
             };
@@ -153,10 +191,10 @@ namespace OptiAssist.Addons.StartupManager
 
             _btnRefresh = new Button
             {
-                Content = T("Startup_Btn_Refresh", "🔄 Atualizar"),
-                Height = 32,
+                Content = T("Startup_Btn_Refresh", "🔄 Refresh"),
+                Height = 28,
                 Padding = new Thickness(12, 0, 12, 0),
-                FontSize = 11.5,
+                FontSize = 11,
                 Cursor = Cursors.Hand
             };
             _btnRefresh.SetResourceReference(Button.StyleProperty, "BtnDefault");
@@ -176,9 +214,9 @@ namespace OptiAssist.Addons.StartupManager
             tabStrip.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
             StackPanel spTabs = new StackPanel { Orientation = Orientation.Horizontal };
-            _tabProgramsBorder = CreateTabButton("🚀 " + T("Startup_Tab_Programs", "Programas de Inicialização"), () => SwitchTab(StartupTab.Programs), out _tabProgramsText);
-            _tabTasksBorder = CreateTabButton("⏰ " + T("Startup_Tab_Tasks", "Tarefas Agendadas"), () => SwitchTab(StartupTab.Tasks), out _tabTasksText);
-            _tabServicesBorder = CreateTabButton("⚙️ " + T("Startup_Tab_Services", "Serviços de Inicialização"), () => SwitchTab(StartupTab.Services), out _tabServicesText);
+            _tabProgramsBorder = CreateTabButton("🚀 " + T("Startup_Tab_Programs", "Startup Programs"), () => SwitchTab(StartupTab.Programs), out _tabProgramsText);
+            _tabTasksBorder = CreateTabButton("⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks"), () => SwitchTab(StartupTab.Tasks), out _tabTasksText);
+            _tabServicesBorder = CreateTabButton("⚙️ " + T("Startup_Tab_Services", "Startup Services"), () => SwitchTab(StartupTab.Services), out _tabServicesText);
 
             spTabs.Children.Add(_tabProgramsBorder);
             spTabs.Children.Add(_tabTasksBorder);
@@ -211,14 +249,14 @@ namespace OptiAssist.Addons.StartupManager
             _txtSearchFilter.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
             _txtSearchFilter.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
             _txtSearchFilter.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
-            _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Filtrar itens por nome, comando ou fornecedor...");
+            _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Filter items by name, command, or publisher...");
             _txtSearchFilter.TextChanged += (s, e) => RenderCurrentTabList();
             Grid.SetColumn(_txtSearchFilter, 0);
             filterGrid.Children.Add(_txtSearchFilter);
 
             _chkHideMicrosoft = new CheckBox
             {
-                Content = T("Startup_Chk_HideMicrosoft", "Ocultar itens nativos da Microsoft / Windows"),
+                Content = T("Startup_Chk_HideMicrosoft", "Hide native Microsoft / Windows entries"),
                 FontSize = 11,
                 IsChecked = true,
                 Margin = new Thickness(14, 0, 0, 0),
@@ -237,7 +275,7 @@ namespace OptiAssist.Addons.StartupManager
             // 4. Stats Summary Bar
             _txtStatsSummary = new TextBlock
             {
-                Text = "Carregando...",
+                Text = T("Startup_Stats_Loading", "Loading..."),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(2, 0, 0, 10)
@@ -333,7 +371,7 @@ namespace OptiAssist.Addons.StartupManager
 
             TextBlock loadingTb = new TextBlock
             {
-                Text = "⏳ " + T("Cleaner_Status_Scanning", "Carregando dados do sistema..."),
+                Text = "⏳ " + T("Startup_Loading_Data", "Loading system startup data..."),
                 FontSize = 12,
                 Margin = new Thickness(0, 16, 0, 0),
                 HorizontalAlignment = HorizontalAlignment.Center
@@ -403,7 +441,7 @@ namespace OptiAssist.Addons.StartupManager
             if (_txtStatsSummary != null)
             {
                 _txtStatsSummary.Text = string.Format(
-                    T("Startup_Stats_Programs", "Total: {0} programas • {1} ativados • {2} desativados"),
+                    T("Startup_Stats_Programs", "Total: {0} programs • {1} enabled • {2} disabled"),
                     total, enabledCount, disabledCount);
             }
 
@@ -421,7 +459,7 @@ namespace OptiAssist.Addons.StartupManager
 
             if (filtered.Count == 0)
             {
-                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Programs", "Nenhum programa de inicialização encontrado com o filtro atual.")));
+                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Programs", "No startup programs found matching current filter.")));
                 return;
             }
 
@@ -472,7 +510,7 @@ namespace OptiAssist.Addons.StartupManager
             bLocation.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             TextBlock tbLoc = new TextBlock
             {
-                Text = prog.LocationDisplay,
+                Text = FormatLocation(prog.LocationType),
                 FontSize = 9.5
             };
             tbLoc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
@@ -489,11 +527,11 @@ namespace OptiAssist.Addons.StartupManager
                     Margin = new Thickness(6, 0, 0, 0),
                     Background = new SolidColorBrush(Color.FromArgb(30, 239, 68, 68)),
                     VerticalAlignment = VerticalAlignment.Center,
-                    ToolTip = T("Startup_Tooltip_Missing", "⚠️ O arquivo do programa não foi localizado no caminho especificado")
+                    ToolTip = T("Startup_Tooltip_Missing", "⚠️ The target executable was not found at the specified path")
                 };
                 TextBlock tbMissing = new TextBlock
                 {
-                    Text = "⚠️ Não encontrado",
+                    Text = T("Startup_Badge_NotFound", "⚠️ Not found"),
                     FontSize = 9.5,
                     Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68))
                 };
@@ -503,13 +541,16 @@ namespace OptiAssist.Addons.StartupManager
 
             spLeft.Children.Add(spTitleRow);
 
-            // Publisher Row
+            // Publisher & Size Row
+            string pub = !string.IsNullOrWhiteSpace(prog.Publisher) ? prog.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
+            string size = !string.IsNullOrWhiteSpace(prog.FileSizeDisplay) ? prog.FileSizeDisplay : "-";
             TextBlock tbPub = new TextBlock
             {
-                Text = string.Format("{0} {1} • Tamanho: {2}",
-                    T("Startup_Label_Publisher", "Fornecedor:"),
-                    prog.Publisher,
-                    prog.FileSizeDisplay),
+                Text = string.Format("{0} {1} • {2} {3}",
+                    T("Startup_Label_Publisher", "Publisher:"),
+                    pub,
+                    T("Startup_Label_Size", "Size:"),
+                    size),
                 FontSize = 10,
                 Margin = new Thickness(0, 2, 0, 2)
             };
@@ -552,7 +593,7 @@ namespace OptiAssist.Addons.StartupManager
             };
             TextBlock tbStatus = new TextBlock
             {
-                Text = prog.IsEnabled ? T("Startup_Status_Enabled", "Ativado") : T("Startup_Status_Disabled", "Desativado"),
+                Text = FormatStatus(prog.IsEnabled),
                 FontSize = 10.5,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = prog.IsEnabled
@@ -565,7 +606,7 @@ namespace OptiAssist.Addons.StartupManager
             // Toggle Button
             Button btnToggle = new Button
             {
-                Content = prog.IsEnabled ? T("Startup_Btn_Disable", "Desabilitar") : T("Startup_Btn_Enable", "Habilitar"),
+                Content = prog.IsEnabled ? T("Startup_Btn_Disable", "Disable") : T("Startup_Btn_Enable", "Enable"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(10, 0, 10, 0),
@@ -578,7 +619,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.ToggleStartupProgram(prog, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ToggleFailed", "Não foi possível alterar o estado da entrada: {0}"), err),
+                    MessageBox.Show(string.Format(T("Startup_Msg_ToggleFailed", "Could not toggle startup entry: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -591,7 +632,7 @@ namespace OptiAssist.Addons.StartupManager
             // Edit Button
             Button btnEdit = new Button
             {
-                Content = T("Startup_Btn_Edit", "✏️ Editar"),
+                Content = T("Startup_Btn_Edit", "✏️ Edit"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
@@ -605,7 +646,7 @@ namespace OptiAssist.Addons.StartupManager
             // Delete Button
             Button btnDelete = new Button
             {
-                Content = T("Startup_Btn_Delete", "🗑️ Excluir"),
+                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
@@ -616,16 +657,16 @@ namespace OptiAssist.Addons.StartupManager
             btnDelete.Click += (s, e) =>
             {
                 string msg = string.Format(
-                    T("Startup_Confirm_Delete_Msg", "Tem certeza de que deseja excluir permanentemente a entrada '{0}' da inicialização do Windows?\n\nEsta ação não desinstala o aplicativo, apenas impede sua execução automática com o sistema."),
+                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically."),
                     prog.Name);
 
-                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirmar Exclusão de Inicialização"),
+                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     string err;
                     if (!StartupEngine.DeleteStartupProgram(prog, out err))
                     {
-                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Não foi possível excluir a entrada: {0}"), err),
+                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                     else
@@ -645,7 +686,7 @@ namespace OptiAssist.Addons.StartupManager
                 Height = 26,
                 FontSize = 11,
                 Padding = new Thickness(0),
-                ToolTip = T("Startup_Tooltip_Explorer", "Abrir pasta de destino no Windows Explorer"),
+                ToolTip = T("Startup_Tooltip_Explorer", "Open target folder in Windows Explorer"),
                 Cursor = Cursors.Hand
             };
             btnExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
@@ -692,7 +733,7 @@ namespace OptiAssist.Addons.StartupManager
             if (_txtStatsSummary != null)
             {
                 _txtStatsSummary.Text = string.Format(
-                    T("Startup_Stats_Tasks", "Total: {0} tarefas de inicialização • {1} ativadas • {2} desativadas"),
+                    T("Startup_Stats_Tasks", "Total: {0} startup tasks • {1} enabled • {2} disabled"),
                     total, enabledCount, disabledCount);
             }
 
@@ -710,7 +751,7 @@ namespace OptiAssist.Addons.StartupManager
 
             if (filtered.Count == 0)
             {
-                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Tasks", "Nenhuma tarefa agendada de terceiros encontrada com o filtro atual.")));
+                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Tasks", "No user-installed scheduled tasks found matching current filter.")));
                 return;
             }
 
@@ -769,12 +810,14 @@ namespace OptiAssist.Addons.StartupManager
 
             spLeft.Children.Add(spTitleRow);
 
-            // Author / Publisher
+            // Author / Publisher & Task Path
+            string pub = !string.IsNullOrWhiteSpace(task.Publisher) ? task.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
             TextBlock tbPub = new TextBlock
             {
-                Text = string.Format("{0} {1} • Caminho da Tarefa: {2}",
-                    T("Startup_Label_Publisher", "Fornecedor:"),
-                    task.Publisher,
+                Text = string.Format("{0} {1} • {2} {3}",
+                    T("Startup_Label_Publisher", "Publisher:"),
+                    pub,
+                    T("Startup_Label_TaskPath", "Task Path:"),
                     task.FullTaskPath),
                 FontSize = 10,
                 Margin = new Thickness(0, 2, 0, 2)
@@ -818,7 +861,7 @@ namespace OptiAssist.Addons.StartupManager
             };
             TextBlock tbStatus = new TextBlock
             {
-                Text = task.IsEnabled ? T("Startup_Status_Enabled", "Ativado") : T("Startup_Status_Disabled", "Desativado"),
+                Text = FormatStatus(task.IsEnabled),
                 FontSize = 10.5,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = task.IsEnabled
@@ -831,7 +874,7 @@ namespace OptiAssist.Addons.StartupManager
             // Toggle Button
             Button btnToggle = new Button
             {
-                Content = task.IsEnabled ? T("Startup_Btn_Disable", "Desabilitar") : T("Startup_Btn_Enable", "Habilitar"),
+                Content = task.IsEnabled ? T("Startup_Btn_Disable", "Disable") : T("Startup_Btn_Enable", "Enable"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(10, 0, 10, 0),
@@ -844,7 +887,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.ToggleTask(task, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ToggleFailed", "Não foi possível alterar o estado da tarefa: {0}"), err),
+                    MessageBox.Show(string.Format(T("Startup_Msg_ToggleFailed", "Could not toggle scheduled task: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -857,7 +900,7 @@ namespace OptiAssist.Addons.StartupManager
             // Run Now Button
             Button btnRun = new Button
             {
-                Content = T("Startup_Btn_Run", "▶️ Executar"),
+                Content = T("Startup_Btn_Run", "▶️ Run"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
@@ -870,11 +913,11 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.RunTask(task, out err))
                 {
-                    MessageBox.Show("Erro ao executar tarefa: " + err, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunError", "Error running task: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {
-                    MessageBox.Show(string.Format("Tarefa '{0}' iniciada com sucesso.", task.Name), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunSuccess", "Task '{0}' started successfully."), task.Name), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             };
             spRight.Children.Add(btnRun);
@@ -882,7 +925,7 @@ namespace OptiAssist.Addons.StartupManager
             // Delete Task Button
             Button btnDelete = new Button
             {
-                Content = T("Startup_Btn_Delete", "🗑️ Excluir"),
+                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
@@ -893,16 +936,16 @@ namespace OptiAssist.Addons.StartupManager
             btnDelete.Click += (s, e) =>
             {
                 string msg = string.Format(
-                    T("Startup_Confirm_Delete_Msg", "Tem certeza de que deseja excluir permanentemente a tarefa agendada '{0}'?"),
+                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete scheduled task '{0}'?"),
                     task.Name);
 
-                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirmar Exclusão de Tarefa"),
+                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
                     MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     string err;
                     if (!StartupEngine.DeleteTask(task, out err))
                     {
-                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Não foi possível excluir a tarefa: {0}"), err),
+                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                     else
@@ -922,7 +965,7 @@ namespace OptiAssist.Addons.StartupManager
                 Height = 26,
                 FontSize = 11,
                 Padding = new Thickness(0),
-                ToolTip = T("Startup_Tooltip_Explorer", "Abrir pasta de destino no Windows Explorer"),
+                ToolTip = T("Startup_Tooltip_Explorer", "Open target folder in Windows Explorer"),
                 Cursor = Cursors.Hand
             };
             btnExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
@@ -965,7 +1008,7 @@ namespace OptiAssist.Addons.StartupManager
             if (_txtStatsSummary != null)
             {
                 _txtStatsSummary.Text = string.Format(
-                    T("Startup_Stats_Services", "Total: {0} serviços de terceiros • {1} em execução • {2} automáticos"),
+                    T("Startup_Stats_Services", "Total: {0} third-party services • {1} running • {2} automatic"),
                     total, runningCount, autoCount);
             }
 
@@ -983,7 +1026,7 @@ namespace OptiAssist.Addons.StartupManager
 
             if (filtered.Count == 0)
             {
-                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Services", "Nenhum serviço de terceiros encontrado com o filtro atual.")));
+                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Services", "No third-party startup services found matching current filter.")));
                 return;
             }
 
@@ -1033,7 +1076,7 @@ namespace OptiAssist.Addons.StartupManager
             bType.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             TextBlock tbType = new TextBlock
             {
-                Text = service.StartupType,
+                Text = FormatServiceStartupType(service.StartupType),
                 FontSize = 9.5
             };
             tbType.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
@@ -1043,12 +1086,14 @@ namespace OptiAssist.Addons.StartupManager
             spLeft.Children.Add(spTitleRow);
 
             // Service internal name & publisher
+            string pub = !string.IsNullOrWhiteSpace(service.Publisher) ? service.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
             TextBlock tbPub = new TextBlock
             {
-                Text = string.Format("Nome do Serviço: {0} • {1} {2}",
+                Text = string.Format("{0} {1} • {2} {3}",
+                    T("Startup_Label_ServiceName", "Service:"),
                     service.ServiceName,
-                    T("Startup_Label_Publisher", "Fornecedor:"),
-                    service.Publisher),
+                    T("Startup_Label_Publisher", "Publisher:"),
+                    pub),
                 FontSize = 10,
                 Margin = new Thickness(0, 2, 0, 2)
             };
@@ -1091,7 +1136,7 @@ namespace OptiAssist.Addons.StartupManager
             };
             TextBlock tbRunState = new TextBlock
             {
-                Text = service.IsRunning ? T("Startup_State_Running", "Em execução") : T("Startup_State_Stopped", "Parado"),
+                Text = FormatServiceStatus(service.IsRunning),
                 FontSize = 10.5,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = service.IsRunning
@@ -1104,7 +1149,7 @@ namespace OptiAssist.Addons.StartupManager
             // Toggle Startup Type Button (Automatic vs Disabled)
             Button btnToggleStartup = new Button
             {
-                Content = service.IsEnabled ? T("Startup_Btn_Disable", "Desabilitar") : T("Startup_Btn_Enable", "Habilitar"),
+                Content = service.IsEnabled ? T("Startup_Btn_Disable", "Disable") : T("Startup_Btn_Enable", "Enable"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(10, 0, 10, 0),
@@ -1117,7 +1162,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.ToggleServiceStartupType(service, out err))
                 {
-                    MessageBox.Show("Erro ao alterar inicialização do serviço: " + err, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(string.Format(T("Startup_Msg_ServiceStartupError", "Error changing service startup type: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {
@@ -1129,7 +1174,7 @@ namespace OptiAssist.Addons.StartupManager
             // Start / Stop Service Button
             Button btnServiceState = new Button
             {
-                Content = service.IsRunning ? T("Startup_Btn_StopService", "Parar") : T("Startup_Btn_StartService", "Iniciar"),
+                Content = service.IsRunning ? T("Startup_Btn_StopService", "Stop") : T("Startup_Btn_StartService", "Start"),
                 FontSize = 10.5,
                 Height = 26,
                 Padding = new Thickness(8, 0, 8, 0),
@@ -1142,7 +1187,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.ToggleServiceRunning(service, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ServiceFailed", "Falha ao controlar serviço: {0}"), err),
+                    MessageBox.Show(string.Format(T("Startup_Msg_ServiceFailed", "Failed to control service: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -1160,7 +1205,7 @@ namespace OptiAssist.Addons.StartupManager
                 Height = 26,
                 FontSize = 11,
                 Padding = new Thickness(0),
-                ToolTip = T("Startup_Tooltip_Explorer", "Abrir pasta de destino no Windows Explorer"),
+                ToolTip = T("Startup_Tooltip_Explorer", "Open target folder in Windows Explorer"),
                 Cursor = Cursors.Hand
             };
             btnExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
@@ -1236,8 +1281,8 @@ namespace OptiAssist.Addons.StartupManager
 
             _txtModalTitle = new TextBlock
             {
-                Text = T("Startup_Dialog_New_Title", "Adicionar Novo Programa à Inicialização"),
-                FontSize = 16,
+                Text = T("Startup_Dialog_New_Title", "Add New Program to Startup"),
+                FontSize = 15,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 16)
             };
@@ -1247,7 +1292,7 @@ namespace OptiAssist.Addons.StartupManager
             // Field 1: Name
             TextBlock lblName = new TextBlock
             {
-                Text = T("Startup_Field_Name", "Nome do Aplicativo * :"),
+                Text = T("Startup_Field_Name", "Application Name * :"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 4)
@@ -1271,7 +1316,7 @@ namespace OptiAssist.Addons.StartupManager
             // Field 2: Command / Path
             TextBlock lblPath = new TextBlock
             {
-                Text = T("Startup_Field_Path", "Caminho do Executável / Comando * :"),
+                Text = T("Startup_Field_Path", "Executable Path / Command * :"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 4)
@@ -1299,7 +1344,7 @@ namespace OptiAssist.Addons.StartupManager
 
             _btnModalBrowse = new Button
             {
-                Content = T("Startup_Btn_Browse", "Procurar..."),
+                Content = T("Startup_Btn_Browse", "Browse..."),
                 Height = 30,
                 Padding = new Thickness(12, 0, 12, 0),
                 FontSize = 11,
@@ -1311,8 +1356,8 @@ namespace OptiAssist.Addons.StartupManager
             {
                 OpenFileDialog ofd = new OpenFileDialog
                 {
-                    Filter = "Programas Executáveis (*.exe;*.bat;*.cmd)|*.exe;*.bat;*.cmd|Todos os Arquivos (*.*)|*.*",
-                    Title = "Selecione o Executável para Inicialização"
+                    Filter = T("Startup_Filter_Executables", "Executable Programs (*.exe;*.bat;*.cmd)|*.exe;*.bat;*.cmd|All Files (*.*)|*.*"),
+                    Title = T("Startup_Dialog_Browse_Title", "Select Executable for Startup")
                 };
                 if (ofd.ShowDialog() == true)
                 {
@@ -1330,7 +1375,7 @@ namespace OptiAssist.Addons.StartupManager
             // Field 3: Scope ComboBox
             TextBlock lblScope = new TextBlock
             {
-                Text = T("Startup_Field_Scope", "Escopo da Inicialização * :"),
+                Text = T("Startup_Field_Scope", "Startup Scope * :"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 4)
@@ -1344,8 +1389,8 @@ namespace OptiAssist.Addons.StartupManager
                 FontSize = 11.5,
                 Margin = new Thickness(0, 0, 0, 20)
             };
-            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_User", "Usuário Atual (HKCU - Run)"), Tag = StartupLocationType.RegistryCurrentUser });
-            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_Machine", "Todos os Usuários (HKLM - Run)"), Tag = StartupLocationType.RegistryLocalMachine });
+            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_User", "Current User (HKCU - Run)"), Tag = StartupLocationType.RegistryCurrentUser });
+            _cmbModalScope.Items.Add(new ComboBoxItem { Content = T("Startup_Scope_Machine", "All Users (HKLM - Run)"), Tag = StartupLocationType.RegistryLocalMachine });
             _cmbModalScope.SelectedIndex = 0;
             modalStack.Children.Add(_cmbModalScope);
 
@@ -1354,7 +1399,7 @@ namespace OptiAssist.Addons.StartupManager
 
             _btnModalCancel = new Button
             {
-                Content = T("Startup_Btn_Cancel", "Cancelar"),
+                Content = T("Startup_Btn_Cancel", "Cancel"),
                 Height = 32,
                 Padding = new Thickness(14, 0, 14, 0),
                 FontSize = 11.5,
@@ -1367,7 +1412,7 @@ namespace OptiAssist.Addons.StartupManager
 
             _btnModalSave = new Button
             {
-                Content = T("Startup_Btn_Save", "Salvar"),
+                Content = T("Startup_Btn_Save", "Save"),
                 Height = 32,
                 Padding = new Thickness(18, 0, 18, 0),
                 FontSize = 11.5,
@@ -1386,7 +1431,7 @@ namespace OptiAssist.Addons.StartupManager
         private void OpenAddProgramModal()
         {
             _editingProgram = null;
-            if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_New_Title", "Adicionar Novo Programa à Inicialização");
+            if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_New_Title", "Add New Program to Startup");
             if (_txtModalName != null) _txtModalName.Text = "";
             if (_txtModalPath != null) _txtModalPath.Text = "";
             if (_cmbModalScope != null)
@@ -1401,7 +1446,7 @@ namespace OptiAssist.Addons.StartupManager
         private void OpenEditProgramModal(StartupProgramItem prog)
         {
             _editingProgram = prog;
-            if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_Edit_Title", "Editar Entrada de Inicialização");
+            if (_txtModalTitle != null) _txtModalTitle.Text = T("Startup_Dialog_Edit_Title", "Edit Startup Entry");
             if (_txtModalName != null) _txtModalName.Text = prog.Name;
             if (_txtModalPath != null) _txtModalPath.Text = prog.Command;
             if (_cmbModalScope != null)
@@ -1426,7 +1471,7 @@ namespace OptiAssist.Addons.StartupManager
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(path))
             {
-                MessageBox.Show(T("Startup_Msg_NameAndPathRequired", "Por favor, informe o Nome e o Caminho do programa."),
+                MessageBox.Show(T("Startup_Msg_NameAndPathRequired", "Please specify both the Name and Path for the program."),
                     "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -1449,7 +1494,7 @@ namespace OptiAssist.Addons.StartupManager
             string err;
             if (!StartupEngine.AddOrUpdateStartupProgram(name, path, scope, oldName, out err))
             {
-                MessageBox.Show("Erro ao salvar: " + err, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(T("Startup_Msg_SaveError", "Error saving startup program: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -1461,14 +1506,15 @@ namespace OptiAssist.Addons.StartupManager
 
         public void OnLanguageChanged(string langCode)
         {
-            if (_txtHeaderTitle != null) _txtHeaderTitle.Text = T("Startup_Title", "Gerenciador de Inicialização do Sistema");
-            if (_txtHeaderSubtitle != null) _txtHeaderSubtitle.Text = T("Startup_Subtitle", "Monitore, habilite, desabilite ou remova programas, tarefas agendadas e serviços de inicialização");
-            if (_btnNewProgram != null) _btnNewProgram.Content = T("Startup_Btn_New", "➕ Adicionar Programa");
-            if (_btnRefresh != null) _btnRefresh.Content = T("Startup_Btn_Refresh", "🔄 Atualizar");
-            if (_chkHideMicrosoft != null) _chkHideMicrosoft.Content = T("Startup_Chk_HideMicrosoft", "Ocultar itens nativos da Microsoft / Windows");
-            if (_tabProgramsText != null) _tabProgramsText.Text = "🚀 " + T("Startup_Tab_Programs", "Programas de Inicialização");
-            if (_tabTasksText != null) _tabTasksText.Text = "⏰ " + T("Startup_Tab_Tasks", "Tarefas Agendadas");
-            if (_tabServicesText != null) _tabServicesText.Text = "⚙️ " + T("Startup_Tab_Services", "Serviços de Inicialização");
+            if (_txtHeaderTitle != null) _txtHeaderTitle.Text = T("Startup_Title", "Startup Manager");
+            if (_txtHeaderSubtitle != null) _txtHeaderSubtitle.Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services");
+            if (_btnNewProgram != null) _btnNewProgram.Content = T("Startup_Btn_New", "➕ Add Program");
+            if (_btnRefresh != null) _btnRefresh.Content = T("Startup_Btn_Refresh", "🔄 Refresh");
+            if (_chkHideMicrosoft != null) _chkHideMicrosoft.Content = T("Startup_Chk_HideMicrosoft", "Hide native Microsoft / Windows entries");
+            if (_tabProgramsText != null) _tabProgramsText.Text = "🚀 " + T("Startup_Tab_Programs", "Startup Programs");
+            if (_tabTasksText != null) _tabTasksText.Text = "⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks");
+            if (_tabServicesText != null) _tabServicesText.Text = "⚙️ " + T("Startup_Tab_Services", "Startup Services");
+            if (_txtSearchFilter != null) _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Filter items by name, command, or publisher...");
 
             ReloadActiveTabData();
         }

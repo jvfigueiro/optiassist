@@ -59,7 +59,7 @@ namespace OptiAssist.Addons.StartupManager
 
         public string StatusDisplay
         {
-            get { return _isEnabled ? "Ativado" : "Desativado"; }
+            get { return _isEnabled ? "Enabled" : "Disabled"; }
         }
 
         protected void OnPropertyChanged(string propName)
@@ -102,7 +102,7 @@ namespace OptiAssist.Addons.StartupManager
 
         public string StatusDisplay
         {
-            get { return _isEnabled ? "Ativado" : "Desativado"; }
+            get { return _isEnabled ? "Enabled" : "Disabled"; }
         }
 
         protected void OnPropertyChanged(string propName)
@@ -179,3 +179,4 @@ namespace OptiAssist.Addons.StartupManager
         }
     }
 }
+

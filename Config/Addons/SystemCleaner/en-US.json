@@ -53,6 +53,7 @@
   "Cleaner_Filter_Placeholder": "🔍 Filter files...",
   "Cleaner_Btn_CopyList": "📋 Copy List",
   "Cleaner_Msg_Copied": "File paths copied to clipboard!",
+  "Cleaner_Msg_MoreFiles": "... and {0} more files (use search filter)",
   "Cleaner_Tooltip_OpenFolder": "Open folder in Windows Explorer",
   "Cleaner_Ctx_CopyPath": "Copy file path",
   "Cleaner_Ctx_OpenFolder": "Open in Explorer",

@@ -358,23 +358,27 @@ namespace OptiAssist
             entry.Author = entry.AssemblyCompany;
         }
 
-        private static int GetModuleSortOrder(string addonId)
+        public static int GetModuleSortOrder(string addonId)
         {
             if (string.IsNullOrEmpty(addonId)) return 100;
             switch (addonId.ToLowerInvariant())
             {
+                case "toolbox":
+                    return 1;
                 case "app-manager":
                 case "app_manager":
                 case "appmanager":
-                    return 1;
-                case "toolbox":
                     return 2;
                 case "system-cleaner":
                 case "system_cleaner":
                     return 3;
+                case "startup-manager":
+                case "startup_manager":
+                case "startupmanager":
+                    return 4;
                 case "maintenance-report":
                 case "maintenance_report":
-                    return 4;
+                    return 5;
                 default:
                     return 50;
             }

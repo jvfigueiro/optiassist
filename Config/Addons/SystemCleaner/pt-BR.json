@@ -53,6 +53,7 @@
   "Cleaner_Filter_Placeholder": "🔍 Filtrar arquivos...",
   "Cleaner_Btn_CopyList": "📋 Copiar Lista",
   "Cleaner_Msg_Copied": "Caminho dos arquivos copiado para a área de transferência!",
+  "Cleaner_Msg_MoreFiles": "... e mais {0} arquivos (use a caixa de busca para filtrar)",
   "Cleaner_Tooltip_OpenFolder": "Abrir pasta no Windows Explorer",
   "Cleaner_Ctx_CopyPath": "Copiar caminho do arquivo",
   "Cleaner_Ctx_OpenFolder": "Abrir no Explorer",

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows.Input;
 using System.Text;
+using System.Linq;
 
 namespace OptiAssist
 {
@@ -19,11 +20,17 @@ namespace OptiAssist
         private HardwareSummary _hardware;
         private ObservableCollection<AddonEntry> _addons;
         private bool _isLoadingSettings = false;
+        private System.Windows.Threading.DispatcherTimer _sidebarHoverTimer;
 
         public MainWindow()
         {
             InitializeComponent();
             Loaded += MainWindow_Loaded;
+            if (btnToggleSidebar != null)
+            {
+                btnToggleSidebar.MouseEnter += BtnToggleSidebar_MouseEnter;
+                btnToggleSidebar.MouseLeave += BtnToggleSidebar_MouseLeave;
+            }
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -77,8 +84,45 @@ namespace OptiAssist
         }
 
         #region TAB NAVIGATION
+        private void BtnToggleSidebar_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (borderSidebar == null || colSidebar == null) return;
+            if (borderSidebar.Visibility == Visibility.Collapsed || colSidebar.Width.Value == 0)
+            {
+                if (_sidebarHoverTimer == null)
+                {
+                    _sidebarHoverTimer = new System.Windows.Threading.DispatcherTimer();
+                    _sidebarHoverTimer.Interval = TimeSpan.FromSeconds(1.25);
+                    _sidebarHoverTimer.Tick += (s, args) =>
+                    {
+                        _sidebarHoverTimer.Stop();
+                        if (btnToggleSidebar != null && btnToggleSidebar.IsMouseOver &&
+                            (borderSidebar.Visibility == Visibility.Collapsed || colSidebar.Width.Value == 0))
+                        {
+                            colSidebar.Width = new GridLength(200);
+                            borderSidebar.Visibility = Visibility.Visible;
+                        }
+                    };
+                }
+                else
+                {
+                    _sidebarHoverTimer.Stop();
+                }
+                _sidebarHoverTimer.Start();
+            }
+        }
+
+        private void BtnToggleSidebar_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (_sidebarHoverTimer != null)
+            {
+                _sidebarHoverTimer.Stop();
+            }
+        }
+
         private void BtnToggleSidebar_Click(object sender, RoutedEventArgs e)
         {
+            if (_sidebarHoverTimer != null) _sidebarHoverTimer.Stop();
             if (borderSidebar == null || colSidebar == null) return;
             if (borderSidebar.Visibility == Visibility.Visible)
             {
@@ -109,11 +153,13 @@ namespace OptiAssist
             // Display corresponding panel
             if (rb == rbNavDashboard)
             {
+                scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelDashboard.Visibility = Visibility.Visible;
             }
             else if (rb == rbNavShortcuts)
             {
+                scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelShortcuts.Visibility = Visibility.Visible;
             }
@@ -127,17 +173,28 @@ namespace OptiAssist
             }
             else if (rb == rbNavSettings)
             {
+                scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelSettings.Visibility = Visibility.Visible;
             }
             else if (rb == rbNavAbout)
             {
+                scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelAbout.Visibility = Visibility.Visible;
             }
             else if (rb.Tag is AddonEntry)
             {
                 AddonEntry entry = (AddonEntry)rb.Tag;
+                if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase))
+                {
+                    scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                }
+                else
+                {
+                    scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+                }
+
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelAddonHost.Visibility = Visibility.Visible;
                 panelAddonHost.Children.Clear();
@@ -780,8 +837,13 @@ namespace OptiAssist
 
             if (_addons == null) return;
 
+            var sortedAddons = _addons
+                .OrderBy(a => AddonHelper.GetModuleSortOrder(a.Id))
+                .ThenBy(a => a.Name)
+                .ToList();
+
             bool restoredActiveAddon = false;
-            foreach (AddonEntry entry in _addons)
+            foreach (AddonEntry entry in sortedAddons)
             {
                 entry.ActiveLabel = LocalizationHelper.Get("Addons_Label_Active", "Active");
                 entry.RemoveLabel = LocalizationHelper.Get("Btn_RemoveAddon", "🗑️ Remove");
@@ -803,6 +865,14 @@ namespace OptiAssist
                 {
                     rb.IsChecked = true;
                     restoredActiveAddon = true;
+                    if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase))
+                    {
+                        scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                    }
+                    else
+                    {
+                        scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+                    }
                     if (panelAddonHost != null)
                     {
                         panelAddonHost.Children.Clear();
