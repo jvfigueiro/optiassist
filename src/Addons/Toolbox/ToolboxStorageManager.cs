@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
@@ -342,6 +342,21 @@ namespace OptiAssist.Addons.Toolbox
                 requires_admin = true,
                 open_external_logs = true,
                 timeout_seconds = 30
+            });
+
+            presets.Add(new ToolboxCommandItem()
+            {
+                id = "preset-sync-internet-time",
+                title = "Sincronizar Data e Hora via Internet (NTP)",
+                description = "Inicia o serviço Horário do Windows (w32time) e força a sincronização imediata do relógio com servidores NTP na internet",
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Write-Host 'Iniciando servico de Horario do Windows (w32time)...'; Set-Service -Name w32time -StartupType Automatic -ErrorAction SilentlyContinue; Start-Service w32time -ErrorAction SilentlyContinue; Write-Host 'Sincronizando relogio via Internet (NTP)...'; w32tm /resync /rediscover; Write-Host 'Data e hora atualizadas:'; Get-Date -Format 'yyyy-MM-dd HH:mm:ss'\"",
+                category = "Integridade e Reparos",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 60
             });
 
             presets.Add(new ToolboxCommandItem()

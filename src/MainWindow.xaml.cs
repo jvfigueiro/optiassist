@@ -776,6 +776,12 @@ namespace OptiAssist
             ShortcutsHelper.OpenServices();
         }
 
+        private void BtnDateTime_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[SHORTCUT] Opening Windows Date & Time administrative settings (timedate.cpl)...");
+            ShortcutsHelper.OpenDateTimeSettings();
+        }
+
         private void BtnAdminCmd_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenAdminCmd(); }
         private void BtnAdminPowerShell_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenAdminPowerShell(); }
 
@@ -1202,6 +1208,11 @@ namespace OptiAssist
             {
                 btnServicesTool.Content = LocalizationHelper.Get("Tool_Services", "⚙️ Windows Services (services.msc)");
                 btnServicesTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolServices", "Windows Services console (services.msc)");
+            }
+            if (btnDateTimeTool != null)
+            {
+                btnDateTimeTool.Content = LocalizationHelper.Get("Tool_DateTime", "🕒 Date & Time (timedate.cpl)");
+                btnDateTimeTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolDateTime", "Windows Date & Time administrative settings (timedate.cpl)");
             }
             if (btnOpenMaintenanceFolderTool != null)
             {

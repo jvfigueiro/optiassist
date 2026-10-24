@@ -497,6 +497,12 @@
                                             Margin="3"
                                             Click="BtnServices_Click"
                                             ToolTip="Windows Services console (services.msc)"/>
+                                    <Button x:Name="btnDateTimeTool"
+                                            Content="🕒 Date &amp; Time (timedate.cpl)"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnDateTime_Click"
+                                            ToolTip="Windows Date &amp; Time administrative settings (timedate.cpl)"/>
                                 </UniformGrid>
                             </StackPanel>
                         </Border>

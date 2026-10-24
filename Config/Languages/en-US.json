@@ -62,6 +62,8 @@
   "Tool_Resmon": "Resource Monitor",
   "Tool_Services": "⚙️ Windows Services (services.msc)",
   "Tooltip_ToolServices": "Windows Services console (services.msc)",
+  "Tool_DateTime": "🕒 Date & Time (timedate.cpl)",
+  "Tooltip_ToolDateTime": "Windows Date & Time administrative settings (timedate.cpl)",
   "Btn_OpenMaintenanceFolder": "📁 Maintenance Tools Folder (Portable)",
   "Logs_Title": "📜 Logs",
   "Logs_Subtitle": "Real-time log of diagnostics, scripts, and system executions",

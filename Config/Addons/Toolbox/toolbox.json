@@ -91,6 +91,19 @@
     "timeout_seconds": 30
   },
   {
+    "id": "preset-sync-internet-time",
+    "title": "Synchronize Date & Time via Internet (NTP)",
+    "description": "Enables and starts Windows Time service (w32time) and forces an immediate clock resynchronization with Internet NTP servers",
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Write-Host 'Enabling and starting Windows Time service (w32time)...'; Set-Service -Name w32time -StartupType Automatic -ErrorAction SilentlyContinue; Start-Service w32time -ErrorAction SilentlyContinue; Write-Host 'Resynchronizing clock with Internet time servers...'; w32tm /resync /rediscover; Write-Host 'Current system date and time:'; Get-Date -Format 'yyyy-MM-dd HH:mm:ss'\"",
+    "category": "Integrity & Repair",
+    "shell": "powershell",
+    "wait_for_exit": true,
+    "capture_output": true,
+    "requires_admin": true,
+    "open_external_logs": true,
+    "timeout_seconds": 60
+  },
+  {
     "id": "preset-wsreset-store",
     "title": "Repair & Reset Microsoft Store (wsreset -i)",
     "description": "Reinstalls and resets corrupted Microsoft Store components, registrations, and cache",

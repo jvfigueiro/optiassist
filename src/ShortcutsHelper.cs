@@ -153,6 +153,11 @@ namespace OptiAssist
             OpenWindowsTool("services.msc");
         }
 
+        public static void OpenDateTimeSettings()
+        {
+            OpenWindowsTool("timedate.cpl");
+        }
+
         public static void OpenGpedit()
         {
             string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
