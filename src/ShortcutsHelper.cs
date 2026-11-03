@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -546,8 +547,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Body Scroll
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Footer Buttons
 
-            // 1. Header
-            StackPanel headerStack = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+            // 1. Header (Left: Title & Subtitle | Right: Language Selector)
+            Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            StackPanel headerStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             TextBlock tbTitle = new TextBlock
             {
                 Text = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist"),
@@ -557,21 +562,124 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             tbTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
             TextBlock tbSub = new TextBlock
             {
-                Text = LocalizationHelper.Get("InstallWin_Subtitle", "Choose installation mode, target directory, and review license terms and conditions of use"),
+                Text = LocalizationHelper.Get("InstallWin_Subtitle", "Review license terms, choose installation mode, and select target directory"),
                 FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0)
+                Margin = new Thickness(0, 2, 0, 0),
+                TextWrapping = TextWrapping.Wrap
             };
             tbSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             headerStack.Children.Add(tbTitle);
             headerStack.Children.Add(tbSub);
-            Grid.SetRow(headerStack, 0);
-            root.Children.Add(headerStack);
+            Grid.SetColumn(headerStack, 0);
+            headerGrid.Children.Add(headerStack);
+
+            StackPanel langPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0)
+            };
+            TextBlock lblLang = new TextBlock
+            {
+                Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            lblLang.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            langPanel.Children.Add(lblLang);
+
+            ComboBox cmbLang = new ComboBox
+            {
+                Width = 145,
+                Height = 28,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            List<string> availableLangs = LocalizationHelper.GetAvailableLanguages();
+            string currentLang = LocalizationHelper.CurrentLanguage;
+            int selectedLangIdx = 0;
+            for (int i = 0; i < availableLangs.Count; i++)
+            {
+                string code = availableLangs[i];
+                string disp = LocalizationHelper.GetLanguageDisplayName(code);
+                cmbLang.Items.Add(new ComboBoxItem { Content = disp, Tag = code });
+                if (string.Equals(code, currentLang, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedLangIdx = i;
+                }
+            }
+            if (cmbLang.Items.Count > 0) cmbLang.SelectedIndex = selectedLangIdx;
+            langPanel.Children.Add(cmbLang);
+            Grid.SetColumn(langPanel, 1);
+            headerGrid.Children.Add(langPanel);
+
+            Grid.SetRow(headerGrid, 0);
+            root.Children.Add(headerGrid);
 
             // 2. Main Body
             ScrollViewer bodyScroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             StackPanel bodyStack = new StackPanel();
 
-            // Card A: Installation Mode (Normal vs Portable)
+            // Card 1 (FIRST): License Terms & Conditions of Use
+            Border licCard = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            licCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            licCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel licStack = new StackPanel();
+            TextBlock lblLicTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("InstallWin_License_Title", "1. License Terms & Conditions of Use (GNU GPLv3)"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            licStack.Children.Add(lblLicTitle);
+
+            string fullTerms = GplLicenseNoticeText + "\r\n\r\n" +
+                LocalizationHelper.Get("InstallWin_Terms_Conditions",
+                "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+
+            TextBox txtLicenseTerms = new TextBox
+            {
+                Text = fullTerms,
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Height = 115,
+                FontFamily = new FontFamily("Consolas, Lucida Console, Segoe UI"),
+                FontSize = 10.5,
+                Padding = new Thickness(8),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            txtLicenseTerms.SetResourceReference(TextBox.BackgroundProperty, "BrushBgPrimary");
+            txtLicenseTerms.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
+            txtLicenseTerms.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
+            licStack.Children.Add(txtLicenseTerms);
+
+            CheckBox chkAcceptLicense = new CheckBox
+            {
+                Content = LocalizationHelper.Get("InstallWin_Chk_AcceptLicense", "I have read and agree to the License Terms (GNU GPLv3) and Conditions of Use"),
+                IsChecked = false,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Cursor = Cursors.Hand
+            };
+            chkAcceptLicense.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            licStack.Children.Add(chkAcceptLicense);
+
+            licCard.Child = licStack;
+            bodyStack.Children.Add(licCard);
+
+            // Card 2: Installation Mode (Normal vs Portable)
             Border modeCard = new Border
             {
                 BorderThickness = new Thickness(1),
@@ -585,7 +693,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             StackPanel modeStack = new StackPanel();
             TextBlock lblModeTitle = new TextBlock
             {
-                Text = LocalizationHelper.Get("InstallWin_Mode_Title", "1. Installation Mode"),
+                Text = LocalizationHelper.Get("InstallWin_Mode_Title", "2. Installation Mode"),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 8)
@@ -652,13 +760,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             modeCard.Child = modeStack;
             bodyStack.Children.Add(modeCard);
 
-            // Card B: Target Directory & Options
+            // Card 3: Target Directory & Options
             Border dirCard = new Border
             {
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
                 Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10)
+                Margin = new Thickness(0, 0, 0, 4)
             };
             dirCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             dirCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
@@ -666,7 +774,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             StackPanel dirStack = new StackPanel();
             TextBlock lblDirTitle = new TextBlock
             {
-                Text = LocalizationHelper.Get("InstallWin_Dir_Title", "2. Target Directory & Options"),
+                Text = LocalizationHelper.Get("InstallWin_Dir_Title", "3. Target Directory & Options"),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 8)
@@ -777,63 +885,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             dirCard.Child = dirStack;
             bodyStack.Children.Add(dirCard);
 
-            // Card C: License Terms & Conditions of Use
-            Border licCard = new Border
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-            licCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            licCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            StackPanel licStack = new StackPanel();
-            TextBlock lblLicTitle = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_License_Title", "3. License Terms & Conditions of Use (GNU GPLv3)"),
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 6)
-            };
-            lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            licStack.Children.Add(lblLicTitle);
-
-            string fullTerms = GplLicenseNoticeText + "\r\n\r\n" +
-                LocalizationHelper.Get("InstallWin_Terms_Conditions",
-                "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
-
-            TextBox txtLicenseTerms = new TextBox
-            {
-                Text = fullTerms,
-                IsReadOnly = true,
-                TextWrapping = TextWrapping.Wrap,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Height = 115,
-                FontFamily = new FontFamily("Consolas, Lucida Console, Segoe UI"),
-                FontSize = 10.5,
-                Padding = new Thickness(8),
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            txtLicenseTerms.SetResourceReference(TextBox.BackgroundProperty, "BrushBgPrimary");
-            txtLicenseTerms.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
-            txtLicenseTerms.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
-            licStack.Children.Add(txtLicenseTerms);
-
-            CheckBox chkAcceptLicense = new CheckBox
-            {
-                Content = LocalizationHelper.Get("InstallWin_Chk_AcceptLicense", "I have read and agree to the License Terms (GNU GPLv3) and Conditions of Use"),
-                IsChecked = true,
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                Cursor = Cursors.Hand
-            };
-            chkAcceptLicense.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            licStack.Children.Add(chkAcceptLicense);
-
-            licCard.Child = licStack;
-            bodyStack.Children.Add(licCard);
-
             bodyScroll.Content = bodyStack;
             Grid.SetRow(bodyScroll, 1);
             root.Children.Add(bodyScroll);
@@ -880,11 +931,56 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             {
                 Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now"),
                 Height = 32,
-                Padding = new Thickness(18, 0, 18, 0)
+                Padding = new Thickness(18, 0, 18, 0),
+                IsEnabled = false
             };
             btnInstallNow.SetResourceReference(Button.StyleProperty, "BtnAccent");
             chkAcceptLicense.Checked += (s, e) => { btnInstallNow.IsEnabled = true; };
             chkAcceptLicense.Unchecked += (s, e) => { btnInstallNow.IsEnabled = false; };
+
+            cmbLang.SelectionChanged += (s, e) =>
+            {
+                ComboBoxItem cbi = cmbLang.SelectedItem as ComboBoxItem;
+                if (cbi == null || cbi.Tag == null) return;
+                string newLang = cbi.Tag.ToString();
+
+                MainWindow mw = owner as MainWindow;
+                if (mw != null)
+                {
+                    mw.SetLanguage(newLang);
+                }
+                else
+                {
+                    LocalizationHelper.LoadLanguage(newLang);
+                    AppSettings st = SettingsHelper.Load();
+                    st.Language = newLang;
+                    SettingsHelper.Save(st);
+                }
+
+                // Refresh all strings in the installer dialog immediately
+                win.Title = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist");
+                tbTitle.Text = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist");
+                tbSub.Text = LocalizationHelper.Get("InstallWin_Subtitle", "Review license terms, choose installation mode, and select target directory");
+                lblLang.Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:");
+                lblLicTitle.Text = LocalizationHelper.Get("InstallWin_License_Title", "1. License Terms & Conditions of Use (GNU GPLv3)");
+                txtLicenseTerms.Text = GplLicenseNoticeText + "\r\n\r\n" +
+                    LocalizationHelper.Get("InstallWin_Terms_Conditions",
+                    "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+                chkAcceptLicense.Content = LocalizationHelper.Get("InstallWin_Chk_AcceptLicense", "I have read and agree to the License Terms (GNU GPLv3) and Conditions of Use");
+                lblModeTitle.Text = LocalizationHelper.Get("InstallWin_Mode_Title", "2. Installation Mode");
+                tbNormalHead.Text = LocalizationHelper.Get("InstallWin_Mode_Normal", "🖥️ Standard Installation (Recommended)");
+                tbNormalDesc.Text = LocalizationHelper.Get("InstallWin_Mode_NormalDesc", "Installs OptiAssist on this computer, creates Desktop and Start Menu shortcuts, and registers an entry in Windows Control Panel (Programs and Features).");
+                tbPortableHead.Text = LocalizationHelper.Get("InstallWin_Mode_Portable", "💾 Portable Installation (USB Flash Drive / External Drive)");
+                tbPortableDesc.Text = LocalizationHelper.Get("InstallWin_Mode_PortableDesc", "Deploys a standalone portable copy of OptiAssist to any folder, partition, or USB drive without modifying the local Windows registry or Control Panel.");
+                lblDirTitle.Text = LocalizationHelper.Get("InstallWin_Dir_Title", "3. Target Directory & Options");
+                btnBrowseDir.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
+                chkShortcuts.Content = LocalizationHelper.Get("InstallWin_Chk_Shortcuts", "Create Desktop and Start Menu shortcuts & register in Control Panel");
+                chkAutorunAfterInstall.Content = LocalizationHelper.Get("InstallWin_Chk_Autorun", "Create USB AutoRun (autorun.inf) on destination drive root");
+                btnCreateAutorun.Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun");
+                btnCreateAutorun.ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry");
+                btnCancel.Content = LocalizationHelper.Get("Startup_Btn_Cancel", "Cancel");
+                btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now");
+            };
 
             btnInstallNow.Click += (s, e) =>
             {

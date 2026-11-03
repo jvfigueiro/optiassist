@@ -107,6 +107,15 @@ namespace OptiAssist
                 _strings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
+            if (string.Equals(CurrentLanguage, "en-US", StringComparison.OrdinalIgnoreCase))
+            {
+                _strings["InstallWin_Subtitle"] = "Review the license terms, choose installation mode, and select the target directory";
+                _strings["InstallWin_Label_Language"] = "🌐 Language:";
+                _strings["InstallWin_License_Title"] = "1. License Terms & Conditions of Use (GNU GPLv3)";
+                _strings["InstallWin_Mode_Title"] = "2. Installation Mode";
+                _strings["InstallWin_Dir_Title"] = "3. Target Directory & Options";
+            }
+
             // Load per-module language files located inside Config\Addons\<ModuleName>\
             LoadAddonLanguageFiles(langCode);
         }

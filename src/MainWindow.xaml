@@ -894,7 +894,7 @@
                                                     </StackPanel>
 
                                                     <!-- Enable/Disable Switch + Remove Button -->
-                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="{Binding ModifyControlsVisibility}">
                                                         <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
                                                                   IsEnabled="{Binding CanModify}"
                                                                   Content="{Binding ActiveLabel}"
@@ -1133,6 +1133,7 @@
 
                                                     <!-- Status Badge -->
                                                     <Border Grid.Column="2"
+                                                            Visibility="{Binding ModifyControlsVisibility}"
                                                             Background="{DynamicResource BrushBgCard}"
                                                             BorderBrush="{DynamicResource BrushBorderCard}"
                                                             BorderThickness="1"

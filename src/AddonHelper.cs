@@ -139,8 +139,14 @@ namespace OptiAssist
             {
                 _canModify = value;
                 OnPropertyChanged("CanModify");
+                OnPropertyChanged("ModifyControlsVisibility");
                 UpdateStatusBadgeText();
             }
+        }
+
+        public Visibility ModifyControlsVisibility
+        {
+            get { return _canModify ? Visibility.Visible : Visibility.Collapsed; }
         }
 
         public string ActiveLabel
