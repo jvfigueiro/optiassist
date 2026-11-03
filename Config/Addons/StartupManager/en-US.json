@@ -1,10 +1,9 @@
 {
   "Nav_StartupManager": "Startup Manager",
   "Startup_Title": "System Startup Manager",
-  "Startup_Subtitle": "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services",
+  "Startup_Subtitle": "Monitor, enable, disable, or remove startup applications and scheduled tasks",
   "Startup_Tab_Programs": "Startup Programs",
   "Startup_Tab_Tasks": "Scheduled Tasks",
-  "Startup_Tab_Services": "Startup Services",
   "Startup_Btn_New": "➕ Add Program",
   "Startup_Btn_Refresh": "🔄 Refresh",
   "Startup_Filter_Label": "🔍 Search for the application you want:",

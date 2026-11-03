@@ -2326,6 +2326,7 @@ namespace OptiAssist.Addons.SystemCleaner
         private ObservableCollection<BaseCleaner> _allCleaners;
         private string _activeTab = "windows"; // "windows" or "apps"
         private bool _isBusy = false;
+        private bool _disableSelectionWarnings = false;
         private CancellationTokenSource _cts;
 
         // UI Controls - Left Pane
@@ -2336,6 +2337,7 @@ namespace OptiAssist.Addons.SystemCleaner
         private Button _btnSelectAll;
         private Button _btnDeselectAll;
         private Button _btnSelectRecommended;
+        private CheckBox _chkDisableWarnings;
         private StackPanel _pnlCategoriesContainer;
         private TextBox _txtDeepScanRoot;
         private Button _btnBrowseDeepScan;
@@ -2403,9 +2405,61 @@ namespace OptiAssist.Addons.SystemCleaner
 
         private void InitCleaners()
         {
+            LoadCleanerSettings();
             List<BaseCleaner> list = CleanerRegistry.CreateAllCleaners(T);
             _allCleaners = new ObservableCollection<BaseCleaner>(list);
             ApplyLocalizedMetadata();
+        }
+
+        private string GetCleanerSettingsPath()
+        {
+            try
+            {
+                string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons", "SystemCleaner");
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                return Path.Combine(dir, "settings.json");
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void LoadCleanerSettings()
+        {
+            try
+            {
+                string path = GetCleanerSettingsPath();
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    string json = File.ReadAllText(path, Encoding.UTF8);
+                    if (json.IndexOf("\"DisableSelectionWarnings\": true", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        json.IndexOf("\"DisableSelectionWarnings\":true", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _disableSelectionWarnings = true;
+                    }
+                    else if (json.IndexOf("\"DisableSelectionWarnings\": false", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             json.IndexOf("\"DisableSelectionWarnings\":false", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _disableSelectionWarnings = false;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SaveCleanerSettings()
+        {
+            try
+            {
+                string path = GetCleanerSettingsPath();
+                if (!string.IsNullOrEmpty(path))
+                {
+                    string json = "{\r\n  \"DisableSelectionWarnings\": " + (_disableSelectionWarnings ? "true" : "false") + "\r\n}";
+                    File.WriteAllText(path, json, new UTF8Encoding(false));
+                }
+            }
+            catch { }
         }
 
         private static ControlTemplate CreateGreenProgressBarTemplate()
@@ -2524,10 +2578,12 @@ namespace OptiAssist.Addons.SystemCleaner
             Border quickBar = new Border
             {
                 BorderThickness = new Thickness(0, 1, 0, 1),
-                Padding = new Thickness(6, 4, 6, 4)
+                Padding = new Thickness(6, 6, 6, 6)
             };
             quickBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
             quickBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+
+            StackPanel spQuickContainer = new StackPanel();
 
             StackPanel spQuick = new StackPanel
             {
@@ -2550,10 +2606,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 {
                     if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (!c.IsDangerous)
-                        {
-                            c.IsSelected = true;
-                        }
+                        c.IsSelected = true;
                     }
                 }
                 UpdateSelectedSummary();
@@ -2599,7 +2652,31 @@ namespace OptiAssist.Addons.SystemCleaner
             spQuick.Children.Add(_btnSelectAll);
             spQuick.Children.Add(_btnDeselectAll);
             spQuick.Children.Add(_btnSelectRecommended);
-            quickBar.Child = spQuick;
+            spQuickContainer.Children.Add(spQuick);
+
+            _chkDisableWarnings = new CheckBox
+            {
+                Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items"),
+                FontSize = 10.5,
+                IsChecked = _disableSelectionWarnings,
+                Margin = new Thickness(4, 6, 4, 0),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Cursor = Cursors.Hand
+            };
+            _chkDisableWarnings.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextSecondary");
+            _chkDisableWarnings.Checked += (s, e) =>
+            {
+                _disableSelectionWarnings = true;
+                SaveCleanerSettings();
+            };
+            _chkDisableWarnings.Unchecked += (s, e) =>
+            {
+                _disableSelectionWarnings = false;
+                SaveCleanerSettings();
+            };
+            spQuickContainer.Children.Add(_chkDisableWarnings);
+
+            quickBar.Child = spQuickContainer;
 
             Grid.SetRow(quickBar, 1);
             leftGrid.Children.Add(quickBar);
@@ -3061,17 +3138,16 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         Action handleDangerousConfirm = () =>
                         {
-                            string warn = !string.IsNullOrEmpty(cleaner.WarningMessage)
-                                ? cleaner.WarningMessage
-                                : cleaner.Description;
-                            string title = T("Msg_CleanerDangerousTitle", "OptiAssist - Caution Warning");
-                            string msg = string.Format(
-                                T("Msg_CleanerDangerousPrompt",
-                                  "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nThis option may clear active login sessions, browsing preferences, or sensitive caches.\n\nAre you sure you want to enable this option for cleaning anyway?"),
-                                cleaner.Name, warn);
+                            if (_disableSelectionWarnings)
+                            {
+                                cb.IsChecked = true;
+                                cleaner.IsSelected = true;
+                                UpdateSelectedSummary();
+                                return;
+                            }
 
-                            MessageBoxResult res = MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                            if (res == MessageBoxResult.Yes)
+                            bool confirmed = ShowDangerousItemDialog(cleaner);
+                            if (confirmed)
                             {
                                 cb.IsChecked = true;
                                 cleaner.IsSelected = true;
@@ -3086,7 +3162,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
                         cb.PreviewMouseLeftButtonDown += (s, e) =>
                         {
-                            if (cb.IsChecked != true)
+                            if (cb.IsChecked != true && !_disableSelectionWarnings)
                             {
                                 e.Handled = true;
                                 handleDangerousConfirm();
@@ -3095,7 +3171,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
                         cb.PreviewKeyDown += (s, e) =>
                         {
-                            if (e.Key == System.Windows.Input.Key.Space && cb.IsChecked != true)
+                            if (e.Key == System.Windows.Input.Key.Space && cb.IsChecked != true && !_disableSelectionWarnings)
                             {
                                 e.Handled = true;
                                 handleDangerousConfirm();
@@ -3900,6 +3976,124 @@ namespace OptiAssist.Addons.SystemCleaner
             UpdateSelectedSummary();
         }
 
+        private bool ShowDangerousItemDialog(BaseCleaner cleaner)
+        {
+            string warn = !string.IsNullOrEmpty(cleaner.WarningMessage)
+                ? cleaner.WarningMessage
+                : cleaner.Description;
+            string title = T("Msg_CleanerDangerousTitle", "OptiAssist - Caution Warning");
+            string msg = string.Format(
+                T("Msg_CleanerDangerousPrompt",
+                  "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nThis option may clear active login sessions, browsing preferences, or sensitive caches.\n\nAre you sure you want to enable this option for cleaning anyway?"),
+                cleaner.Name, warn);
+
+            Window win = new Window
+            {
+                Title = title,
+                Width = 480,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ResizeMode = ResizeMode.NoResize
+            };
+            if (Application.Current != null && Application.Current.MainWindow != null)
+            {
+                win.Owner = Application.Current.MainWindow;
+            }
+            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
+
+            Border rootBorder = new Border
+            {
+                Padding = new Thickness(20),
+                BorderThickness = new Thickness(1)
+            };
+            rootBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            rootBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel sp = new StackPanel();
+
+            TextBlock tbMsg = new TextBlock
+            {
+                Text = msg,
+                FontSize = 11.5,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 14)
+            };
+            tbMsg.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            sp.Children.Add(tbMsg);
+
+            CheckBox chkSuppress = new CheckBox
+            {
+                Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items"),
+                FontSize = 11,
+                IsChecked = _disableSelectionWarnings,
+                Margin = new Thickness(0, 0, 0, 16),
+                Cursor = Cursors.Hand
+            };
+            chkSuppress.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextSecondary");
+            sp.Children.Add(chkSuppress);
+
+            StackPanel spBtns = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+
+            bool result = false;
+
+            Button btnNo = new Button
+            {
+                Content = T("Cleaner_Btn_No", "No"),
+                MinWidth = 80,
+                Height = 30,
+                Padding = new Thickness(14, 0, 14, 0),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 8, 0),
+                Cursor = Cursors.Hand,
+                IsCancel = true
+            };
+            btnNo.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnNo.Click += (s, e) =>
+            {
+                result = false;
+                win.Close();
+            };
+
+            Button btnYes = new Button
+            {
+                Content = T("Cleaner_Btn_Yes", "Yes"),
+                MinWidth = 80,
+                Height = 30,
+                Padding = new Thickness(14, 0, 14, 0),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Cursor = Cursors.Hand,
+                IsDefault = true
+            };
+            btnYes.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            btnYes.Click += (s, e) =>
+            {
+                result = true;
+                win.Close();
+            };
+
+            spBtns.Children.Add(btnNo);
+            spBtns.Children.Add(btnYes);
+            sp.Children.Add(spBtns);
+
+            rootBorder.Child = sp;
+            win.Content = rootBorder;
+            win.ShowDialog();
+
+            if (chkSuppress.IsChecked == true && !_disableSelectionWarnings)
+            {
+                _disableSelectionWarnings = true;
+                if (_chkDisableWarnings != null) _chkDisableWarnings.IsChecked = true;
+                SaveCleanerSettings();
+            }
+
+            return result;
+        }
+
         public void OnLanguageChanged(string langCode)
         {
             if (_tabWindowsText != null) _tabWindowsText.Text = T("Cleaner_Tab_Windows", "Windows");
@@ -3907,6 +4101,7 @@ namespace OptiAssist.Addons.SystemCleaner
             if (_btnSelectAll != null) _btnSelectAll.Content = T("Cleaner_Quick_All", "Select All");
             if (_btnDeselectAll != null) _btnDeselectAll.Content = T("Cleaner_Quick_None", "Deselect All");
             if (_btnSelectRecommended != null) _btnSelectRecommended.Content = T("Cleaner_Quick_Default", "Defaults");
+            if (_chkDisableWarnings != null) _chkDisableWarnings.Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items");
             if (_txtIdleTitle != null) _txtIdleTitle.Text = T("Cleaner_Status_Idle_Title", "System Cleaner & Optimizer");
             if (_txtIdleDesc != null) _txtIdleDesc.Text = T("Cleaner_Status_Idle_Desc", "Select the items you wish to clean on the left, then click 'Analyze' to check cleanable space or 'Run Cleaner' to begin.");
             if (_btnLeftAction != null && !_isBusy) _btnLeftAction.Content = T("Btn_CleanerAnalyze", "🔍 Analyze");

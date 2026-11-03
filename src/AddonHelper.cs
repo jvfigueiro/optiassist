@@ -423,8 +423,22 @@ namespace OptiAssist
             {
                 try
                 {
+                    string sourceToLoad = dllPath;
+                    try
+                    {
+                        string moduleFolder = Path.GetFileName(Path.GetDirectoryName(dllPath));
+                        string fileName = Path.GetFileName(dllPath);
+                        string objCandidate = Path.Combine(baseDir, "src", "Addons", moduleFolder, "obj", "Release", fileName);
+                        if (File.Exists(objCandidate) && File.GetLastWriteTimeUtc(objCandidate) > File.GetLastWriteTimeUtc(dllPath))
+                        {
+                            sourceToLoad = objCandidate;
+                            try { File.Copy(objCandidate, dllPath, true); } catch { }
+                        }
+                    }
+                    catch { }
+
                     // Load assembly from byte array so the .dll file on disk is never locked by the process
-                    byte[] rawBytes = File.ReadAllBytes(dllPath);
+                    byte[] rawBytes = File.ReadAllBytes(sourceToLoad);
                     Assembly asm = Assembly.Load(rawBytes);
 
                     Type[] types = asm.GetExportedTypes();

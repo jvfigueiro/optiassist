@@ -144,6 +144,14 @@ namespace OptiAssist
                         MergeAddonDirectoryLanguage(langSubDir, langCode);
                     }
                 }
+
+                if (string.Equals(langCode, "en-US", StringComparison.OrdinalIgnoreCase))
+                {
+                    _strings["Startup_Subtitle"] = "Monitor, enable, disable, or remove startup applications and scheduled tasks";
+                    _strings["Cleaner_Chk_DisableWarnings"] = "Disable warnings when selecting items";
+                    _strings["Cleaner_Btn_Yes"] = "Yes";
+                    _strings["Cleaner_Btn_No"] = "No";
+                }
             }
             catch { }
         }

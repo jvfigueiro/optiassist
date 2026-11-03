@@ -19,13 +19,12 @@ namespace OptiAssist.Addons.StartupManager
         private IOptiAssistHost _host;
         private FrameworkElement _rootView;
 
-        private enum StartupTab { Programs, Tasks, Services }
+        private enum StartupTab { Programs, Tasks }
         private StartupTab _activeTab = StartupTab.Programs;
 
         // Cached datasets
         private List<StartupProgramItem> _allPrograms = new List<StartupProgramItem>();
         private List<StartupTaskItem> _allTasks = new List<StartupTaskItem>();
-        private List<StartupServiceItem> _allServices = new List<StartupServiceItem>();
 
         // UI Header controls
         private TextBlock _txtHeaderTitle;
@@ -42,8 +41,6 @@ namespace OptiAssist.Addons.StartupManager
         private TextBlock _tabProgramsText;
         private Border _tabTasksBorder;
         private TextBlock _tabTasksText;
-        private Border _tabServicesBorder;
-        private TextBlock _tabServicesText;
 
         // Container & Stats
         private TextBlock _txtStatsSummary;
@@ -70,7 +67,7 @@ namespace OptiAssist.Addons.StartupManager
 
         public string Id { get { return "startup-manager"; } }
         public string Name { get { return T("Nav_StartupManager", "Startup Manager"); } }
-        public string Description { get { return T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services"); } }
+        public string Description { get { return T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications and scheduled tasks"); } }
         public string Version { get { return "1.1.0.0"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🚀"; } }
@@ -115,25 +112,6 @@ namespace OptiAssist.Addons.StartupManager
             }
         }
 
-        private string FormatServiceStartupType(string type)
-        {
-            if (string.IsNullOrEmpty(type)) return "";
-            if (type.IndexOf("Delayed", StringComparison.OrdinalIgnoreCase) >= 0 || type.IndexOf("Atrasado", StringComparison.OrdinalIgnoreCase) >= 0)
-                return T("Startup_Type_Delayed", "Automatic (Delayed)");
-            if (type.IndexOf("Automatic", StringComparison.OrdinalIgnoreCase) >= 0 || type.IndexOf("Automático", StringComparison.OrdinalIgnoreCase) >= 0)
-                return T("Startup_Type_Automatic", "Automatic");
-            if (type.IndexOf("Manual", StringComparison.OrdinalIgnoreCase) >= 0)
-                return T("Startup_Type_Manual", "Manual");
-            if (type.IndexOf("Disabled", StringComparison.OrdinalIgnoreCase) >= 0 || type.IndexOf("Desativado", StringComparison.OrdinalIgnoreCase) >= 0)
-                return T("Startup_Type_Disabled", "Disabled");
-            return type;
-        }
-
-        private string FormatServiceStatus(bool isRunning)
-        {
-            return isRunning ? T("Startup_State_Running", "Running") : T("Startup_State_Stopped", "Stopped");
-        }
-
         private string FormatStatus(bool isEnabled)
         {
             return isEnabled ? T("Startup_Status_Enabled", "Enabled") : T("Startup_Status_Disabled", "Disabled");
@@ -166,7 +144,7 @@ namespace OptiAssist.Addons.StartupManager
 
             _txtHeaderSubtitle = new TextBlock
             {
-                Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services"),
+                Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications and scheduled tasks"),
                 FontSize = 11,
                 Margin = new Thickness(0, 2, 0, 0),
                 TextTrimming = TextTrimming.CharacterEllipsis
@@ -220,11 +198,9 @@ namespace OptiAssist.Addons.StartupManager
             StackPanel spTabs = new StackPanel { Orientation = Orientation.Horizontal };
             _tabProgramsBorder = CreateTabButton("🚀 " + T("Startup_Tab_Programs", "Startup Programs"), () => SwitchTab(StartupTab.Programs), out _tabProgramsText);
             _tabTasksBorder = CreateTabButton("⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks"), () => SwitchTab(StartupTab.Tasks), out _tabTasksText);
-            _tabServicesBorder = CreateTabButton("⚙️ " + T("Startup_Tab_Services", "Startup Services"), () => SwitchTab(StartupTab.Services), out _tabServicesText);
 
             spTabs.Children.Add(_tabProgramsBorder);
             spTabs.Children.Add(_tabTasksBorder);
-            spTabs.Children.Add(_tabServicesBorder);
             tabStrip.Child = spTabs;
             mainStack.Children.Add(tabStrip);
 
@@ -369,7 +345,6 @@ namespace OptiAssist.Addons.StartupManager
             // Update Tab Highlights
             HighlightTab(_tabProgramsBorder, _tabProgramsText, tab == StartupTab.Programs);
             HighlightTab(_tabTasksBorder, _tabTasksText, tab == StartupTab.Tasks);
-            HighlightTab(_tabServicesBorder, _tabServicesText, tab == StartupTab.Services);
 
             // Add program button only relevant for Tab 1 (Programs)
             if (_btnNewProgram != null)
@@ -377,7 +352,7 @@ namespace OptiAssist.Addons.StartupManager
                 _btnNewProgram.Visibility = (tab == StartupTab.Programs) ? Visibility.Visible : Visibility.Collapsed;
             }
 
-            // Hide Microsoft checkbox only applies to Tasks and Services
+            // Hide Microsoft checkbox only applies to Tasks
             if (_chkHideMicrosoft != null)
             {
                 _chkHideMicrosoft.Visibility = (tab == StartupTab.Programs) ? Visibility.Collapsed : Visibility.Visible;
@@ -429,10 +404,6 @@ namespace OptiAssist.Addons.StartupManager
                 {
                     _allTasks = StartupEngine.GetStartupScheduledTasks(hideMs);
                 }
-                else if (_activeTab == StartupTab.Services)
-                {
-                    _allServices = StartupEngine.GetStartupServices(hideMs);
-                }
 
                 Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
@@ -455,10 +426,6 @@ namespace OptiAssist.Addons.StartupManager
             else if (_activeTab == StartupTab.Tasks)
             {
                 RenderTasksList(query);
-            }
-            else if (_activeTab == StartupTab.Services)
-            {
-                RenderServicesList(query);
             }
         }
 
@@ -891,250 +858,6 @@ namespace OptiAssist.Addons.StartupManager
             btnEdit.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnEdit.Click += (s, e) => OpenEditTaskModal(task);
             spRight.Children.Add(btnEdit);
-
-            Grid.SetColumn(spRight, 1);
-            g.Children.Add(spRight);
-
-            card.Child = g;
-            return card;
-        }
-
-        #endregion
-
-        #region TAB 3: SERVICES RENDERING
-
-        private void RenderServicesList(string query)
-        {
-            int total = _allServices.Count;
-            int runningCount = 0;
-            int autoCount = 0;
-            foreach (var s in _allServices)
-            {
-                if (s.IsRunning) runningCount++;
-                if (s.IsEnabled) autoCount++;
-            }
-
-            if (_txtStatsSummary != null)
-            {
-                _txtStatsSummary.Text = string.Format(
-                    T("Startup_Stats_Services", "Total: {0} third-party services • {1} running • {2} automatic"),
-                    total, runningCount, autoCount);
-            }
-
-            List<StartupServiceItem> filtered = new List<StartupServiceItem>();
-            foreach (var s in _allServices)
-            {
-                if (string.IsNullOrEmpty(query) ||
-                    (s.DisplayName != null && s.DisplayName.ToLowerInvariant().Contains(query)) ||
-                    (s.ServiceName != null && s.ServiceName.ToLowerInvariant().Contains(query)) ||
-                    (s.Publisher != null && s.Publisher.ToLowerInvariant().Contains(query)) ||
-                    (s.FileDescription != null && s.FileDescription.ToLowerInvariant().Contains(query)))
-                {
-                    filtered.Add(s);
-                }
-            }
-
-            if (filtered.Count == 0)
-            {
-                _pnlItemsList.Children.Add(CreateEmptyPlaceholder(T("Startup_Empty_Services", "No third-party startup services found matching current filter.")));
-                return;
-            }
-
-            foreach (var service in filtered)
-            {
-                _pnlItemsList.Children.Add(BuildServiceCard(service));
-            }
-        }
-
-        private Border BuildServiceCard(StartupServiceItem service)
-        {
-            Border card = new Border
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(14, 10, 14, 10),
-                Margin = new Thickness(0, 0, 0, 6)
-            };
-            card.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
-            card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            Grid g = new Grid();
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            StackPanel spLeft = new StackPanel();
-
-            StackPanel spTitleRow = new StackPanel { Orientation = Orientation.Horizontal };
-            TextBlock tbName = new TextBlock
-            {
-                Text = service.DisplayName,
-                FontSize = 12.5,
-                FontWeight = FontWeights.Bold,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            tbName.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            spTitleRow.Children.Add(tbName);
-
-            // Startup Type Badge
-            Border bType = new Border
-            {
-                CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(6, 1, 6, 1),
-                Margin = new Thickness(8, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            bType.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            TextBlock tbType = new TextBlock
-            {
-                Text = FormatServiceStartupType(service.StartupType),
-                FontSize = 9.5
-            };
-            tbType.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            bType.Child = tbType;
-            spTitleRow.Children.Add(bType);
-
-            spLeft.Children.Add(spTitleRow);
-
-            // Service internal name, publisher & executable description
-            string pub = !string.IsNullOrWhiteSpace(service.Publisher) ? service.Publisher : T("Startup_Publisher_Unknown", "Unknown Publisher");
-            StringBuilder sbPub = new StringBuilder();
-            sbPub.Append(T("Startup_Label_ServiceName", "Service:")).Append(" ").Append(service.ServiceName);
-            sbPub.Append(" • ").Append(T("Startup_Label_Publisher", "Publisher:")).Append(" ").Append(pub);
-            if (!string.IsNullOrWhiteSpace(service.FileDescription))
-            {
-                sbPub.Append(" • ").Append(T("Startup_Label_Description", "Description:")).Append(" ").Append(service.FileDescription);
-            }
-
-            TextBlock tbPub = new TextBlock
-            {
-                Text = sbPub.ToString(),
-                FontSize = 10,
-                Margin = new Thickness(0, 2, 0, 2)
-            };
-            tbPub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            spLeft.Children.Add(tbPub);
-
-            // ImagePath
-            TextBlock tbCmd = new TextBlock
-            {
-                Text = service.ImagePath,
-                FontSize = 10,
-                FontFamily = new FontFamily("Consolas, Segoe UI"),
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                ToolTip = service.ImagePath
-            };
-            tbCmd.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
-            spLeft.Children.Add(tbCmd);
-
-            Grid.SetColumn(spLeft, 0);
-            g.Children.Add(spLeft);
-
-            // Right: Status Badge + Action Buttons
-            StackPanel spRight = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(12, 0, 0, 0)
-            };
-
-            // Running State Pill
-            Border bRunState = new Border
-            {
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(8, 3, 8, 3),
-                Margin = new Thickness(0, 0, 8, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Background = service.IsRunning
-                    ? new SolidColorBrush(Color.FromArgb(35, 34, 197, 94))
-                    : new SolidColorBrush(Color.FromArgb(25, 148, 163, 184))
-            };
-            TextBlock tbRunState = new TextBlock
-            {
-                Text = FormatServiceStatus(service.IsRunning),
-                FontSize = 10.5,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = service.IsRunning
-                    ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
-                    : new SolidColorBrush(Color.FromRgb(148, 163, 184))
-            };
-            bRunState.Child = tbRunState;
-            spRight.Children.Add(bRunState);
-
-            // Toggle Startup Type Button (Automatic vs Disabled)
-            Button btnToggleStartup = new Button
-            {
-                Content = service.IsEnabled ? T("Startup_Btn_Disable", "Disable") : T("Startup_Btn_Enable", "Enable"),
-                FontSize = 10.5,
-                Height = 26,
-                Padding = new Thickness(10, 0, 10, 0),
-                Margin = new Thickness(0, 0, 4, 0),
-                Cursor = Cursors.Hand
-            };
-            btnToggleStartup.SetResourceReference(Button.StyleProperty, service.IsEnabled ? "BtnDefault" : "BtnAccent");
-            btnToggleStartup.Click += (s, e) =>
-            {
-                string err;
-                if (!StartupEngine.ToggleServiceStartupType(service, out err))
-                {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ServiceStartupError", "Error changing service startup type: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                else
-                {
-                    RenderCurrentTabList();
-                }
-            };
-            spRight.Children.Add(btnToggleStartup);
-
-            // Start / Stop Service Button
-            Button btnServiceState = new Button
-            {
-                Content = service.IsRunning ? T("Startup_Btn_StopService", "Stop") : T("Startup_Btn_StartService", "Start"),
-                FontSize = 10.5,
-                Height = 26,
-                Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 4, 0),
-                Cursor = Cursors.Hand
-            };
-            btnServiceState.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnServiceState.Click += (s, e) =>
-            {
-                string err;
-                if (!StartupEngine.ToggleServiceRunning(service, out err))
-                {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ServiceFailed", "Failed to control service: {0}"), err),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                else
-                {
-                    RenderCurrentTabList();
-                }
-            };
-            spRight.Children.Add(btnServiceState);
-
-            // Explorer Button
-            Button btnExplorer = new Button
-            {
-                Content = "📂",
-                Width = 26,
-                Height = 26,
-                FontSize = 11,
-                Padding = new Thickness(0),
-                ToolTip = T("Startup_Tooltip_Explorer", "Open target folder in Windows Explorer"),
-                Cursor = Cursors.Hand
-            };
-            btnExplorer.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnExplorer.Click += (s, e) =>
-            {
-                try
-                {
-                    if (File.Exists(service.ExePath))
-                    {
-                        Process.Start("explorer.exe", string.Format("/select,\"{0}\"", service.ExePath));
-                    }
-                }
-                catch { }
-            };
-            spRight.Children.Add(btnExplorer);
 
             Grid.SetColumn(spRight, 1);
             g.Children.Add(spRight);
@@ -1679,13 +1402,12 @@ namespace OptiAssist.Addons.StartupManager
         public void OnLanguageChanged(string langCode)
         {
             if (_txtHeaderTitle != null) _txtHeaderTitle.Text = string.Format("{0}  {1}", Icon, Name);
-            if (_txtHeaderSubtitle != null) _txtHeaderSubtitle.Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services");
+            if (_txtHeaderSubtitle != null) _txtHeaderSubtitle.Text = T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications and scheduled tasks");
             if (_btnNewProgram != null) _btnNewProgram.Content = T("Startup_Btn_New", "➕ Add Program");
             if (_btnRefresh != null) _btnRefresh.Content = T("Startup_Btn_Refresh", "🔄 Refresh");
             if (_chkHideMicrosoft != null) _chkHideMicrosoft.Content = T("Startup_Chk_HideMicrosoft", "Hide native Microsoft / Windows entries");
             if (_tabProgramsText != null) _tabProgramsText.Text = "🚀 " + T("Startup_Tab_Programs", "Startup Programs");
             if (_tabTasksText != null) _tabTasksText.Text = "⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks");
-            if (_tabServicesText != null) _tabServicesText.Text = "⚙️ " + T("Startup_Tab_Services", "Startup Services");
             if (_lblSearchFilter != null) _lblSearchFilter.Text = T("Startup_Filter_Label", "🔍 Search for the application you want:");
             if (_txtSearchWatermark != null) _txtSearchWatermark.Text = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
             if (_txtSearchFilter != null) _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
