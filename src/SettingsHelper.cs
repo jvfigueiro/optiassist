@@ -18,6 +18,7 @@ namespace OptiAssist
         public bool ServiceProviderMode { get; set; }
         public bool EnableMaintenanceReport { get; set; }
         public bool OpenExternalLogsByDefault { get; set; }
+        public bool AlwaysOnTop { get; set; }
         public List<string> DisabledAddons { get; set; }
         public string CustomLogoPath { get; set; }
 
@@ -35,6 +36,7 @@ namespace OptiAssist
             ServiceProviderMode = false;
             EnableMaintenanceReport = false;
             OpenExternalLogsByDefault = false;
+            AlwaysOnTop = false;
             DisabledAddons = new List<string>();
             CustomLogoPath = "";
         }
@@ -106,6 +108,11 @@ namespace OptiAssist
                     bool b;
                     if (bool.TryParse(dict["OpenExternalLogsByDefault"], out b)) settings.OpenExternalLogsByDefault = b;
                 }
+                if (dict.ContainsKey("AlwaysOnTop"))
+                {
+                    bool b;
+                    if (bool.TryParse(dict["AlwaysOnTop"], out b)) settings.AlwaysOnTop = b;
+                }
                 if (dict.ContainsKey("CustomLogoPath"))
                 {
                     settings.CustomLogoPath = dict["CustomLogoPath"];
@@ -153,6 +160,7 @@ namespace OptiAssist
                 sb.AppendLine(string.Format("  \"ServiceProviderMode\": {0},", settings.ServiceProviderMode ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"EnableMaintenanceReport\": {0},", settings.EnableMaintenanceReport ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"OpenExternalLogsByDefault\": {0},", settings.OpenExternalLogsByDefault ? "true" : "false"));
+                sb.AppendLine(string.Format("  \"AlwaysOnTop\": {0},", settings.AlwaysOnTop ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"CustomLogoPath\": \"{0}\",", EscapeJson(settings.CustomLogoPath)));
                 string disabledStr = settings.DisabledAddons != null ? string.Join(",", settings.DisabledAddons.ToArray()) : "";
                 sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\"", EscapeJson(disabledStr)));
@@ -220,11 +228,41 @@ namespace OptiAssist
             return Path.Combine(SettingsHelper.GetConfigDirectory(), "custom_shortcuts.json");
         }
 
+        public static List<CustomShortcutItem> CreateDefaultShortcuts()
+        {
+            return new List<CustomShortcutItem>
+            {
+                new CustomShortcutItem
+                {
+                    Id = "default-maintenance-folder",
+                    Title = "Maintenance Folder",
+                    Icon = "📁",
+                    TargetType = "Section",
+                    TargetValue = "maintenance-folder",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-chris-titus",
+                    Title = "Chris Titus WinUtil",
+                    Icon = "🚀",
+                    TargetType = "Section",
+                    TargetValue = "chris-titus",
+                    Arguments = ""
+                }
+            };
+        }
+
         public static List<CustomShortcutItem> Load()
         {
             var list = new List<CustomShortcutItem>();
             string path = GetShortcutsFilePath();
-            if (!File.Exists(path)) return list;
+            if (!File.Exists(path))
+            {
+                list = CreateDefaultShortcuts();
+                Save(list);
+                return list;
+            }
 
             try
             {

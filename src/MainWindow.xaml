@@ -398,18 +398,6 @@
                                             Height="34" Margin="3" FontSize="11"
                                             ToolTip="Open App Manager and install all selected applications"
                                             Click="BtnRunPostInstallTask_Click"/>
-                                    <Button x:Name="btnTaskMaintenanceFolder"
-                                            Content="📁 Maintenance Folder"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open portable maintenance tools folder"
-                                            Click="BtnOpenMaintenanceFolder_Click"/>
-                                    <Button x:Name="btnTaskChrisTitus"
-                                            Content="🚀 Chris Titus WinUtil"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Run Chris Titus Tech utility (PowerShell)"
-                                            Click="BtnChrisTitus_Click"/>
                                     <Button x:Name="btnTaskMemoryDiag"
                                             Content="🧠 Memory Diagnostic"
                                             Style="{StaticResource BtnDefault}"
@@ -534,36 +522,36 @@
                                            Margin="0,0,0,8"
                                            TextTrimming="CharacterEllipsis"/>
                                 <UniformGrid Columns="3" Margin="0,0,0,0">
-                                    <Button x:Name="btnDevMgmtTool" Content="🔌 Device Manager" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDevMgmt_Click"/>
-                                    <Button x:Name="btnNetplwiz" Content="👤 User Accounts (Netplwiz)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNetplwiz_Click"/>
-                                    <Button x:Name="btnDiskMgmt" Content="💾 Disk Management" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDiskMgmt_Click"/>
-                                    <Button x:Name="btnControl" Content="⚙️ Classic Control Panel" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnControlPanel_Click"/>
-                                    <Button x:Name="btnMsinfo" Content="ℹ️ System Information (msinfo32)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsInfo_Click"/>
-                                    <Button x:Name="btnWinver" Content="📋 About Windows (winver)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnWinver_Click"/>
-                                    <Button x:Name="btnMsconfig" Content="🔧 MSCONFIG Tool" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsConfig_Click"/>
-                                    <Button x:Name="btnSysDmTool" Content="💻 System Properties" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnSysDm_Click"/>
-                                    <Button x:Name="btnNcpa" Content="🌐 Network Connections (ncpa.cpl)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNcpa_Click"/>
-                                    <Button x:Name="btnOptionalFeatures" Content="📦 Windows Features" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnOptionalFeatures_Click"/>
-                                    <Button x:Name="btnRegedit" Content="🔑 Registry Editor (regedit)" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnRegedit_Click"/>
-                                    <Button x:Name="btnTaskmgr" Content="📊 Task Manager" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnTaskMgr_Click"/>
-                                    <Button x:Name="btnResmon" Content="⚡ Resource Monitor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnResmon_Click"/>
-                                    <Button x:Name="btnMemoryDiagTool" Content="🧠 Memory Diagnostic" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMemoryDiag_Click"/>
-                                    <Button x:Name="btnRelMon" Content="📈 Reliability Monitor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnReliability_Click"/>
-                                    <Button x:Name="btnEventVwr" Content="📑 Event Viewer" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnEventVwr_Click"/>
+                                    <Button x:Name="btnDevMgmtTool" Content="Device Manager" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDevMgmt_Click"/>
+                                    <Button x:Name="btnNetplwiz" Content="User Accounts" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNetplwiz_Click"/>
+                                    <Button x:Name="btnDiskMgmt" Content="Disk Management" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnDiskMgmt_Click"/>
+                                    <Button x:Name="btnControl" Content="Classic Control Panel" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnControlPanel_Click"/>
+                                    <Button x:Name="btnMsinfo" Content="System Information" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsInfo_Click"/>
+                                    <Button x:Name="btnWinver" Content="About Windows" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnWinver_Click"/>
+                                    <Button x:Name="btnMsconfig" Content="MSCONFIG Tool" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMsConfig_Click"/>
+                                    <Button x:Name="btnSysDmTool" Content="System Properties" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnSysDm_Click"/>
+                                    <Button x:Name="btnNcpa" Content="Network Connections" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnNcpa_Click"/>
+                                    <Button x:Name="btnOptionalFeatures" Content="Windows Features" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnOptionalFeatures_Click"/>
+                                    <Button x:Name="btnRegedit" Content="Registry Editor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnRegedit_Click"/>
+                                    <Button x:Name="btnTaskmgr" Content="Task Manager" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnTaskMgr_Click"/>
+                                    <Button x:Name="btnResmon" Content="Resource Monitor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnResmon_Click"/>
+                                    <Button x:Name="btnMemoryDiagTool" Content="Memory Diagnostic" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnMemoryDiag_Click"/>
+                                    <Button x:Name="btnRelMon" Content="Reliability Monitor" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnReliability_Click"/>
+                                    <Button x:Name="btnEventVwr" Content="Event Viewer" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnEventVwr_Click"/>
                                     <Button x:Name="btnGpedit" Style="{StaticResource BtnDefault}" Margin="3" Click="BtnGpedit_Click"
                                             ToolTip="Group Policy Editor (gpedit.msc) - Available in Windows Pro &amp; Enterprise editions">
                                         <TextBlock x:Name="txtBtnGpeditText"
-                                                   Text="📜 GPEDIT Tool (Pro/Enterprise)"
+                                                   Text="GPEDIT Tool (Pro/Ent)"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </Button>
                                     <Button x:Name="btnServicesTool"
-                                            Content="⚙️ Windows Services (services.msc)"
+                                            Content="Windows Services"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="3"
                                             Click="BtnServices_Click"
                                             ToolTip="Windows Services console (services.msc)"/>
                                     <Button x:Name="btnDateTimeTool"
-                                            Content="🕒 Date &amp; Time (timedate.cpl)"
+                                            Content="Date &amp; Time"
                                             Style="{StaticResource BtnDefault}"
                                             Margin="3"
                                             Click="BtnDateTime_Click"
@@ -574,7 +562,7 @@
 
                         <!-- Maintenance Tools Folder button positioned directly below Administrative Tools -->
                         <Button x:Name="btnOpenMaintenanceFolderTool"
-                                Content="📂 Maintenance Tools Folder (Portable)"
+                                Content="📁 Maintenance Tools"
                                 Style="{StaticResource BtnDefault}"
                                 Height="36"
                                 Margin="0,0,0,4"
@@ -605,7 +593,7 @@
                                            Foreground="{DynamicResource BrushTextPrimary}"
                                            TextTrimming="CharacterEllipsis"/>
                                 <TextBlock x:Name="txtSettingsSub"
-                                           Text="Settings saved in Config\settings.json on the portable drive"
+                                           Text="Configure general preferences, language, visual theme, system installation, and modular add-ons"
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextSecondary}"
                                            Margin="0,2,0,0"
@@ -658,6 +646,11 @@
                                           Checked="ChkSettingExternalLogs_Changed"
                                           Unchecked="ChkSettingExternalLogs_Changed"
                                           Content="Open external Logs window by default"
+                                          Margin="0,2,0,4"/>
+                                <CheckBox x:Name="chkSettingAlwaysOnTop"
+                                          Checked="ChkSettingAlwaysOnTop_Changed"
+                                          Unchecked="ChkSettingAlwaysOnTop_Changed"
+                                          Content="Keep OptiAssist main window always on top (Always on top)"
                                           Margin="0,2,0,12"/>
 
                                 <WrapPanel Orientation="Horizontal">

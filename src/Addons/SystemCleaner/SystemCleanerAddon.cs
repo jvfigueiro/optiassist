@@ -2654,28 +2654,6 @@ namespace OptiAssist.Addons.SystemCleaner
             spQuick.Children.Add(_btnSelectRecommended);
             spQuickContainer.Children.Add(spQuick);
 
-            _chkDisableWarnings = new CheckBox
-            {
-                Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items"),
-                FontSize = 10.5,
-                IsChecked = _disableSelectionWarnings,
-                Margin = new Thickness(4, 6, 4, 0),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Cursor = Cursors.Hand
-            };
-            _chkDisableWarnings.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextSecondary");
-            _chkDisableWarnings.Checked += (s, e) =>
-            {
-                _disableSelectionWarnings = true;
-                SaveCleanerSettings();
-            };
-            _chkDisableWarnings.Unchecked += (s, e) =>
-            {
-                _disableSelectionWarnings = false;
-                SaveCleanerSettings();
-            };
-            spQuickContainer.Children.Add(_chkDisableWarnings);
-
             quickBar.Child = spQuickContainer;
 
             Grid.SetRow(quickBar, 1);
@@ -3182,9 +3160,30 @@ namespace OptiAssist.Addons.SystemCleaner
                     _pnlCategoriesContainer.Children.Add(cb);
                 }
 
-                // If Deep Scan section, add root folder picker row
+                // If Deep Scan section, add root folder picker row and Disable Warnings checkbox
                 if (secId == "deep_scan")
                 {
+                    _chkDisableWarnings = new CheckBox
+                    {
+                        Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items"),
+                        FontSize = 11,
+                        IsChecked = _disableSelectionWarnings,
+                        Margin = new Thickness(18, 4, 0, 2),
+                        Cursor = System.Windows.Input.Cursors.Hand
+                    };
+                    _chkDisableWarnings.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                    _chkDisableWarnings.Checked += (s, e) =>
+                    {
+                        _disableSelectionWarnings = true;
+                        SaveCleanerSettings();
+                    };
+                    _chkDisableWarnings.Unchecked += (s, e) =>
+                    {
+                        _disableSelectionWarnings = false;
+                        SaveCleanerSettings();
+                    };
+                    _pnlCategoriesContainer.Children.Add(_chkDisableWarnings);
+
                     Border deepScanBox = new Border
                     {
                         Margin = new Thickness(18, 6, 0, 4),

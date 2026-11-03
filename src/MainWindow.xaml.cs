@@ -345,6 +345,8 @@ namespace OptiAssist
                 if (chkSettingWinget != null) chkSettingWinget.IsChecked = _settings.EnableWingetFallback;
                 if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.IsChecked = _settings.AutoRefreshHardware;
                 if (chkSettingExternalLogs != null) chkSettingExternalLogs.IsChecked = _settings.OpenExternalLogsByDefault;
+                if (chkSettingAlwaysOnTop != null) chkSettingAlwaysOnTop.IsChecked = _settings.AlwaysOnTop;
+                this.Topmost = _settings.AlwaysOnTop;
 
                 string currentLang = string.IsNullOrEmpty(_settings.Language) ? "en-US" : _settings.Language;
                 ApplyLanguage(currentLang);
@@ -912,6 +914,12 @@ namespace OptiAssist
                 case "maintenance-report":
                     defaultIcon = "📋";
                     return LocalizationHelper.Get("Nav_MaintenanceReport", "Maintenance Report");
+                case "maintenance-folder":
+                    defaultIcon = "📁";
+                    return LocalizationHelper.Get("Task_MaintenanceFolder", "📁 Maintenance Folder").Replace("📁", "").Trim();
+                case "chris-titus":
+                    defaultIcon = "🚀";
+                    return LocalizationHelper.Get("Task_ChrisTitus", "🚀 Chris Titus WinUtil").Replace("🚀", "").Trim();
             }
 
             if (_addons != null)
@@ -939,7 +947,12 @@ namespace OptiAssist
             {
                 string defIcon;
                 string secTitle = GetSectionDisplayLabel(item.TargetValue, out defIcon);
-                if (string.IsNullOrWhiteSpace(title)) title = secTitle;
+                if (string.IsNullOrWhiteSpace(title) ||
+                    string.Equals(item.Id, "default-maintenance-folder", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(item.Id, "default-chris-titus", StringComparison.OrdinalIgnoreCase))
+                {
+                    title = secTitle;
+                }
                 if (string.IsNullOrWhiteSpace(icon)) icon = defIcon;
             }
             else
@@ -1104,6 +1117,14 @@ namespace OptiAssist
                         NavButton_Click(rbNavAbout, new RoutedEventArgs());
                     }
                 }
+                else if (sec == "maintenance-folder")
+                {
+                    ShortcutsHelper.OpenMaintenanceFolder();
+                }
+                else if (sec == "chris-titus")
+                {
+                    BtnChrisTitus_Click(this, new RoutedEventArgs());
+                }
                 else
                 {
                     NavigateToAddonModule(sec);
@@ -1247,6 +1268,7 @@ namespace OptiAssist
             string[] sectionIds = new string[]
             {
                 "toolbox", "app-manager", "system-cleaner", "startup-manager", "maintenance-report",
+                "maintenance-folder", "chris-titus",
                 "windows-tools", "logs", "settings", "about"
             };
             foreach (string sid in sectionIds)
@@ -1930,16 +1952,6 @@ namespace OptiAssist
                 btnTaskPostInstall.Content = LocalizationHelper.Get("Task_PostInstall", "📦 App Manager");
                 btnTaskPostInstall.ToolTip = LocalizationHelper.Get("Tooltip_TaskPostInstall", "Go to application and installer manager");
             }
-            if (btnTaskMaintenanceFolder != null)
-            {
-                btnTaskMaintenanceFolder.Content = LocalizationHelper.Get("Task_MaintenanceFolder", "📁 Maintenance Folder");
-                btnTaskMaintenanceFolder.ToolTip = LocalizationHelper.Get("Tooltip_TaskMaintenanceFolder", "Open portable maintenance tools folder");
-            }
-            if (btnTaskChrisTitus != null)
-            {
-                btnTaskChrisTitus.Content = LocalizationHelper.Get("Task_ChrisTitus", "🚀 Chris Titus WinUtil");
-                btnTaskChrisTitus.ToolTip = LocalizationHelper.Get("Tooltip_TaskChrisTitus", "Run Chris Titus Tech utility (PowerShell)");
-            }
             if (btnTaskMemoryDiag != null)
             {
                 btnTaskMemoryDiag.Content = LocalizationHelper.Get("Task_MemoryDiag", "🧠 Memory Diagnostic");
@@ -1985,37 +1997,37 @@ namespace OptiAssist
             if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
             if (txtToolsSubtitle != null) txtToolsSubtitle.Text = LocalizationHelper.Get("Tools_Subtitle", "Quick access to primary management consoles and native system utilities");
             if (txtAdminToolsTitle != null) txtAdminToolsTitle.Text = LocalizationHelper.Get("Tools_Section_Title", "🛠️ Administrative Tools");
-            if (btnDevMgmtTool != null) btnDevMgmtTool.Content = LocalizationHelper.Get("Tool_DevMgmt", "🔌 Device Manager");
-            if (btnNetplwiz != null) btnNetplwiz.Content = LocalizationHelper.Get("Tool_Netplwiz", "👤 User Accounts (Netplwiz)");
-            if (btnDiskMgmt != null) btnDiskMgmt.Content = LocalizationHelper.Get("Tool_DiskMgmt", "💾 Disk Management");
-            if (btnControl != null) btnControl.Content = LocalizationHelper.Get("Tool_Control", "⚙️ Classic Control Panel");
-            if (btnMsinfo != null) btnMsinfo.Content = LocalizationHelper.Get("Tool_Msinfo", "ℹ️ System Information (msinfo32)");
-            if (btnWinver != null) btnWinver.Content = LocalizationHelper.Get("Tool_Winver", "📋 About Windows (winver)");
-            if (btnMsconfig != null) btnMsconfig.Content = LocalizationHelper.Get("Tool_Msconfig", "🔧 MSCONFIG Tool");
-            if (btnSysDmTool != null) btnSysDmTool.Content = LocalizationHelper.Get("Tool_SysDm", "💻 System Properties");
-            if (btnNcpa != null) btnNcpa.Content = LocalizationHelper.Get("Tool_Ncpa", "🌐 Network Connections (ncpa.cpl)");
-            if (btnOptionalFeatures != null) btnOptionalFeatures.Content = LocalizationHelper.Get("Tool_OptionalFeatures", "📦 Windows Features");
-            if (btnRegedit != null) btnRegedit.Content = LocalizationHelper.Get("Tool_Regedit", "🔑 Registry Editor (regedit)");
-            if (btnTaskmgr != null) btnTaskmgr.Content = LocalizationHelper.Get("Tool_Taskmgr", "📊 Task Manager");
-            if (btnResmon != null) btnResmon.Content = LocalizationHelper.Get("Tool_Resmon", "⚡ Resource Monitor");
-            if (btnMemoryDiagTool != null) btnMemoryDiagTool.Content = LocalizationHelper.Get("Tool_MemoryDiag", "🧠 Memory Diagnostic");
-            if (btnRelMon != null) btnRelMon.Content = LocalizationHelper.Get("Tool_Reliability", "📈 Reliability Monitor");
-            if (btnEventVwr != null) btnEventVwr.Content = LocalizationHelper.Get("Tool_EventVwr", "📑 Event Viewer");
-            if (txtBtnGpeditText != null) txtBtnGpeditText.Text = LocalizationHelper.Get("Tool_Gpedit", "📜 GPEDIT Tool (Pro/Ent)");
+            if (btnDevMgmtTool != null) btnDevMgmtTool.Content = LocalizationHelper.Get("Tool_DevMgmt", "Device Manager");
+            if (btnNetplwiz != null) btnNetplwiz.Content = LocalizationHelper.Get("Tool_Netplwiz", "User Accounts");
+            if (btnDiskMgmt != null) btnDiskMgmt.Content = LocalizationHelper.Get("Tool_DiskMgmt", "Disk Management");
+            if (btnControl != null) btnControl.Content = LocalizationHelper.Get("Tool_Control", "Classic Control Panel");
+            if (btnMsinfo != null) btnMsinfo.Content = LocalizationHelper.Get("Tool_Msinfo", "System Information");
+            if (btnWinver != null) btnWinver.Content = LocalizationHelper.Get("Tool_Winver", "About Windows");
+            if (btnMsconfig != null) btnMsconfig.Content = LocalizationHelper.Get("Tool_Msconfig", "MSCONFIG Tool");
+            if (btnSysDmTool != null) btnSysDmTool.Content = LocalizationHelper.Get("Tool_SysDm", "System Properties");
+            if (btnNcpa != null) btnNcpa.Content = LocalizationHelper.Get("Tool_Ncpa", "Network Connections");
+            if (btnOptionalFeatures != null) btnOptionalFeatures.Content = LocalizationHelper.Get("Tool_OptionalFeatures", "Windows Features");
+            if (btnRegedit != null) btnRegedit.Content = LocalizationHelper.Get("Tool_Regedit", "Registry Editor");
+            if (btnTaskmgr != null) btnTaskmgr.Content = LocalizationHelper.Get("Tool_Taskmgr", "Task Manager");
+            if (btnResmon != null) btnResmon.Content = LocalizationHelper.Get("Tool_Resmon", "Resource Monitor");
+            if (btnMemoryDiagTool != null) btnMemoryDiagTool.Content = LocalizationHelper.Get("Tool_MemoryDiag", "Memory Diagnostic");
+            if (btnRelMon != null) btnRelMon.Content = LocalizationHelper.Get("Tool_Reliability", "Reliability Monitor");
+            if (btnEventVwr != null) btnEventVwr.Content = LocalizationHelper.Get("Tool_EventVwr", "Event Viewer");
+            if (txtBtnGpeditText != null) txtBtnGpeditText.Text = LocalizationHelper.Get("Tool_Gpedit", "GPEDIT Tool (Pro/Ent)");
             if (btnGpedit != null) btnGpedit.ToolTip = LocalizationHelper.Get("Tooltip_Gpedit", "Group Policy Editor (gpedit.msc) - Available in Windows Pro & Enterprise editions");
             if (btnServicesTool != null)
             {
-                btnServicesTool.Content = LocalizationHelper.Get("Tool_Services", "⚙️ Windows Services (services.msc)");
+                btnServicesTool.Content = LocalizationHelper.Get("Tool_Services", "Windows Services");
                 btnServicesTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolServices", "Windows Services console (services.msc)");
             }
             if (btnDateTimeTool != null)
             {
-                btnDateTimeTool.Content = LocalizationHelper.Get("Tool_DateTime", "🕒 Date & Time (timedate.cpl)");
+                btnDateTimeTool.Content = LocalizationHelper.Get("Tool_DateTime", "Date & Time");
                 btnDateTimeTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolDateTime", "Windows Date & Time administrative settings (timedate.cpl)");
             }
             if (btnOpenMaintenanceFolderTool != null)
             {
-                btnOpenMaintenanceFolderTool.Content = LocalizationHelper.Get("Btn_OpenMaintenanceFolder", "📂 Maintenance Tools Folder (Portable)");
+                btnOpenMaintenanceFolderTool.Content = LocalizationHelper.Get("Btn_OpenMaintenanceFolder", "📁 Maintenance Tools");
                 btnOpenMaintenanceFolderTool.ToolTip = LocalizationHelper.Get("Tooltip_OpenMaintenanceFolder", "Access local Maintenance folder containing portable tools");
             }
 
@@ -2063,13 +2075,14 @@ namespace OptiAssist
 
             // 8. Settings
             if (txtSettingsTitle != null) txtSettingsTitle.Text = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
-            if (txtSettingsSub != null) txtSettingsSub.Text = LocalizationHelper.Get("Settings_Subtitle", "Settings saved in Config\\settings.json on the portable drive");
+            if (txtSettingsSub != null) txtSettingsSub.Text = LocalizationHelper.Get("Settings_Subtitle", "Configure general preferences, language, visual theme, system installation, and modular add-ons");
             if (txtLangLabel != null) txtLangLabel.Text = LocalizationHelper.Get("Settings_Label_Language", "Application Language:");
             SetupLanguageButtons(langCode);
 
             if (chkSettingWinget != null) chkSettingWinget.Content = LocalizationHelper.Get("Settings_Chk_WingetFallback", "Enable Winget download fallback when program is not in Installers folder");
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.Content = LocalizationHelper.Get("Settings_Chk_AutoRefresh", "Automatically refresh hardware specs on startup");
             if (chkSettingExternalLogs != null) chkSettingExternalLogs.Content = LocalizationHelper.Get("Settings_Chk_ExternalLogs", "Open external Logs window by default");
+            if (chkSettingAlwaysOnTop != null) chkSettingAlwaysOnTop.Content = LocalizationHelper.Get("Settings_Chk_AlwaysOnTop", "Keep OptiAssist main window always on top (Always on top)");
             if (btnSaveSettings != null) btnSaveSettings.Content = LocalizationHelper.Get("Btn_SaveSettings", "💾 Save Settings");
             if (btnResetSettings != null) btnResetSettings.Content = LocalizationHelper.Get("Btn_ResetSettings", "🔄 Restore Defaults");
 
@@ -2294,6 +2307,18 @@ namespace OptiAssist
             Log(string.Format("[CONFIG] OpenExternalLogsByDefault updated to {0} and saved to settings.json.", _settings.OpenExternalLogsByDefault));
         }
 
+        private void ChkSettingAlwaysOnTop_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings) return;
+
+            if (_settings == null) _settings = SettingsHelper.Load();
+            _settings.AlwaysOnTop = chkSettingAlwaysOnTop.IsChecked == true;
+            this.Topmost = _settings.AlwaysOnTop;
+            SettingsHelper.Save(_settings);
+
+            Log(string.Format("[CONFIG] AlwaysOnTop updated to {0} and saved to settings.json.", _settings.AlwaysOnTop));
+        }
+
         private void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
         {
             if (_settings == null) _settings = new AppSettings();
@@ -2301,8 +2326,10 @@ namespace OptiAssist
             _settings.EnableWingetFallback = chkSettingWinget != null && chkSettingWinget.IsChecked == true;
             _settings.AutoRefreshHardware = chkSettingAutoRefresh != null && chkSettingAutoRefresh.IsChecked == true;
             _settings.OpenExternalLogsByDefault = chkSettingExternalLogs != null && chkSettingExternalLogs.IsChecked == true;
+            _settings.AlwaysOnTop = chkSettingAlwaysOnTop != null && chkSettingAlwaysOnTop.IsChecked == true;
             _settings.AccentColor = txtSettingAccentColor.Text.Trim();
 
+            this.Topmost = _settings.AlwaysOnTop;
             SettingsHelper.Save(_settings);
 
             UpdateServiceProviderUI();

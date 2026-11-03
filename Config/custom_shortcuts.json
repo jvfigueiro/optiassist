@@ -1,0 +1,18 @@
+[
+  {
+    "Id": "default-maintenance-folder",
+    "Title": "Maintenance Folder",
+    "Icon": "📁",
+    "TargetType": "Section",
+    "TargetValue": "maintenance-folder",
+    "Arguments": ""
+  },
+  {
+    "Id": "default-chris-titus",
+    "Title": "Chris Titus WinUtil",
+    "Icon": "🚀",
+    "TargetType": "Section",
+    "TargetValue": "chris-titus",
+    "Arguments": ""
+  }
+]
