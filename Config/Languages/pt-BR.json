@@ -245,5 +245,6 @@
   "Shortcut_Dialog_IconLabel": "Ícone:",
   "Shortcut_Dialog_NameLabel": "Nome de Exibição *:",
   "Shortcut_Btn_Folder": "Pasta...",
-  "Shortcut_Msg_Required": "Por favor, informe um caminho de destino válido ou selecione uma seção do aplicativo."
+  "Shortcut_Msg_Required": "Por favor, informe um caminho de destino válido ou selecione uma seção do aplicativo.",
+  "Task_InstallersFolder": "📂 Pasta Installers"
 }

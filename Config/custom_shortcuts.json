@@ -8,6 +8,14 @@
     "Arguments": ""
   },
   {
+    "Id": "default-installers-folder",
+    "Title": "Installers Folder",
+    "Icon": "📂",
+    "TargetType": "Section",
+    "TargetValue": "installers-folder",
+    "Arguments": ""
+  },
+  {
     "Id": "default-chris-titus",
     "Title": "Chris Titus WinUtil",
     "Icon": "🚀",

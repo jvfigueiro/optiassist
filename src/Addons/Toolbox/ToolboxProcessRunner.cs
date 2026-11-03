@@ -138,14 +138,18 @@ namespace OptiAssist.Addons.Toolbox
                     psi.RedirectStandardOutput = true;
                     psi.RedirectStandardError = true;
                 }
-                else
+                else if (needsRunAsVerb)
                 {
                     psi.UseShellExecute = true;
                     psi.CreateNoWindow = false;
-                    if (needsRunAsVerb)
-                    {
-                        psi.Verb = "runas";
-                    }
+                    psi.Verb = "runas";
+                    psi.WindowStyle = ProcessWindowStyle.Hidden;
+                }
+                else
+                {
+                    psi.UseShellExecute = false;
+                    psi.CreateNoWindow = true;
+                    psi.WindowStyle = ProcessWindowStyle.Hidden;
                 }
 
                 using (Process proc = new Process())

@@ -24,6 +24,22 @@ namespace OptiAssist
             return maintDir;
         }
 
+        public static string GetInstallersDirectory()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string dir = Path.Combine(baseDir, "Installers");
+            if (!Directory.Exists(dir))
+            {
+                string legacy = Path.Combine(baseDir, "PostInstall");
+                if (Directory.Exists(legacy))
+                {
+                    return legacy;
+                }
+                try { Directory.CreateDirectory(dir); } catch { }
+            }
+            return dir;
+        }
+
         public static void OpenWindowsTool(string command, string args = "")
         {
             try
@@ -203,9 +219,9 @@ namespace OptiAssist
             {
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = "powershell.exe";
-                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"irm https://christitus.com/win | iex\"";
-                psi.UseShellExecute = true;
-                psi.Verb = "runas";
+                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"irm https://christitus.com/win | iex\"";
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
                 Process.Start(psi);
             }
             catch (Exception ex)
@@ -278,6 +294,16 @@ namespace OptiAssist
         public static void OpenMaintenanceFolder()
         {
             string dir = GetMaintenanceDirectory();
+            try
+            {
+                Process.Start("explorer.exe", dir);
+            }
+            catch { }
+        }
+
+        public static void OpenInstallersFolder()
+        {
+            string dir = GetInstallersDirectory();
             try
             {
                 Process.Start("explorer.exe", dir);

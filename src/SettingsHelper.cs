@@ -243,6 +243,15 @@ namespace OptiAssist
                 },
                 new CustomShortcutItem
                 {
+                    Id = "default-installers-folder",
+                    Title = "Installers Folder",
+                    Icon = "📂",
+                    TargetType = "Section",
+                    TargetValue = "installers-folder",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
                     Id = "default-chris-titus",
                     Title = "Chris Titus WinUtil",
                     Icon = "🚀",

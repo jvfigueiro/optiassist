@@ -244,5 +244,6 @@
   "Shortcut_Dialog_IconLabel": "Icon:",
   "Shortcut_Dialog_NameLabel": "Display Name *:",
   "Shortcut_Btn_Folder": "Folder...",
-  "Shortcut_Msg_Required": "Please specify a valid target path or select an app section."
+  "Shortcut_Msg_Required": "Please specify a valid target path or select an app section.",
+  "Task_InstallersFolder": "📂 Installers Folder"
 }

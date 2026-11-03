@@ -435,47 +435,42 @@
                                 Margin="0,0,0,8"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="txtCustomShortcutsTitle"
-                                               Grid.Column="0"
-                                               Text="⭐ Custom Shortcuts"
-                                               FontWeight="Bold"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource BrushAccent}"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button x:Name="btnAddCustomShortcut"
-                                                Content="➕ Add Shortcut"
-                                                Style="{StaticResource BtnAccent}"
-                                                Height="26"
-                                                Padding="10,0"
-                                                FontSize="10.5"
-                                                Margin="0,0,6,0"
-                                                Click="BtnAddCustomShortcut_Click"/>
-                                        <Button x:Name="btnEditCustomShortcuts"
-                                                Content="✏️ Edit / Remove"
-                                                Style="{StaticResource BtnDefault}"
-                                                Height="26"
-                                                Padding="10,0"
-                                                FontSize="10.5"
-                                                Click="BtnEditCustomShortcuts_Click"/>
-                                    </StackPanel>
-                                </Grid>
+                                <TextBlock x:Name="txtCustomShortcutsTitle"
+                                           Text="⭐ Custom Shortcuts"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,8"
+                                           TextTrimming="CharacterEllipsis"/>
                                 <TextBlock x:Name="txtCustomShortcutsEmpty"
                                            Text="No custom shortcuts created yet. Click '+ Add Shortcut' to pin app modules or your favorite tools."
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextMuted}"
-                                           Margin="2,2,0,2"
+                                           Margin="2,2,0,6"
                                            TextWrapping="Wrap"/>
                                 <UniformGrid x:Name="ugCustomShortcuts"
                                              Columns="3"
                                              HorizontalAlignment="Stretch"
                                              Visibility="Collapsed"/>
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Left"
+                                            Margin="3,8,0,0">
+                                    <Button x:Name="btnAddCustomShortcut"
+                                            Content="➕ Add Shortcut"
+                                            Style="{StaticResource BtnAccent}"
+                                            Height="26"
+                                            Padding="10,0"
+                                            FontSize="10.5"
+                                            Margin="0,0,6,0"
+                                            Click="BtnAddCustomShortcut_Click"/>
+                                    <Button x:Name="btnEditCustomShortcuts"
+                                            Content="✏️ Edit / Remove"
+                                            Style="{StaticResource BtnDefault}"
+                                            Height="26"
+                                            Padding="10,0"
+                                            FontSize="10.5"
+                                            Click="BtnEditCustomShortcuts_Click"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>

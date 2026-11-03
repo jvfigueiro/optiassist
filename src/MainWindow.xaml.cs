@@ -917,6 +917,9 @@ namespace OptiAssist
                 case "maintenance-folder":
                     defaultIcon = "📁";
                     return LocalizationHelper.Get("Task_MaintenanceFolder", "📁 Maintenance Folder").Replace("📁", "").Trim();
+                case "installers-folder":
+                    defaultIcon = "📂";
+                    return LocalizationHelper.Get("Task_InstallersFolder", "📂 Installers Folder").Replace("📂", "").Trim();
                 case "chris-titus":
                     defaultIcon = "🚀";
                     return LocalizationHelper.Get("Task_ChrisTitus", "🚀 Chris Titus WinUtil").Replace("🚀", "").Trim();
@@ -949,6 +952,7 @@ namespace OptiAssist
                 string secTitle = GetSectionDisplayLabel(item.TargetValue, out defIcon);
                 if (string.IsNullOrWhiteSpace(title) ||
                     string.Equals(item.Id, "default-maintenance-folder", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(item.Id, "default-installers-folder", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(item.Id, "default-chris-titus", StringComparison.OrdinalIgnoreCase))
                 {
                     title = secTitle;
@@ -1004,7 +1008,7 @@ namespace OptiAssist
                         FontSize = 11,
                         ToolTip = tooltipText
                     };
-                    btn.Click += (s, e) => ExecuteCustomShortcut(currentItem);
+                    btn.Click += (s, e) => ExecuteCustomShortcut(currentItem, btn);
 
                     ContextMenu cm = new ContextMenu();
                     MenuItem miEdit = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Edit", "✏️ Edit Shortcut") };
@@ -1078,7 +1082,7 @@ namespace OptiAssist
             Log(string.Format("[SHORTCUTS] Custom shortcut '{0}' removed.", item.Title));
         }
 
-        private void ExecuteCustomShortcut(CustomShortcutItem item)
+        private void ExecuteCustomShortcut(CustomShortcutItem item, Button runButton = null)
         {
             if (item == null) return;
 
@@ -1119,11 +1123,23 @@ namespace OptiAssist
                 }
                 else if (sec == "maintenance-folder")
                 {
+                    Log("[SHORTCUTS] Opening Maintenance folder...");
                     ShortcutsHelper.OpenMaintenanceFolder();
+                }
+                else if (sec == "installers-folder")
+                {
+                    Log("[SHORTCUTS] Opening Installers folder...");
+                    ShortcutsHelper.OpenInstallersFolder();
                 }
                 else if (sec == "chris-titus")
                 {
-                    BtnChrisTitus_Click(this, new RoutedEventArgs());
+                    string script = "$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; irm https://christitus.com/win | iex";
+                    string base64Cmd = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+                    RunShortcutCommandInBackground(
+                        "Chris Titus WinUtil",
+                        "powershell.exe",
+                        "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand " + base64Cmd,
+                        runButton);
                 }
                 else
                 {
@@ -1132,27 +1148,161 @@ namespace OptiAssist
                 return;
             }
 
-            // Custom executable, folder, script, or URL
-            try
+            // Custom executable, script, folder, or URL
+            string target = Environment.ExpandEnvironmentVariables(item.TargetValue ?? "").Trim();
+            string args = (item.Arguments ?? "").Trim();
+
+            // Folders and URLs open directly via ShellExecute
+            if (Directory.Exists(target) ||
+                target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase))
             {
-                string target = Environment.ExpandEnvironmentVariables(item.TargetValue ?? "");
-                ProcessStartInfo psi = new ProcessStartInfo(target)
+                try
                 {
-                    UseShellExecute = true
-                };
-                if (!string.IsNullOrWhiteSpace(item.Arguments))
-                {
-                    psi.Arguments = item.Arguments;
+                    Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+                    Log(string.Format("[SHORTCUTS] Opened '{0}' -> {1}", item.Title, target));
                 }
-                Process.Start(psi);
-                Log(string.Format("[SHORTCUTS] Executed custom shortcut '{0}' -> {1}", item.Title, target));
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        string.Format(LocalizationHelper.Get("Shortcut_Msg_LaunchError", "Unable to launch shortcut '{0}':\n{1}"), item.Title, ex.Message),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                return;
             }
-            catch (Exception ex)
+
+            // External applications, scripts, and commands follow Toolbox background execution logic
+            string fileName = target;
+            string finalArgs = args;
+            string ext = "";
+            try { ext = Path.GetExtension(target).ToLowerInvariant(); } catch { }
+
+            if (ext == ".ps1")
             {
-                MessageBox.Show(
-                    string.Format(LocalizationHelper.Get("Shortcut_Msg_LaunchError", "Unable to launch shortcut '{0}':\n{1}"), item.Title, ex.Message),
-                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                fileName = "powershell.exe";
+                finalArgs = string.Format("-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{0}\" {1}", target, args).Trim();
             }
+            else if (ext == ".bat" || ext == ".cmd")
+            {
+                fileName = "cmd.exe";
+                finalArgs = string.Format("/c \"\"{0}\" {1}\"", target, args).Trim();
+            }
+            else if (target.StartsWith("powershell ", StringComparison.OrdinalIgnoreCase) ||
+                     target.StartsWith("powershell.exe ", StringComparison.OrdinalIgnoreCase))
+            {
+                int firstSpace = target.IndexOf(' ');
+                fileName = "powershell.exe";
+                string inlineArgs = firstSpace > 0 ? target.Substring(firstSpace + 1).Trim() : "";
+                finalArgs = ("-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden " + inlineArgs + " " + args).Trim();
+            }
+            else if (target.StartsWith("cmd ", StringComparison.OrdinalIgnoreCase) ||
+                     target.StartsWith("cmd.exe ", StringComparison.OrdinalIgnoreCase))
+            {
+                int firstSpace = target.IndexOf(' ');
+                fileName = "cmd.exe";
+                string inlineArgs = firstSpace > 0 ? target.Substring(firstSpace + 1).Trim() : "";
+                finalArgs = (inlineArgs + " " + args).Trim();
+            }
+
+            RunShortcutCommandInBackground(item.Title, fileName, finalArgs, runButton);
+        }
+
+        private void RunShortcutCommandInBackground(string title, string fileName, string arguments, Button runButton)
+        {
+            Log(string.Format("[SHORTCUTS] Starting '{0}' ({1} {2})...", title, fileName, arguments));
+
+            object originalContent = runButton != null ? runButton.Content : null;
+            if (runButton != null)
+            {
+                runButton.IsEnabled = false;
+                runButton.Content = "⏳...";
+            }
+
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                int pid = 0;
+                Exception startEx = null;
+                bool isConsoleWrapper = fileName.EndsWith("powershell.exe", StringComparison.OrdinalIgnoreCase) ||
+                                        fileName.EndsWith("cmd.exe", StringComparison.OrdinalIgnoreCase) ||
+                                        fileName.Equals("powershell", StringComparison.OrdinalIgnoreCase) ||
+                                        fileName.Equals("cmd", StringComparison.OrdinalIgnoreCase);
+
+                try
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = fileName,
+                        Arguments = arguments,
+                        WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                        CreateNoWindow = isConsoleWrapper,
+                        WindowStyle = isConsoleWrapper ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal,
+                        UseShellExecute = !isConsoleWrapper
+                    };
+
+                    if (isConsoleWrapper)
+                    {
+                        psi.RedirectStandardOutput = true;
+                        psi.RedirectStandardError = true;
+                    }
+
+                    Process proc = new Process { StartInfo = psi };
+                    if (isConsoleWrapper)
+                    {
+                        proc.OutputDataReceived += (s, e) =>
+                        {
+                            if (!string.IsNullOrEmpty(e.Data))
+                            {
+                                Log(string.Format("[SHORTCUTS:{0}] {1}", title, e.Data));
+                            }
+                        };
+                        proc.ErrorDataReceived += (s, e) =>
+                        {
+                            if (!string.IsNullOrEmpty(e.Data))
+                            {
+                                Log(string.Format("[SHORTCUTS:{0}:ERR] {1}", title, e.Data));
+                            }
+                        };
+                    }
+
+                    proc.Start();
+                    try { pid = proc.Id; } catch { }
+
+                    if (isConsoleWrapper)
+                    {
+                        proc.BeginOutputReadLine();
+                        proc.BeginErrorReadLine();
+                    }
+
+                    // Brief feedback pause like Toolbox fire-and-forget launch
+                    proc.WaitForExit(1000);
+                }
+                catch (Exception ex)
+                {
+                    startEx = ex;
+                }
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (runButton != null)
+                    {
+                        runButton.IsEnabled = true;
+                        runButton.Content = originalContent;
+                    }
+
+                    if (startEx != null)
+                    {
+                        Log(string.Format("[SHORTCUTS] ❌ Failed to start '{0}': {1}", title, startEx.Message));
+                        MessageBox.Show(
+                            string.Format(LocalizationHelper.Get("Shortcut_Msg_LaunchError", "Unable to launch shortcut '{0}':\n{1}"), title, startEx.Message),
+                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                    else
+                    {
+                        Log(string.Format("[SHORTCUTS] ✔️ '{0}' launched in background (PID: {1}).", title, pid));
+                    }
+                }));
+            });
         }
 
         private void NavigateToAddonModule(string addonId)
@@ -1268,7 +1418,7 @@ namespace OptiAssist
             string[] sectionIds = new string[]
             {
                 "toolbox", "app-manager", "system-cleaner", "startup-manager", "maintenance-report",
-                "maintenance-folder", "chris-titus",
+                "maintenance-folder", "installers-folder", "chris-titus",
                 "windows-tools", "logs", "settings", "about"
             };
             foreach (string sid in sectionIds)
