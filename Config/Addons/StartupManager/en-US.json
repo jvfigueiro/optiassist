@@ -1,9 +1,10 @@
 {
   "Nav_StartupManager": "Startup Manager",
   "Startup_Title": "System Startup Manager",
-  "Startup_Subtitle": "Monitor, enable, disable, or remove startup applications and scheduled tasks",
+  "Startup_Subtitle": "Monitor, enable, disable, or remove startup applications, scheduled tasks, and services",
   "Startup_Tab_Programs": "Startup Programs",
   "Startup_Tab_Tasks": "Scheduled Tasks",
+  "Startup_Tab_Services": "Startup Services",
   "Startup_Btn_New": "➕ Add Program",
   "Startup_Btn_Refresh": "🔄 Refresh",
   "Startup_Filter_Label": "🔍 Search for the application you want:",
@@ -81,6 +82,8 @@
   "Startup_Msg_ServiceFailed": "Failed to control service: {0}",
   "Startup_Empty_Programs": "No startup programs found matching current filter.",
   "Startup_Empty_Tasks": "No user-installed scheduled tasks found matching current filter.",
-  "Startup_Empty_Services": "No third-party startup services found matching current filter."
+  "Startup_Empty_Services": "No third-party startup services found matching current filter.",
+  "Startup_Title_ShowMicrosoftWarning": "System Safety Warning",
+  "Startup_Msg_ShowMicrosoftWarning": "⚠️ Warning: Showing native Microsoft and Windows scheduled tasks will expose critical operating system tasks.\n\nDisabling, modifying, or deleting native Windows scheduled tasks can cause severe system instability, break Windows features, or prevent Windows from functioning properly.\n\nAre you sure you want to display native Microsoft / Windows entries?"
 }
 

@@ -28,6 +28,7 @@ namespace OptiAssist.Addons.Toolbox
         private TextBlock _txtTitle;
         private TextBlock _txtSubtitle;
         private TextBox _txtSearch;
+        private TextBlock _txtSearchWatermark;
         private Button _btnOptions;
         private Button _btnNewCommand;
         private Button _btnRestorePresets;
@@ -191,46 +192,48 @@ namespace OptiAssist.Addons.Toolbox
             {
                 CornerRadius = new CornerRadius(6),
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(10, 8, 10, 8),
-                Margin = new Thickness(0, 0, 0, 10)
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(0, 0, 0, 12)
             };
-            toolbarCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            toolbarCard.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
             toolbarCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            Grid toolbarGrid = new Grid();
-            toolbarGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            toolbarGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-
-            // Search box on left
-            StackPanel spSearch = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            TextBlock lblSearchIcon = new TextBlock()
-            {
-                Text = "🔎",
-                FontSize = 12,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-            spSearch.Children.Add(lblSearchIcon);
-
+            Grid searchInputGrid = new Grid();
             _txtSearch = new TextBox()
             {
-                Width = 280,
                 Height = 28,
-                Padding = new Thickness(6, 4, 6, 4),
                 FontSize = 11,
+                Padding = new Thickness(8, 2, 8, 2),
                 VerticalContentAlignment = VerticalAlignment.Center,
-                BorderThickness = new Thickness(1),
-                ToolTip = T("Toolbox_Search_Tooltip", "Filter actions by title, category, or command")
+                ToolTip = T("Toolbox_Search_Placeholder", "🔍 Type here to search for the tool, category, or command you want...")
             };
             _txtSearch.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
             _txtSearch.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
-            _txtSearch.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
-            _txtSearch.TextChanged += (s, e) => RebuildCategoriesAccordion();
-            spSearch.Children.Add(_txtSearch);
-            Grid.SetColumn(spSearch, 0);
-            toolbarGrid.Children.Add(spSearch);
+            _txtSearch.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
 
-            toolbarCard.Child = toolbarGrid;
+            _txtSearchWatermark = new TextBlock()
+            {
+                Text = T("Toolbox_Search_Placeholder", "🔍 Type here to search for the tool, category, or command you want..."),
+                FontSize = 11,
+                Margin = new Thickness(10, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                IsHitTestVisible = false
+            };
+            _txtSearchWatermark.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+
+            _txtSearch.TextChanged += (s, e) =>
+            {
+                if (_txtSearchWatermark != null)
+                {
+                    _txtSearchWatermark.Visibility = string.IsNullOrEmpty(_txtSearch.Text) ? Visibility.Visible : Visibility.Collapsed;
+                }
+                RebuildCategoriesAccordion();
+            };
+
+            searchInputGrid.Children.Add(_txtSearch);
+            searchInputGrid.Children.Add(_txtSearchWatermark);
+
+            toolbarCard.Child = searchInputGrid;
             Grid.SetRow(toolbarCard, 1);
             rootGrid.Children.Add(toolbarCard);
 
@@ -1418,6 +1421,8 @@ namespace OptiAssist.Addons.Toolbox
         {
             if (_txtTitle != null) _txtTitle.Text = string.Format("{0}  {1}", Icon, Name);
             if (_txtSubtitle != null) _txtSubtitle.Text = T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist");
+            if (_txtSearchWatermark != null) _txtSearchWatermark.Text = T("Toolbox_Search_Placeholder", "🔍 Type here to search for the tool, category, or command you want...");
+            if (_txtSearch != null) _txtSearch.ToolTip = T("Toolbox_Search_Placeholder", "🔍 Type here to search for the tool, category, or command you want...");
             if (_btnOptions != null) _btnOptions.Content = T("Btn_ToolboxOptions", "⚙️ Options");
             if (_txtOptionsTitle != null) _txtOptionsTitle.Text = T("Toolbox_Options_Title", "⚙️ Toolbox Options");
             if (_btnNewCommand != null) _btnNewCommand.Content = T("Btn_ToolboxNew", "➕ New Toolbox");

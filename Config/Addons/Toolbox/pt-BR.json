@@ -3,6 +3,7 @@
   "Toolbox_Title": "🧰 Toolbox",
   "Toolbox_Subtitle": "Ações e ferramentas personalizadas do sistema integradas ao OptiAssist",
   "Toolbox_Search_Tooltip": "Filtrar ações por título, categoria ou linha de comando",
+  "Toolbox_Search_Placeholder": "🔍 Digite aqui para pesquisar sobre a ferramenta, categoria ou comando que você quer...",
   "Btn_ToolboxNew": "➕ Novo Toolbox",
   "Btn_ToolboxRestorePresets": "🔄 Restaurar Presets",
   "Btn_ToolboxOpenJson": "📂 Abrir toolbox.json",

@@ -31,10 +31,10 @@ namespace OptiAssist.Addons.StartupManager
         private TextBlock _txtHeaderSubtitle;
         private Button _btnNewProgram;
         private Button _btnRefresh;
-        private TextBlock _lblSearchFilter;
         private TextBlock _txtSearchWatermark;
         private TextBox _txtSearchFilter;
         private CheckBox _chkHideMicrosoft;
+        private bool _suppressHideMsEvent = false;
 
         // Tabs Controls
         private Border _tabProgramsBorder;
@@ -215,17 +215,6 @@ namespace OptiAssist.Addons.StartupManager
             filterCard.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
             filterCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            StackPanel filterStack = new StackPanel();
-            _lblSearchFilter = new TextBlock
-            {
-                Text = T("Startup_Filter_Label", "🔍 Search for the application you want:"),
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 0, 0, 6)
-            };
-            _lblSearchFilter.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            filterStack.Children.Add(_lblSearchFilter);
-
             Grid filterGrid = new Grid();
             filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -277,13 +266,33 @@ namespace OptiAssist.Addons.StartupManager
                 Cursor = Cursors.Hand
             };
             _chkHideMicrosoft.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            _chkHideMicrosoft.Checked += (s, e) => ReloadActiveTabData();
-            _chkHideMicrosoft.Unchecked += (s, e) => ReloadActiveTabData();
+            _chkHideMicrosoft.Checked += (s, e) =>
+            {
+                if (_suppressHideMsEvent) return;
+                ReloadActiveTabData();
+            };
+            _chkHideMicrosoft.Unchecked += (s, e) =>
+            {
+                if (_suppressHideMsEvent) return;
+                MessageBoxResult res = MessageBox.Show(
+                    T("Startup_Msg_ShowMicrosoftWarning", "⚠️ Warning: Showing native Microsoft and Windows scheduled tasks will expose critical operating system tasks.\n\nDisabling, modifying, or deleting native Windows scheduled tasks can cause severe system instability, break Windows features, or prevent Windows from functioning properly.\n\nAre you sure you want to display native Microsoft / Windows entries?"),
+                    T("Startup_Title_ShowMicrosoftWarning", "System Safety Warning"),
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (res != MessageBoxResult.Yes)
+                {
+                    _suppressHideMsEvent = true;
+                    _chkHideMicrosoft.IsChecked = true;
+                    _suppressHideMsEvent = false;
+                    return;
+                }
+                ReloadActiveTabData();
+            };
             Grid.SetColumn(_chkHideMicrosoft, 1);
             filterGrid.Children.Add(_chkHideMicrosoft);
 
-            filterStack.Children.Add(filterGrid);
-            filterCard.Child = filterStack;
+            filterCard.Child = filterGrid;
             mainStack.Children.Add(filterCard);
 
             // 4. Stats Summary Bar
@@ -1408,7 +1417,6 @@ namespace OptiAssist.Addons.StartupManager
             if (_chkHideMicrosoft != null) _chkHideMicrosoft.Content = T("Startup_Chk_HideMicrosoft", "Hide native Microsoft / Windows entries");
             if (_tabProgramsText != null) _tabProgramsText.Text = "🚀 " + T("Startup_Tab_Programs", "Startup Programs");
             if (_tabTasksText != null) _tabTasksText.Text = "⏰ " + T("Startup_Tab_Tasks", "Scheduled Tasks");
-            if (_lblSearchFilter != null) _lblSearchFilter.Text = T("Startup_Filter_Label", "🔍 Search for the application you want:");
             if (_txtSearchWatermark != null) _txtSearchWatermark.Text = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
             if (_txtSearchFilter != null) _txtSearchFilter.ToolTip = T("Startup_Filter_Placeholder", "🔍 Type here to search for the application, publisher, or command you want...");
             if (_cmbModalScope != null && _cmbModalScope.Items.Count >= 2)

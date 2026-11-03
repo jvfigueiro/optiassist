@@ -192,4 +192,116 @@ namespace OptiAssist
             return result;
         }
     }
+
+    public class CustomShortcutItem
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Icon { get; set; }
+        public string TargetType { get; set; } // "Section" or "Custom"
+        public string TargetValue { get; set; }
+        public string Arguments { get; set; }
+
+        public CustomShortcutItem()
+        {
+            Id = Guid.NewGuid().ToString("N");
+            Title = "";
+            Icon = "⭐";
+            TargetType = "Section";
+            TargetValue = "";
+            Arguments = "";
+        }
+    }
+
+    public static class CustomShortcutsHelper
+    {
+        public static string GetShortcutsFilePath()
+        {
+            return Path.Combine(SettingsHelper.GetConfigDirectory(), "custom_shortcuts.json");
+        }
+
+        public static List<CustomShortcutItem> Load()
+        {
+            var list = new List<CustomShortcutItem>();
+            string path = GetShortcutsFilePath();
+            if (!File.Exists(path)) return list;
+
+            try
+            {
+                string json = File.ReadAllText(path, Encoding.UTF8);
+                string[] blocks = json.Split(new[] { '{' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string block in blocks)
+                {
+                    int closeIdx = block.IndexOf('}');
+                    if (closeIdx < 0) continue;
+                    string content = block.Substring(0, closeIdx);
+                    var item = new CustomShortcutItem();
+                    bool hasField = false;
+
+                    string[] lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (string line in lines)
+                    {
+                        string trimmed = line.Trim().TrimEnd(',');
+                        int colonIdx = trimmed.IndexOf(':');
+                        if (colonIdx <= 0) continue;
+
+                        string key = trimmed.Substring(0, colonIdx).Trim().Trim('\"');
+                        string val = trimmed.Substring(colonIdx + 1).Trim().Trim('\"');
+                        val = val.Replace("\\\"", "\"").Replace("\\\\", "\\");
+
+                        if (key.Equals("Id", StringComparison.OrdinalIgnoreCase)) { item.Id = val; hasField = true; }
+                        else if (key.Equals("Title", StringComparison.OrdinalIgnoreCase)) { item.Title = val; hasField = true; }
+                        else if (key.Equals("Icon", StringComparison.OrdinalIgnoreCase)) { item.Icon = val; }
+                        else if (key.Equals("TargetType", StringComparison.OrdinalIgnoreCase)) { item.TargetType = val; }
+                        else if (key.Equals("TargetValue", StringComparison.OrdinalIgnoreCase)) { item.TargetValue = val; hasField = true; }
+                        else if (key.Equals("Arguments", StringComparison.OrdinalIgnoreCase)) { item.Arguments = val; }
+                    }
+
+                    if (hasField && !string.IsNullOrWhiteSpace(item.TargetValue))
+                    {
+                        list.Add(item);
+                    }
+                }
+            }
+            catch { }
+
+            return list;
+        }
+
+        public static void Save(List<CustomShortcutItem> items)
+        {
+            try
+            {
+                string path = GetShortcutsFilePath();
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("[");
+                if (items != null)
+                {
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        var it = items[i];
+                        sb.AppendLine("  {");
+                        sb.AppendLine(string.Format("    \"Id\": \"{0}\",", Escape(it.Id)));
+                        sb.AppendLine(string.Format("    \"Title\": \"{0}\",", Escape(it.Title)));
+                        sb.AppendLine(string.Format("    \"Icon\": \"{0}\",", Escape(it.Icon)));
+                        sb.AppendLine(string.Format("    \"TargetType\": \"{0}\",", Escape(it.TargetType)));
+                        sb.AppendLine(string.Format("    \"TargetValue\": \"{0}\",", Escape(it.TargetValue)));
+                        sb.AppendLine(string.Format("    \"Arguments\": \"{0}\"", Escape(it.Arguments)));
+                        sb.Append("  }");
+                        if (i < items.Count - 1) sb.AppendLine(",");
+                        else sb.AppendLine();
+                    }
+                }
+                sb.AppendLine("]");
+                File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+            }
+            catch { }
+        }
+
+        private static string Escape(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "").Replace("\n", " ");
+        }
+    }
 }

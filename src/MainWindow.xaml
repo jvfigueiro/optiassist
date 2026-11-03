@@ -329,6 +329,18 @@
                                                    FontSize="11"
                                                    Margin="0,0,0,4"
                                                    TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="lblOsInstallDate"
+                                                   Text="Install Date: Detecting..."
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="0,0,0,4"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="lblOsActivation"
+                                                   Text="Activation: Detecting..."
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="0,0,0,4"
+                                                   TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
 
                                     <!-- Device Name positioned at same exact height as Serial Number -->
@@ -423,6 +435,59 @@
                                             ToolTip="Restart computer directly into BIOS / UEFI"
                                             Click="BtnRebootBios_Click"/>
                                 </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Custom Shortcuts Section -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="txtCustomShortcutsTitle"
+                                               Grid.Column="0"
+                                               Text="⭐ Custom Shortcuts"
+                                               FontWeight="Bold"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource BrushAccent}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button x:Name="btnAddCustomShortcut"
+                                                Content="➕ Add Shortcut"
+                                                Style="{StaticResource BtnAccent}"
+                                                Height="26"
+                                                Padding="10,0"
+                                                FontSize="10.5"
+                                                Margin="0,0,6,0"
+                                                Click="BtnAddCustomShortcut_Click"/>
+                                        <Button x:Name="btnEditCustomShortcuts"
+                                                Content="✏️ Edit / Remove"
+                                                Style="{StaticResource BtnDefault}"
+                                                Height="26"
+                                                Padding="10,0"
+                                                FontSize="10.5"
+                                                Click="BtnEditCustomShortcuts_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock x:Name="txtCustomShortcutsEmpty"
+                                           Text="No custom shortcuts created yet. Click '+ Add Shortcut' to pin app modules or your favorite tools."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource BrushTextMuted}"
+                                           Margin="2,2,0,2"
+                                           TextWrapping="Wrap"/>
+                                <UniformGrid x:Name="ugCustomShortcuts"
+                                             Columns="3"
+                                             HorizontalAlignment="Stretch"
+                                             Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -595,21 +660,39 @@
                                           Content="Open external Logs window by default"
                                           Margin="0,2,0,12"/>
 
-                                <StackPanel Orientation="Horizontal">
+                                <WrapPanel Orientation="Horizontal">
                                     <Button x:Name="btnSaveSettings"
                                             Content="💾 Save Settings"
                                             Style="{StaticResource BtnAccent}"
                                             Width="160"
                                             HorizontalAlignment="Left"
-                                            Margin="0,0,8,0"
+                                            Margin="0,0,8,4"
                                             Click="BtnSaveSettings_Click"/>
                                     <Button x:Name="btnResetSettings"
                                             Content="🔄 Restore Defaults"
                                             Style="{StaticResource BtnDefault}"
                                             Padding="14,0"
                                             HorizontalAlignment="Left"
+                                            Margin="0,0,8,4"
                                             Click="BtnResetSettings_Click"/>
-                                </StackPanel>
+                                    <Button x:Name="btnInstallApp"
+                                            Content="📥 Install OptiAssist"
+                                            Style="{StaticResource BtnDefault}"
+                                            Padding="14,0"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,8,4"
+                                            ToolTip="Open installation &amp; portable deployment options for OptiAssist"
+                                            Click="BtnInstallApp_Click"/>
+                                    <Button x:Name="btnUninstallApp"
+                                            Content="🗑️ Uninstall OptiAssist"
+                                            Style="{StaticResource BtnDefault}"
+                                            Padding="14,0"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,8,4"
+                                            Visibility="Collapsed"
+                                            ToolTip="Uninstall OptiAssist from this device and remove all shortcuts"
+                                            Click="BtnUninstallApp_Click"/>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
 
@@ -737,50 +820,6 @@
                                     <Button x:Name="btnPresetRed" Content="🔴 Red" Tag="#FF4444" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                     <Button x:Name="btnPresetYellow" Content="🟡 Yellow" Tag="#F59E0B" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
                                     <Button x:Name="btnPresetPink" Content="🌸 Pink" Tag="#FC4899" Style="{StaticResource BtnDefault}" Height="28" Padding="10,0" Margin="0,0,6,6" FontSize="10" Click="BtnColorPreset_Click"/>
-                                </WrapPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Section: Additional Settings (Device Integration & Portable Tools) -->
-                        <Border Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0,8,0,0"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel>
-                                <TextBlock x:Name="txtAdditionalSettingsTitle"
-                                           Text="🛠️ Additional Settings"
-                                           FontWeight="Bold"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource BrushAccent}"
-                                           Margin="0,0,0,4"/>
-                                <TextBlock x:Name="txtAdditionalSettingsSub"
-                                           Text="Device integration, system installation, and portable drive options:"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource BrushTextSecondary}"
-                                           Margin="0,0,0,10"
-                                           TextWrapping="Wrap"/>
-
-                                <WrapPanel>
-                                    <Button x:Name="btnInstallApp"
-                                            Content="📥 Install OptiAssist"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="32"
-                                            Padding="14,0"
-                                            Margin="0,0,8,8"
-                                            ToolTip="Open installation &amp; portable deployment options for OptiAssist"
-                                            Click="BtnInstallApp_Click"/>
-                                    <Button x:Name="btnUninstallApp"
-                                            Content="🗑️ Uninstall OptiAssist"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="32"
-                                            Padding="14,0"
-                                            Margin="0,0,8,8"
-                                            Visibility="Collapsed"
-                                            ToolTip="Uninstall OptiAssist from this device and remove all shortcuts"
-                                            Click="BtnUninstallApp_Click"/>
                                 </WrapPanel>
                             </StackPanel>
                         </Border>
@@ -988,21 +1027,6 @@
                                                    Foreground="{DynamicResource BrushTextPrimary}"/>
                                     </StackPanel>
                                 </StackPanel>
-
-                                <!-- GNU GPLv3 Explicit License Badge -->
-                                <Border Background="{DynamicResource BrushBgInput}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="10,6"
-                                        HorizontalAlignment="Left"
-                                        Margin="0,0,0,12">
-                                    <TextBlock x:Name="txtAboutLicenseTag"
-                                               Text="⚖️ License: GNU General Public License v3.0 (GNU GPLv3)"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushAccent}"/>
-                                </Border>
 
                                 <!-- Acknowledgments & Credits to Chris Titus -->
                                 <Border Background="{DynamicResource BrushBgPrimary}"

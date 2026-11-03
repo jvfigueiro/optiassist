@@ -13,6 +13,8 @@ namespace OptiAssist
         public string OsDisplayVersion { get; set; }
         public string OsBuild { get; set; }
         public string OsArchitecture { get; set; }
+        public string OsInstallDate { get; set; }
+        public bool OsIsActivated { get; set; }
         public string ComputerName { get; set; }
         public string CpuName { get; set; }
         public int CpuCores { get; set; }
@@ -37,6 +39,8 @@ namespace OptiAssist
             OsDisplayVersion = "";
             OsBuild = "";
             OsArchitecture = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
+            OsInstallDate = "";
+            OsIsActivated = false;
             ComputerName = Environment.MachineName;
             CpuName = "Detecting CPU...";
             GpuName = "Detecting GPU...";
@@ -75,7 +79,7 @@ namespace OptiAssist
             // 1. Operating System Information
             try
             {
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption, Version, OSArchitecture, FreePhysicalMemory FROM Win32_OperatingSystem"))
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption, Version, OSArchitecture, FreePhysicalMemory, InstallDate FROM Win32_OperatingSystem"))
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
@@ -87,13 +91,22 @@ namespace OptiAssist
                             ulong freeKb = Convert.ToUInt64(mo["FreePhysicalMemory"]);
                             summary.RamFreeGb = Math.Round(freeKb / (1024.0 * 1024.0), 1);
                         }
+                        if (mo["InstallDate"] != null)
+                        {
+                            try
+                            {
+                                DateTime dt = ManagementDateTimeConverter.ToDateTime(mo["InstallDate"].ToString());
+                                summary.OsInstallDate = dt.ToString("dd/MM/yyyy");
+                            }
+                            catch { }
+                        }
                         break;
                     }
                 }
             }
             catch { }
 
-            // Query DisplayVersion and UBR from Windows Registry
+            // Query DisplayVersion, UBR, and fallback InstallDate from Windows Registry
             try
             {
                 using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
@@ -107,6 +120,38 @@ namespace OptiAssist
                         if (ubr != null && !string.IsNullOrEmpty(summary.OsBuild))
                         {
                             summary.OsBuild += "." + ubr.ToString();
+                        }
+
+                        if (string.IsNullOrEmpty(summary.OsInstallDate))
+                        {
+                            object instDateObj = rk.GetValue("InstallDate");
+                            if (instDateObj != null)
+                            {
+                                long unixSec = Convert.ToInt64(instDateObj);
+                                if (unixSec > 0)
+                                {
+                                    DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(unixSec).ToLocalTime();
+                                    summary.OsInstallDate = dt.ToString("dd/MM/yyyy");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // Query Windows Activation Status (SoftwareLicensingProduct)
+            try
+            {
+                using (ManagementObjectSearcher licSearcher = new ManagementObjectSearcher(
+                    "SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f' AND LicenseStatus = 1"))
+                {
+                    foreach (ManagementObject mo in licSearcher.Get())
+                    {
+                        if (mo["LicenseStatus"] != null && Convert.ToInt32(mo["LicenseStatus"]) == 1)
+                        {
+                            summary.OsIsActivated = true;
+                            break;
                         }
                     }
                 }

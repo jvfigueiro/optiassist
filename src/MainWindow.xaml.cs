@@ -19,6 +19,9 @@ namespace OptiAssist
         private AppSettings _settings;
         private HardwareSummary _hardware;
         private ObservableCollection<AddonEntry> _addons;
+        private List<CustomShortcutItem> _customShortcuts = new List<CustomShortcutItem>();
+        private bool _isEditingCustomShortcuts = false;
+        private bool _isRefreshingHardwareBg = false;
         private bool _isLoadingSettings = false;
         private System.Windows.Threading.DispatcherTimer _sidebarHoverTimer;
 
@@ -39,6 +42,8 @@ namespace OptiAssist
             LoadAppLogo();
             UpdateDeploymentButtonsUI();
             ReloadAddonsList();
+            _customShortcuts = CustomShortcutsHelper.Load();
+            RenderCustomShortcuts();
 
             if (_settings != null && _settings.AutoRefreshHardware)
             {
@@ -157,6 +162,7 @@ namespace OptiAssist
                 scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelDashboard.Visibility = Visibility.Visible;
+                RefreshHardwareBackground();
             }
             else if (rb == rbNavShortcuts)
             {
@@ -408,6 +414,8 @@ namespace OptiAssist
             lblHeaderRam.Text = LocalizationHelper.Get("Status_Detecting", "Detecting RAM...");
 
             lblOsTitle.Text = LocalizationHelper.Get("Status_Detecting", "Querying system info and WMI...");
+            if (lblOsInstallDate != null) lblOsInstallDate.Text = LocalizationHelper.Get("Label_OsInstallDate", "Install Date: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
+            if (lblOsActivation != null) lblOsActivation.Text = LocalizationHelper.Get("Label_OsActivation", "Activation: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
             lblCpuDetails.Text = LocalizationHelper.Get("Label_Processor", "Processor: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
             lblRamDetails.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
             lblGpuDetails.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
@@ -423,16 +431,54 @@ namespace OptiAssist
             txtSecureBootStatus.Text = LocalizationHelper.Get("Status_Detecting", "Checking...");
             txtSecureBootStatus.Foreground = (SolidColorBrush)FindResource("BrushWarning");
 
+            _isRefreshingHardwareBg = true;
             ThreadPool.QueueUserWorkItem(state =>
             {
-                HardwareSummary info = SystemInfoHelper.GetSystemInfo();
-                _hardware = info;
-
-                Dispatcher.Invoke(new Action(() =>
+                try
                 {
-                    UpdateHardwareDisplay(info);
-                    Log(string.Format("[INFO] Hardware updated. Serial: {0} | Motherboard: {1}", info.SerialNumber, info.Motherboard));
-                }));
+                    HardwareSummary info = SystemInfoHelper.GetSystemInfo();
+                    _hardware = info;
+
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        UpdateHardwareDisplay(info);
+                        Log(string.Format("[INFO] Hardware updated. Serial: {0} | Motherboard: {1}", info.SerialNumber, info.Motherboard));
+                    }));
+                }
+                finally
+                {
+                    _isRefreshingHardwareBg = false;
+                }
+            });
+        }
+
+        private void RefreshHardwareBackground()
+        {
+            if (_isRefreshingHardwareBg) return;
+            if (_hardware == null)
+            {
+                RefreshHardwareAsync();
+                return;
+            }
+
+            _isRefreshingHardwareBg = true;
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    HardwareSummary info = SystemInfoHelper.GetSystemInfo();
+                    _hardware = info;
+
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        UpdateHardwareDisplay(info);
+                    }));
+                }
+                catch { }
+                finally
+                {
+                    _isRefreshingHardwareBg = false;
+                }
             });
         }
 
@@ -457,13 +503,29 @@ namespace OptiAssist
                 LocalizationHelper.Get("Label_Processor", "Processor: ").TrimEnd(':', ' '), info.CpuName, info.CpuCores, info.CpuThreads);
 
             lblHeaderRam.Text = string.Format("{0} GB RAM", info.RamTotalGb);
-            lblHeaderRam.ToolTip = string.Format("{0}: {1} GB ({2} GB)",
-                LocalizationHelper.Get("Label_Ram", "RAM Memory: ").TrimEnd(':', ' '), info.RamTotalGb, info.RamFreeGb);
+            lblHeaderRam.ToolTip = string.Format("{0}: {1} GB",
+                LocalizationHelper.Get("Label_Ram", "RAM Memory: ").TrimEnd(':', ' '), info.RamTotalGb);
 
             // Operating System Card (Right)
             lblOsTitle.Text = string.Format("{0} {1}", info.OsName, info.OsDisplayVersion);
             lblOsDetails.Text = string.Format("Build: {0} ({1})",
                 info.OsBuild, info.OsArchitecture);
+            if (lblOsInstallDate != null)
+            {
+                string installDateVal = !string.IsNullOrEmpty(info.OsInstallDate)
+                    ? info.OsInstallDate
+                    : LocalizationHelper.Get("Status_NotInformed", "Not informed");
+                lblOsInstallDate.Text = string.Format("{0}{1}",
+                    LocalizationHelper.Get("Label_OsInstallDate", "Install Date: "), installDateVal);
+            }
+            if (lblOsActivation != null)
+            {
+                string actText = info.OsIsActivated
+                    ? LocalizationHelper.Get("Status_OsActivated", "Activated")
+                    : LocalizationHelper.Get("Status_OsNotActivated", "Not Activated");
+                lblOsActivation.Text = string.Format("{0}{1}",
+                    LocalizationHelper.Get("Label_OsActivation", "Activation: "), actText);
+            }
             lblMachineName.Text = info.ComputerName;
 
             // Hardware Information Card (Left - 1 per line)
@@ -479,8 +541,8 @@ namespace OptiAssist
 
             lblCpuDetails.Text = string.Format("{0}{1} ({2} Cores / {3} Threads)",
                 LocalizationHelper.Get("Label_Processor", "Processor: "), info.CpuName, info.CpuCores, info.CpuThreads);
-            lblRamDetails.Text = string.Format("{0}{1} GB Total ({2} GB)",
-                LocalizationHelper.Get("Label_Ram", "RAM Memory: "), info.RamTotalGb, info.RamFreeGb);
+            lblRamDetails.Text = string.Format("{0}{1} GB",
+                LocalizationHelper.Get("Label_Ram", "RAM Memory: "), info.RamTotalGb);
             lblGpuDetails.Text = string.Format("{0}{1}",
                 LocalizationHelper.Get("Label_Gpu", "Graphics Card: "), info.GpuName);
             lblMotherboard.Text = string.Format("{0}{1}",
@@ -786,6 +848,728 @@ namespace OptiAssist
         private void BtnAdminPowerShell_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenAdminPowerShell(); }
 
         private void BtnOpenMaintenanceFolder_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenMaintenanceFolder(); }
+
+        #region CUSTOM SHORTCUTS (DASHBOARD)
+        private void BtnAddCustomShortcut_Click(object sender, RoutedEventArgs e)
+        {
+            ShowCustomShortcutDialog(null);
+        }
+
+        private void BtnEditCustomShortcuts_Click(object sender, RoutedEventArgs e)
+        {
+            if (_customShortcuts == null || _customShortcuts.Count == 0)
+            {
+                MessageBox.Show(
+                    LocalizationHelper.Get("Dashboard_CustomShortcuts_Empty", "No custom shortcuts created yet. Click '+ Add Shortcut' to pin app modules or your favorite tools."),
+                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _isEditingCustomShortcuts = !_isEditingCustomShortcuts;
+            if (btnEditCustomShortcuts != null)
+            {
+                btnEditCustomShortcuts.Content = _isEditingCustomShortcuts
+                    ? LocalizationHelper.Get("Btn_DoneEditingShortcuts", "✔️ Done")
+                    : LocalizationHelper.Get("Btn_EditCustomShortcuts", "✏️ Edit / Remove");
+                btnEditCustomShortcuts.Style = _isEditingCustomShortcuts
+                    ? (Style)FindResource("BtnAccent")
+                    : (Style)FindResource("BtnDefault");
+            }
+            RenderCustomShortcuts();
+        }
+
+        private string GetSectionDisplayLabel(string sectionId, out string defaultIcon)
+        {
+            defaultIcon = "⭐";
+            if (string.IsNullOrEmpty(sectionId)) return "";
+
+            switch (sectionId.ToLowerInvariant())
+            {
+                case "windows-tools":
+                    defaultIcon = "🛠️";
+                    return LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools").Replace("🛠️", "").Trim();
+                case "logs":
+                    defaultIcon = "📜";
+                    return LocalizationHelper.Get("Nav_Terminal", "📜  Logs").Replace("📜", "").Trim();
+                case "settings":
+                    defaultIcon = "⚙️";
+                    return LocalizationHelper.Get("Nav_Settings", "⚙️  Settings").Replace("⚙️", "").Trim();
+                case "about":
+                    defaultIcon = "ℹ️";
+                    return LocalizationHelper.Get("Nav_About", "ℹ️  About").Replace("ℹ️", "").Trim();
+                case "toolbox":
+                    defaultIcon = "🧰";
+                    return LocalizationHelper.Get("Nav_Toolbox", "Toolbox");
+                case "app-manager":
+                    defaultIcon = "📦";
+                    return LocalizationHelper.Get("Nav_AppManager", "App Manager");
+                case "system-cleaner":
+                    defaultIcon = "🧹";
+                    return LocalizationHelper.Get("Nav_SystemCleaner", "System Cleaner");
+                case "startup-manager":
+                    defaultIcon = "🚀";
+                    return LocalizationHelper.Get("Nav_StartupManager", "Startup Manager");
+                case "maintenance-report":
+                    defaultIcon = "📋";
+                    return LocalizationHelper.Get("Nav_MaintenanceReport", "Maintenance Report");
+            }
+
+            if (_addons != null)
+            {
+                foreach (var a in _addons)
+                {
+                    if (string.Equals(a.Id, sectionId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        defaultIcon = !string.IsNullOrEmpty(a.Icon) ? a.Icon : "🧩";
+                        return a.Name;
+                    }
+                }
+            }
+
+            return sectionId;
+        }
+
+        private string FormatShortcutButtonContent(CustomShortcutItem item)
+        {
+            if (item == null) return "";
+            string icon = !string.IsNullOrWhiteSpace(item.Icon) ? item.Icon.Trim() : "";
+            string title = item.Title;
+
+            if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase))
+            {
+                string defIcon;
+                string secTitle = GetSectionDisplayLabel(item.TargetValue, out defIcon);
+                if (string.IsNullOrWhiteSpace(title)) title = secTitle;
+                if (string.IsNullOrWhiteSpace(icon)) icon = defIcon;
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(icon)) icon = "⚡";
+            }
+
+            return string.Format("{0} {1}", icon, title).Trim();
+        }
+
+        private void RenderCustomShortcuts()
+        {
+            if (ugCustomShortcuts == null || txtCustomShortcutsEmpty == null) return;
+
+            ugCustomShortcuts.Children.Clear();
+
+            if (_customShortcuts == null || _customShortcuts.Count == 0)
+            {
+                _isEditingCustomShortcuts = false;
+                if (btnEditCustomShortcuts != null)
+                {
+                    btnEditCustomShortcuts.Content = LocalizationHelper.Get("Btn_EditCustomShortcuts", "✏️ Edit / Remove");
+                    btnEditCustomShortcuts.Style = (Style)FindResource("BtnDefault");
+                }
+                txtCustomShortcutsEmpty.Visibility = Visibility.Visible;
+                ugCustomShortcuts.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            txtCustomShortcutsEmpty.Visibility = Visibility.Collapsed;
+            ugCustomShortcuts.Visibility = Visibility.Visible;
+
+            foreach (CustomShortcutItem item in _customShortcuts)
+            {
+                CustomShortcutItem currentItem = item;
+                string labelText = FormatShortcutButtonContent(currentItem);
+                string tooltipText = string.Equals(currentItem.TargetType, "Section", StringComparison.OrdinalIgnoreCase)
+                    ? string.Format("{0}: {1}", LocalizationHelper.Get("Shortcut_Type_Section", "App Section"), labelText)
+                    : currentItem.TargetValue;
+
+                if (!_isEditingCustomShortcuts)
+                {
+                    Button btn = new Button
+                    {
+                        Content = labelText,
+                        Style = (Style)FindResource("BtnDefault"),
+                        Height = 34,
+                        Margin = new Thickness(3),
+                        FontSize = 11,
+                        ToolTip = tooltipText
+                    };
+                    btn.Click += (s, e) => ExecuteCustomShortcut(currentItem);
+
+                    ContextMenu cm = new ContextMenu();
+                    MenuItem miEdit = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Edit", "✏️ Edit Shortcut") };
+                    miEdit.Click += (s, e) => ShowCustomShortcutDialog(currentItem);
+                    MenuItem miRemove = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Remove", "🗑️ Remove Shortcut") };
+                    miRemove.Click += (s, e) => RemoveCustomShortcut(currentItem);
+                    cm.Items.Add(miEdit);
+                    cm.Items.Add(miRemove);
+                    btn.ContextMenu = cm;
+
+                    ugCustomShortcuts.Children.Add(btn);
+                }
+                else
+                {
+                    Grid cellGrid = new Grid { Margin = new Thickness(3), Height = 34 };
+                    cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                    cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                    Button btnMain = new Button
+                    {
+                        Content = labelText,
+                        Style = (Style)FindResource("BtnDefault"),
+                        Height = 34,
+                        FontSize = 11,
+                        ToolTip = LocalizationHelper.Get("Shortcut_Menu_Edit", "✏️ Edit Shortcut")
+                    };
+                    btnMain.Click += (s, e) => ShowCustomShortcutDialog(currentItem);
+                    Grid.SetColumn(btnMain, 0);
+                    cellGrid.Children.Add(btnMain);
+
+                    Button btnEdit = new Button
+                    {
+                        Content = "✏️",
+                        Style = (Style)FindResource("BtnDefault"),
+                        Width = 30,
+                        Height = 34,
+                        Margin = new Thickness(2, 0, 0, 0),
+                        FontSize = 10.5,
+                        ToolTip = LocalizationHelper.Get("Shortcut_Menu_Edit", "✏️ Edit Shortcut")
+                    };
+                    btnEdit.Click += (s, e) => ShowCustomShortcutDialog(currentItem);
+                    Grid.SetColumn(btnEdit, 1);
+                    cellGrid.Children.Add(btnEdit);
+
+                    Button btnDel = new Button
+                    {
+                        Content = "🗑️",
+                        Style = (Style)FindResource("BtnDanger"),
+                        Width = 30,
+                        Height = 34,
+                        Margin = new Thickness(2, 0, 0, 0),
+                        FontSize = 10.5,
+                        ToolTip = LocalizationHelper.Get("Shortcut_Menu_Remove", "🗑️ Remove Shortcut")
+                    };
+                    btnDel.Click += (s, e) => RemoveCustomShortcut(currentItem);
+                    Grid.SetColumn(btnDel, 2);
+                    cellGrid.Children.Add(btnDel);
+
+                    ugCustomShortcuts.Children.Add(cellGrid);
+                }
+            }
+        }
+
+        private void RemoveCustomShortcut(CustomShortcutItem item)
+        {
+            if (item == null || _customShortcuts == null) return;
+            _customShortcuts.Remove(item);
+            CustomShortcutsHelper.Save(_customShortcuts);
+            RenderCustomShortcuts();
+            Log(string.Format("[SHORTCUTS] Custom shortcut '{0}' removed.", item.Title));
+        }
+
+        private void ExecuteCustomShortcut(CustomShortcutItem item)
+        {
+            if (item == null) return;
+
+            if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase))
+            {
+                string sec = (item.TargetValue ?? "").Trim().ToLowerInvariant();
+                if (sec == "windows-tools")
+                {
+                    if (rbNavShortcuts != null)
+                    {
+                        rbNavShortcuts.IsChecked = true;
+                        NavButton_Click(rbNavShortcuts, new RoutedEventArgs());
+                    }
+                }
+                else if (sec == "logs")
+                {
+                    if (rbNavTerminal != null)
+                    {
+                        rbNavTerminal.IsChecked = true;
+                        NavButton_Click(rbNavTerminal, new RoutedEventArgs());
+                    }
+                }
+                else if (sec == "settings")
+                {
+                    if (rbNavSettings != null)
+                    {
+                        rbNavSettings.IsChecked = true;
+                        NavButton_Click(rbNavSettings, new RoutedEventArgs());
+                    }
+                }
+                else if (sec == "about")
+                {
+                    if (rbNavAbout != null)
+                    {
+                        rbNavAbout.IsChecked = true;
+                        NavButton_Click(rbNavAbout, new RoutedEventArgs());
+                    }
+                }
+                else
+                {
+                    NavigateToAddonModule(sec);
+                }
+                return;
+            }
+
+            // Custom executable, folder, script, or URL
+            try
+            {
+                string target = Environment.ExpandEnvironmentVariables(item.TargetValue ?? "");
+                ProcessStartInfo psi = new ProcessStartInfo(target)
+                {
+                    UseShellExecute = true
+                };
+                if (!string.IsNullOrWhiteSpace(item.Arguments))
+                {
+                    psi.Arguments = item.Arguments;
+                }
+                Process.Start(psi);
+                Log(string.Format("[SHORTCUTS] Executed custom shortcut '{0}' -> {1}", item.Title, target));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    string.Format(LocalizationHelper.Get("Shortcut_Msg_LaunchError", "Unable to launch shortcut '{0}':\n{1}"), item.Title, ex.Message),
+                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void NavigateToAddonModule(string addonId)
+        {
+            if (_addons != null)
+            {
+                foreach (AddonEntry addon in _addons)
+                {
+                    if (string.Equals(addon.Id, addonId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!addon.IsEnabled)
+                        {
+                            addon.IsEnabled = true;
+                            RebuildSidebarAddonsMenu();
+                        }
+
+                        if (addon.SidebarButton != null)
+                        {
+                            addon.SidebarButton.IsChecked = true;
+                            NavButton_Click(addon.SidebarButton, new RoutedEventArgs());
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ShowCustomShortcutDialog(CustomShortcutItem existingItem)
+        {
+            bool isEdit = existingItem != null;
+            Window dlg = new Window
+            {
+                Title = isEdit
+                    ? LocalizationHelper.Get("Shortcut_Dialog_EditTitle", "Edit Custom Shortcut")
+                    : LocalizationHelper.Get("Shortcut_Dialog_AddTitle", "Add Custom Shortcut"),
+                Width = 460,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.SingleBorderWindow
+            };
+            dlg.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
+
+            Border card = new Border
+            {
+                Margin = new Thickness(14),
+                Padding = new Thickness(16),
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1)
+            };
+            card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel sp = new StackPanel();
+
+            TextBlock lblHeader = new TextBlock
+            {
+                Text = isEdit
+                    ? "✏️ " + LocalizationHelper.Get("Shortcut_Dialog_EditTitle", "Edit Custom Shortcut")
+                    : "➕ " + LocalizationHelper.Get("Shortcut_Dialog_AddTitle", "Add Custom Shortcut"),
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            lblHeader.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            sp.Children.Add(lblHeader);
+
+            TextBlock lblType = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Shortcut_Dialog_TypeLabel", "Shortcut Type:"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            lblType.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            sp.Children.Add(lblType);
+
+            StackPanel spRadios = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
+            RadioButton rbSection = new RadioButton
+            {
+                Content = LocalizationHelper.Get("Shortcut_Type_Section", "App Section / Module"),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 18, 0),
+                IsChecked = !isEdit || string.Equals(existingItem.TargetType, "Section", StringComparison.OrdinalIgnoreCase)
+            };
+            rbSection.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
+
+            RadioButton rbCustom = new RadioButton
+            {
+                Content = LocalizationHelper.Get("Shortcut_Type_Custom", "Custom Program / Folder / URL"),
+                FontSize = 11,
+                IsChecked = isEdit && string.Equals(existingItem.TargetType, "Custom", StringComparison.OrdinalIgnoreCase)
+            };
+            rbCustom.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
+
+            spRadios.Children.Add(rbSection);
+            spRadios.Children.Add(rbCustom);
+            sp.Children.Add(spRadios);
+
+            // Section Picker Panel
+            StackPanel pnlSection = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+            TextBlock lblSelectSection = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Shortcut_Dialog_SelectSection", "Select Section or Module:"),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblSelectSection.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            pnlSection.Children.Add(lblSelectSection);
+
+            ComboBox cmbSections = new ComboBox { Height = 28, FontSize = 11 };
+            string[] sectionIds = new string[]
+            {
+                "toolbox", "app-manager", "system-cleaner", "startup-manager", "maintenance-report",
+                "windows-tools", "logs", "settings", "about"
+            };
+            foreach (string sid in sectionIds)
+            {
+                string ic;
+                string name = GetSectionDisplayLabel(sid, out ic);
+                ComboBoxItem cbi = new ComboBoxItem
+                {
+                    Content = string.Format("{0}  {1}", ic, name),
+                    Tag = sid
+                };
+                cmbSections.Items.Add(cbi);
+                if (isEdit && string.Equals(existingItem.TargetValue, sid, StringComparison.OrdinalIgnoreCase))
+                {
+                    cmbSections.SelectedItem = cbi;
+                }
+            }
+            if (cmbSections.SelectedIndex < 0 && cmbSections.Items.Count > 0)
+            {
+                cmbSections.SelectedIndex = 0;
+            }
+            pnlSection.Children.Add(cmbSections);
+            sp.Children.Add(pnlSection);
+
+            // Custom Target Panel
+            StackPanel pnlCustom = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+            TextBlock lblTarget = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Shortcut_Dialog_TargetLabel", "Target Path, Command, Folder, or URL *:"),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblTarget.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            pnlCustom.Children.Add(lblTarget);
+
+            Grid targetGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            targetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            targetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            targetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            TextBox txtTarget = new TextBox
+            {
+                Height = 28,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 2, 6, 2),
+                Text = (isEdit && rbCustom.IsChecked == true) ? existingItem.TargetValue : ""
+            };
+            Grid.SetColumn(txtTarget, 0);
+            targetGrid.Children.Add(txtTarget);
+
+            Button btnBrowseFile = new Button
+            {
+                Content = "📄 " + LocalizationHelper.Get("Startup_Btn_Browse", "Browse..."),
+                Style = (Style)FindResource("BtnDefault"),
+                Height = 28,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(6, 0, 0, 0),
+                FontSize = 10.5
+            };
+            Grid.SetColumn(btnBrowseFile, 1);
+            targetGrid.Children.Add(btnBrowseFile);
+
+            Button btnBrowseFolder = new Button
+            {
+                Content = "📁 " + LocalizationHelper.Get("Shortcut_Btn_Folder", "Folder..."),
+                Style = (Style)FindResource("BtnDefault"),
+                Height = 28,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(4, 0, 0, 0),
+                FontSize = 10.5
+            };
+            Grid.SetColumn(btnBrowseFolder, 2);
+            targetGrid.Children.Add(btnBrowseFolder);
+            pnlCustom.Children.Add(targetGrid);
+
+            TextBlock lblArgs = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Shortcut_Dialog_ArgsLabel", "Arguments (optional):"),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblArgs.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            pnlCustom.Children.Add(lblArgs);
+
+            TextBox txtArgs = new TextBox
+            {
+                Height = 28,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 2, 6, 2),
+                Text = isEdit ? (existingItem.Arguments ?? "") : ""
+            };
+            pnlCustom.Children.Add(txtArgs);
+            sp.Children.Add(pnlCustom);
+
+            // Title & Icon Row
+            Grid nameIconGrid = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            nameIconGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
+            nameIconGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            StackPanel spIcon = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+            TextBlock lblIcon = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Shortcut_Dialog_IconLabel", "Icon:"),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblIcon.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            TextBox txtIcon = new TextBox
+            {
+                Height = 28,
+                FontSize = 12,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Text = isEdit ? existingItem.Icon : "🧰"
+            };
+            spIcon.Children.Add(lblIcon);
+            spIcon.Children.Add(txtIcon);
+            Grid.SetColumn(spIcon, 0);
+            nameIconGrid.Children.Add(spIcon);
+
+            StackPanel spName = new StackPanel();
+            TextBlock lblName = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Shortcut_Dialog_NameLabel", "Display Name *:"),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblName.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            TextBox txtName = new TextBox
+            {
+                Height = 28,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 2, 6, 2),
+                Text = isEdit ? existingItem.Title : ""
+            };
+            spName.Children.Add(lblName);
+            spName.Children.Add(txtName);
+            Grid.SetColumn(spName, 1);
+            nameIconGrid.Children.Add(spName);
+            sp.Children.Add(nameIconGrid);
+
+            Action syncSelectionToFields = () =>
+            {
+                if (rbSection.IsChecked == true)
+                {
+                    pnlSection.Visibility = Visibility.Visible;
+                    pnlCustom.Visibility = Visibility.Collapsed;
+                    ComboBoxItem sel = cmbSections.SelectedItem as ComboBoxItem;
+                    if (sel != null && sel.Tag != null)
+                    {
+                        string ic;
+                        string nm = GetSectionDisplayLabel(sel.Tag.ToString(), out ic);
+                        txtIcon.Text = ic;
+                        txtName.Text = nm;
+                    }
+                }
+                else
+                {
+                    pnlSection.Visibility = Visibility.Collapsed;
+                    pnlCustom.Visibility = Visibility.Visible;
+                    if (!isEdit && (string.IsNullOrWhiteSpace(txtIcon.Text) || txtIcon.Text == "🧰"))
+                    {
+                        txtIcon.Text = "⚡";
+                    }
+                }
+            };
+
+            if (!isEdit)
+            {
+                syncSelectionToFields();
+            }
+            else
+            {
+                pnlSection.Visibility = rbSection.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+                pnlCustom.Visibility = rbCustom.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            rbSection.Checked += (s, e) => syncSelectionToFields();
+            rbCustom.Checked += (s, e) =>
+            {
+                pnlSection.Visibility = Visibility.Collapsed;
+                pnlCustom.Visibility = Visibility.Visible;
+                if (string.IsNullOrWhiteSpace(txtName.Text) || cmbSections.SelectedItem != null)
+                {
+                    if (!isEdit) txtName.Text = "";
+                }
+                txtIcon.Text = "⚡";
+            };
+            cmbSections.SelectionChanged += (s, e) =>
+            {
+                if (rbSection.IsChecked == true) syncSelectionToFields();
+            };
+
+            btnBrowseFile.Click += (s, e) =>
+            {
+                var ofd = new Microsoft.Win32.OpenFileDialog();
+                ofd.Filter = "All Files (*.*)|*.*|Programs (*.exe;*.bat;*.cmd;*.ps1;*.msc)|*.exe;*.bat;*.cmd;*.ps1;*.msc";
+                if (ofd.ShowDialog(dlg) == true)
+                {
+                    txtTarget.Text = ofd.FileName;
+                    if (string.IsNullOrWhiteSpace(txtName.Text))
+                    {
+                        txtName.Text = Path.GetFileNameWithoutExtension(ofd.FileName);
+                    }
+                }
+            };
+
+            btnBrowseFolder.Click += (s, e) =>
+            {
+                using (var fbd = new System.Windows.Forms.FolderBrowserDialog())
+                {
+                    if (fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                        txtTarget.Text = fbd.SelectedPath;
+                        if (string.IsNullOrWhiteSpace(txtName.Text))
+                        {
+                            txtName.Text = new DirectoryInfo(fbd.SelectedPath).Name;
+                        }
+                        txtIcon.Text = "📁";
+                    }
+                }
+            };
+
+            // Bottom Action Buttons
+            StackPanel spBtns = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+
+            Button btnCancel = new Button
+            {
+                Content = LocalizationHelper.Get("Btn_Cancel", "Cancel"),
+                Style = (Style)FindResource("BtnDefault"),
+                Height = 30,
+                Padding = new Thickness(14, 0, 14, 0),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            btnCancel.Click += (s, e) => dlg.Close();
+            spBtns.Children.Add(btnCancel);
+
+            Button btnSave = new Button
+            {
+                Content = LocalizationHelper.Get("Startup_Btn_Save", "Save"),
+                Style = (Style)FindResource("BtnAccent"),
+                Height = 30,
+                Padding = new Thickness(18, 0, 18, 0)
+            };
+            btnSave.Click += (s, e) =>
+            {
+                bool isSec = rbSection.IsChecked == true;
+                string targetVal = "";
+                if (isSec)
+                {
+                    ComboBoxItem sel = cmbSections.SelectedItem as ComboBoxItem;
+                    if (sel != null && sel.Tag != null) targetVal = sel.Tag.ToString();
+                }
+                else
+                {
+                    targetVal = txtTarget.Text.Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(targetVal))
+                {
+                    MessageBox.Show(
+                        LocalizationHelper.Get("Shortcut_Msg_Required", "Please specify a valid target path or select an app section."),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string titleVal = txtName.Text.Trim();
+                if (string.IsNullOrWhiteSpace(titleVal))
+                {
+                    if (isSec)
+                    {
+                        string ic;
+                        titleVal = GetSectionDisplayLabel(targetVal, out ic);
+                    }
+                    else
+                    {
+                        titleVal = targetVal;
+                    }
+                }
+
+                string iconVal = string.IsNullOrWhiteSpace(txtIcon.Text) ? (isSec ? "⭐" : "⚡") : txtIcon.Text.Trim();
+
+                if (isEdit)
+                {
+                    existingItem.Title = titleVal;
+                    existingItem.Icon = iconVal;
+                    existingItem.TargetType = isSec ? "Section" : "Custom";
+                    existingItem.TargetValue = targetVal;
+                    existingItem.Arguments = isSec ? "" : txtArgs.Text.Trim();
+                }
+                else
+                {
+                    CustomShortcutItem newItem = new CustomShortcutItem
+                    {
+                        Title = titleVal,
+                        Icon = iconVal,
+                        TargetType = isSec ? "Section" : "Custom",
+                        TargetValue = targetVal,
+                        Arguments = isSec ? "" : txtArgs.Text.Trim()
+                    };
+                    if (_customShortcuts == null) _customShortcuts = new List<CustomShortcutItem>();
+                    _customShortcuts.Add(newItem);
+                }
+
+                CustomShortcutsHelper.Save(_customShortcuts);
+                RenderCustomShortcuts();
+                dlg.Close();
+            };
+            spBtns.Children.Add(btnSave);
+
+            sp.Children.Add(spBtns);
+            card.Child = sp;
+            dlg.Content = card;
+            dlg.ShowDialog();
+        }
+        #endregion
         #endregion
 
         #region ADD-ONS & MODULES MANAGEMENT (IOptiAssistHost)
@@ -1182,6 +1966,21 @@ namespace OptiAssist
                 btnTaskToolbox.ToolTip = LocalizationHelper.Get("Tooltip_TaskToolbox", "Open Toolbox custom actions and tools");
             }
 
+            // Custom Shortcuts section in Dashboard
+            if (txtCustomShortcutsTitle != null) txtCustomShortcutsTitle.Text = LocalizationHelper.Get("Dashboard_CustomShortcuts_Title", "⭐ Custom Shortcuts");
+            if (btnAddCustomShortcut != null) btnAddCustomShortcut.Content = LocalizationHelper.Get("Btn_AddCustomShortcut", "➕ Add Shortcut");
+            if (btnEditCustomShortcuts != null)
+            {
+                btnEditCustomShortcuts.Content = _isEditingCustomShortcuts
+                    ? LocalizationHelper.Get("Btn_DoneEditingShortcuts", "✔️ Done")
+                    : LocalizationHelper.Get("Btn_EditCustomShortcuts", "✏️ Edit / Remove");
+            }
+            if (txtCustomShortcutsEmpty != null)
+            {
+                txtCustomShortcutsEmpty.Text = LocalizationHelper.Get("Dashboard_CustomShortcuts_Empty", "No custom shortcuts created yet. Click '+ Add Shortcut' to pin app modules or your favorite tools.");
+            }
+            RenderCustomShortcuts();
+
             // 5. Windows Administrative Tools
             if (txtToolsTitle != null) txtToolsTitle.Text = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
             if (txtToolsSubtitle != null) txtToolsSubtitle.Text = LocalizationHelper.Get("Tools_Subtitle", "Quick access to primary management consoles and native system utilities");
@@ -1311,9 +2110,7 @@ namespace OptiAssist
             if (btnPresetYellow != null) btnPresetYellow.Content = "🟡 " + LocalizationHelper.Get("Color_Yellow", "Yellow");
             if (btnPresetPink != null) btnPresetPink.Content = "🌸 " + LocalizationHelper.Get("Color_Pink", "Pink");
 
-            // Additional Settings card
-            if (txtAdditionalSettingsTitle != null) txtAdditionalSettingsTitle.Text = LocalizationHelper.Get("Settings_Card_AdditionalSettings", "🛠️ Additional Settings");
-            if (txtAdditionalSettingsSub != null) txtAdditionalSettingsSub.Text = LocalizationHelper.Get("Settings_Sub_AdditionalSettings", "Device integration, system installation, and portable drive options:");
+            // Install / Uninstall buttons (in main Settings card)
             if (btnInstallApp != null)
             {
                 btnInstallApp.ToolTip = LocalizationHelper.Get("Tooltip_InstallApp", "Open installation & portable deployment options for OptiAssist");
@@ -1328,7 +2125,6 @@ namespace OptiAssist
             // 9. About
             if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("Nav_About", "ℹ️  About");
             if (txtAboutSub != null) txtAboutSub.Text = LocalizationHelper.Get("About_Subtitle", "Version information, copyright, and open-source license");
-            if (txtAboutLicenseTag != null) txtAboutLicenseTag.Text = LocalizationHelper.Get("About_License_Tag", "⚖️ License: GNU General Public License v3.0 (GNU GPLv3)");
             if (txtAboutCreditsTitle != null) txtAboutCreditsTitle.Text = LocalizationHelper.Get("About_Credits_Title", "🤝 Acknowledgments & Credits");
             if (txtAboutCreditsText != null) txtAboutCreditsText.Text = LocalizationHelper.Get("About_Credits_Text", "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist.");
             if (btnAboutGithub != null) btnAboutGithub.Content = LocalizationHelper.Get("Btn_AboutGithub", "🌐 GitHub Repository");
@@ -1378,6 +2174,8 @@ namespace OptiAssist
                 }
                 if (lblOsTitle != null) lblOsTitle.Text = LocalizationHelper.Get("Status_Detecting", "Detecting Windows...");
                 if (lblOsDetails != null) lblOsDetails.Text = detecting;
+                if (lblOsInstallDate != null) lblOsInstallDate.Text = LocalizationHelper.Get("Label_OsInstallDate", "Install Date: ") + detecting;
+                if (lblOsActivation != null) lblOsActivation.Text = LocalizationHelper.Get("Label_OsActivation", "Activation: ") + detecting;
                 if (lblCpuDetails != null) lblCpuDetails.Text = LocalizationHelper.Get("Label_Processor", "Processor: ") + detecting;
                 if (lblRamDetails != null) lblRamDetails.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ") + detecting;
                 if (lblGpuDetails != null) lblGpuDetails.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ") + detecting;

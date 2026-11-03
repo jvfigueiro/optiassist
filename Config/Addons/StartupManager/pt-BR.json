@@ -81,6 +81,8 @@
   "Startup_Msg_ServiceFailed": "Falha ao controlar serviço: {0}",
   "Startup_Empty_Programs": "Nenhum programa de inicialização encontrado com o filtro atual.",
   "Startup_Empty_Tasks": "Nenhuma tarefa agendada de terceiros encontrada com o filtro atual.",
-  "Startup_Empty_Services": "Nenhum serviço de terceiros encontrado com o filtro atual."
+  "Startup_Empty_Services": "Nenhum serviço de terceiros encontrado com o filtro atual.",
+  "Startup_Title_ShowMicrosoftWarning": "Aviso de Segurança do Sistema",
+  "Startup_Msg_ShowMicrosoftWarning": "⚠️ Atenção: Exibir as tarefas agendadas nativas da Microsoft e do Windows irá listar tarefas críticas do sistema operacional.\n\nDesabilitar, modificar ou excluir tarefas agendadas nativas do Windows pode causar grave instabilidade, falhas em recursos do sistema ou impedir o funcionamento correto do Windows.\n\nTem certeza de que deseja exibir os itens nativos da Microsoft / Windows?"
 }
 
