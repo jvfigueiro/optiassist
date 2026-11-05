@@ -18,17 +18,17 @@ Welcome to the official technical documentation for **OptiAssist**, the portable
 
 ---
 
-## 🏛️ Transversal Engineering Guides & Module Documentation
+## Transversal Engineering Guides & Module Documentation
 
 In addition to the overview chapters above, comprehensive engineering guides and per-module specifications are available:
 
-* 🏛️ [**System Architecture & Module Lifecycle**](arquitetura.md): Detailed Microkernel design, sequence diagrams, and anti-lock assembly loading.
-* 🛠️ [**Developer Guide: How to Create a Module**](como-criar-um-modulo.md): Step-by-step tutorial with complete code examples.
-* 📦 [**Build, Packaging, and Distribution**](build-e-distribuicao.md): Build targets, self-deployment, and uninstallation mechanisms.
-* ⚙️ [**Configuration, JSON Schemas, i18n, and Logging**](configuracao-e-logs.md): Data dictionary and real-time logging pipelines.
-* ❓ [**FAQ and Troubleshooting**](faq-e-troubleshooting.md): Code-based explanations of platform edge cases and error codes.
-* 🗺️ [**Complete Architecture Map & Code Analysis**](_analise/00-mapa.md): Exhaustive codebase analysis and platform integrations.
-* 📑 [**Individual Module Specifications Index**](modulos/README.md): Detailed guides for all 10 native and add-on modules.
+* [**System Architecture & Module Lifecycle**](architecture.md): Detailed Microkernel design, sequence diagrams, and anti-lock assembly loading.
+* [**Developer Guide: How to Create a Module**](how-to-create-a-module.md): Step-by-step tutorial with complete code examples.
+* [**Build, Packaging, and Distribution**](build-and-distribution.md): Build targets, self-deployment, and uninstallation mechanisms.
+* [**Configuration, JSON Schemas, i18n, and Logging**](configuration-and-logs.md): Data dictionary and real-time logging pipelines.
+* [**FAQ and Troubleshooting**](faq-and-troubleshooting.md): Code-based explanations of platform edge cases and error codes.
+* [**Complete Architecture Map & Code Analysis**](analysis/00-map.md): Exhaustive codebase analysis and platform integrations.
+* [**Individual Module Specifications Index**](modules/README.md): Detailed guides for all native and add-on modules.
 
 ---
 

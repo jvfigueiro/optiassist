@@ -3,7 +3,7 @@
 **Module Identifier:** `StartupManager`  
 **Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
 **DLL Location:** `Config\Addons\StartupManager\StartupManager.dll`  
-**Documentation File:** `docs/modulos/startup-manager.md`  
+**Documentation File:** `docs/modules/startup-manager.md`  
 
 ![Startup Manager Interface](../images/startup-manager.png)
 

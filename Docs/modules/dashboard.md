@@ -2,7 +2,7 @@
 
 **Module Identifier:** `dashboard`  
 **Type:** Host Native View (`MainWindow`)  
-**Documentation File:** `docs/modulos/dashboard.md`  
+**Documentation File:** `docs/modules/dashboard.md`  
 
 ![Dashboard Interface](../images/dashboard.png)
 

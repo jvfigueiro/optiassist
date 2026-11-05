@@ -33,11 +33,11 @@ These modules operate as independent .NET Framework 4.8 Class Libraries located 
 
 ---
 
-## 📐 Related Engineering and Architecture Documents
+## Related Engineering and Architecture Documents
 
-* [**00-mapa.md (Architecture Map & Code Analysis)**](../_analise/00-mapa.md): Comprehensive analysis of the technology stack, zero-dependency philosophy, Win32/WMI/CIM/COM integration points, Windows 10 vs 11 compatibility matrix, and error handling.
-* [**arquitetura.md (System Architecture & Module Lifecycle)**](../arquitetura.md): Deep dive into the Microkernel pattern, interface contracts (`IOptiAssistAddon` / `IOptiAssistHost`), and anti-lock assembly loading.
-* [**como-criar-um-modulo.md (Developer Guide)**](../como-criar-um-modulo.md): Step-by-step developer tutorial for creating custom add-on modules.
-* [**build-e-distribuicao.md (Build and Distribution)**](../build-e-distribuicao.md): Compilation commands, project targets, and deployment architecture.
-* [**configuracao-e-logs.md (Configuration & Logs)**](../configuracao-e-logs.md): JSON schemas, multi-language localization, and the logging subsystem.
-* [**faq-e-troubleshooting.md (Troubleshooting Guide)**](../faq-e-troubleshooting.md): Answers to common questions, error code explanations, and edge cases.
+* [**00-map.md (Architecture Map & Code Analysis)**](../analysis/00-map.md): Comprehensive analysis of the technology stack, zero-dependency philosophy, Win32/WMI/CIM/COM integration points, Windows 10 vs 11 compatibility matrix, and error handling.
+* [**architecture.md (System Architecture & Module Lifecycle)**](../architecture.md): Deep dive into the Microkernel pattern, interface contracts (`IOptiAssistAddon` / `IOptiAssistHost`), and anti-lock assembly loading.
+* [**how-to-create-a-module.md (Developer Guide)**](../how-to-create-a-module.md): Step-by-step developer tutorial for creating custom add-on modules.
+* [**build-and-distribution.md (Build and Distribution)**](../build-and-distribution.md): Compilation commands, project targets, and deployment architecture.
+* [**configuration-and-logs.md (Configuration & Logs)**](../configuration-and-logs.md): JSON schemas, multi-language localization, and the logging subsystem.
+* [**faq-and-troubleshooting.md (Troubleshooting Guide)**](../faq-and-troubleshooting.md): Answers to common questions, error code explanations, and edge cases.

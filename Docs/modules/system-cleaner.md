@@ -3,7 +3,7 @@
 **Module Identifier:** `SystemCleaner`  
 **Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
 **DLL Location:** `Config\Addons\SystemCleaner\SystemCleaner.dll`  
-**Documentation File:** `docs/modulos/system-cleaner.md`  
+**Documentation File:** `docs/modules/system-cleaner.md`  
 
 ![System Cleaner Interface](../images/system-cleaner.png)
 

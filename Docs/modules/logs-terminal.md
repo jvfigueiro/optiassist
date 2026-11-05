@@ -2,7 +2,7 @@
 
 **Module Identifier:** `logs`  
 **Type:** Host Native View (`MainWindow`) & Floating Window (`LogWindow`)  
-**Documentation File:** `docs/modulos/logs-terminal.md`  
+**Documentation File:** `docs/modules/logs-terminal.md`  
 
 ---
 

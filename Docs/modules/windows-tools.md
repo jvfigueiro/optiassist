@@ -2,7 +2,7 @@
 
 **Module Identifier:** `windows-tools`  
 **Type:** Host Native View (`MainWindow`)  
-**Documentation File:** `docs/modulos/windows-tools.md`  
+**Documentation File:** `docs/modules/windows-tools.md`  
 
 ![Windows Tools Interface](../images/windows-tools.png)
 

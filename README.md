@@ -15,15 +15,15 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 
 | Module | Summary Description | Documentation |
 | :--- | :--- | :---: |
-| **Dashboard** | Asynchronous hardware telemetry (CPU, total RAM, GPU, Motherboard, BIOS, Serial/Service Tag with one-click copy), Windows installation date, activation status, security posture (BitLocker, TPM 2.0, Secure Boot), and fully customizable Common Tasks shortcuts. | [Read Guide](Docs/modulos/dashboard.md) |
-| **App Manager** | Batch unattended software deployment via offline local installers (`Installers/`) or official Microsoft Winget repository, with a visual catalog editor (`autoinstall.json`) and batch updates scanner. | [Read Guide](Docs/modulos/app-manager.md) |
-| **Toolbox** | Script and command execution engine (PowerShell, CMD, portable binaries) with dynamic categories, standardized search, real-time stdout/stderr streaming, process termination, and Base64 command encoding. | [Read Guide](Docs/modulos/toolbox.md) |
-| **System Cleaner** | BleachBit-inspired modular cleaner with non-destructive Dry-Run (Scan) support, path protection (PathSanitizer), locked-file resilience, and deep scans for developer artifacts (`node_modules`, `venv`, `__pycache__`). | [Read Guide](Docs/modulos/system-cleaner.md) |
-| **Startup Manager** | Unified autostart inspector: Windows Registry (`Run`/`RunOnce` with `StartupApproved`), Startup folders, and Scheduled Tasks via COM (`Schedule.Service`), with standardized search and risk warnings for native entries. | [Read Guide](Docs/modulos/startup-manager.md) |
-| **Windows Tools** | Fast-launch control panel for native administrative consoles (`sysdm.cpl`, `services.msc`, `compmgmt.msc`, `regedit`, `cleanmgr`), technician folders, and direct UEFI firmware reboot. | [Read Guide](Docs/modulos/windows-tools.md) |
-| **Maintenance Report** | Technical service order and report generator with client/technician details, an 8-step maintenance checklist, hardware specifications, and structured `.txt` export. | [Read Guide](Docs/modulos/maintenance-report.md) |
-| **Settings & Deployment** | Theme personalization (Light/Dark/Accent colors), zero-restart language hot-reloading (i18n), Always on Top window toggle, module management, and built-in installer/uninstaller. | [Read Guide](Docs/modulos/settings-deployment.md) |
-| **Logs & Terminal** | Thread-safe real-time diagnostic terminal with an independent floating pop-out window (`LogWindow`), keyword search, clipboard copying, and `.txt` log export. | [Read Guide](Docs/modulos/logs-terminal.md) |
+| **Dashboard** | Asynchronous hardware telemetry (CPU, total RAM, GPU, Motherboard, BIOS, Serial/Service Tag with one-click copy), Windows installation date, activation status, security posture (BitLocker, TPM 2.0, Secure Boot), and fully customizable Common Tasks shortcuts. | [Read Guide](Docs/modules/dashboard.md) |
+| **App Manager** | Batch unattended software deployment via offline local installers (`Installers/`) or official Microsoft Winget repository, with a visual catalog editor (`autoinstall.json`) and batch updates scanner. | [Read Guide](Docs/modules/app-manager.md) |
+| **Toolbox** | Script and command execution engine (PowerShell, CMD, portable binaries) with dynamic categories, standardized search, real-time stdout/stderr streaming, process termination, and Base64 command encoding. | [Read Guide](Docs/modules/toolbox.md) |
+| **System Cleaner** | BleachBit-inspired modular cleaner with non-destructive Dry-Run (Scan) support, path protection (PathSanitizer), locked-file resilience, and deep scans for developer artifacts (`node_modules`, `venv`, `__pycache__`). | [Read Guide](Docs/modules/system-cleaner.md) |
+| **Startup Manager** | Unified autostart inspector: Windows Registry (`Run`/`RunOnce` with `StartupApproved`), Startup folders, and Scheduled Tasks via COM (`Schedule.Service`), with standardized search and risk warnings for native entries. | [Read Guide](Docs/modules/startup-manager.md) |
+| **Windows Tools** | Fast-launch control panel for native administrative consoles (`sysdm.cpl`, `services.msc`, `compmgmt.msc`, `regedit`, `cleanmgr`), technician folders, and direct UEFI firmware reboot. | [Read Guide](Docs/modules/windows-tools.md) |
+| **Maintenance Report** | Technical service order and report generator with client/technician details, an 8-step maintenance checklist, hardware specifications, and structured `.txt` export. | [Read Guide](Docs/modules/maintenance-report.md) |
+| **Settings & Deployment** | Theme personalization (Light/Dark/Accent colors), zero-restart language hot-reloading (i18n), Always on Top window toggle, module management, and built-in installer/uninstaller. | [Read Guide](Docs/modules/settings-deployment.md) |
+| **Logs & Terminal** | Thread-safe real-time diagnostic terminal with an independent floating pop-out window (`LogWindow`), keyword search, clipboard copying, and `.txt` log export. | [Read Guide](Docs/modules/logs-terminal.md) |
 
 ---
 
@@ -84,7 +84,7 @@ OptiAssist is designed around a **Zero External Dependencies** model: it does no
 2. **Standard Installation (Local System)**: In **Settings**, click **Install OptiAssist**. The application creates Start Menu and Desktop shortcuts, registers an entry in Windows Control Panel (*Programs and Features*), and copies files to `%ProgramFiles%\OptiAssist`.
 3. **USB AutoRun**: From the deployment dialog, generate an `autorun.inf` at the root of a USB flash drive to apply the custom application icon and label in Windows Explorer.
 
-For compilation targets, automated packaging, and silent uninstallation details, refer to the [Build and Distribution Guide](Docs/build-e-distribuicao.md).
+For compilation targets, automated packaging, and silent uninstallation details, refer to the [Build and Distribution Guide](Docs/build-and-distribution.md).
 
 ---
 
@@ -122,7 +122,7 @@ AppManager     SystemCleaner                  Toolbox         StartupManager
 - **Anti-Lock Assembly Loading**: Plugins are read into in-memory byte arrays (`File.ReadAllBytes` + `Assembly.Load`), allowing add-on DLLs on disk to be updated, recompiled, or replaced without locking running processes.
 - **Unified Localization**: Multi-language JSON dictionaries (`Config/Languages/`) with instant zero-restart runtime hot-reloading.
 
-For architectural diagrams and component sequence lifecycles, refer to the [Architecture Documentation](Docs/arquitetura.md).
+For architectural diagrams and component sequence lifecycles, refer to the [Architecture Documentation](Docs/architecture.md).
 
 ---
 
@@ -181,7 +181,7 @@ Extending OptiAssist does not require modifying the host executable. Custom modu
 3. Add custom translation keys to the language JSON files.
 4. Compile the output DLL into `Config/Addons/<YourModule>/<YourModule>.dll`.
 
-Read the comprehensive step-by-step developer tutorial in [How to Create a Module in OptiAssist](Docs/como-criar-um-modulo.md).
+Read the comprehensive step-by-step developer tutorial in [How to Create a Module in OptiAssist](Docs/how-to-create-a-module.md).
 
 ---
 
@@ -204,19 +204,19 @@ This project is free software distributed under the terms of the **GNU General P
 
 For in-depth technical specifications, refer to the dedicated documentation files:
 
-- [Architecture Map and Code Analysis](Docs/_analise/00-mapa.md)
-- [System Architecture and Module Lifecycle](Docs/arquitetura.md)
-- [Developer Guide: How to Create a Module](Docs/como-criar-um-modulo.md)
-- [Build, Packaging, and Distribution](Docs/build-e-distribuicao.md)
-- [Configuration, JSON Schemas, i18n, and Logging](Docs/configuracao-e-logs.md)
-- [FAQ and Troubleshooting Guide](Docs/faq-e-troubleshooting.md)
-- [Module Index and Detailed Documentation](Docs/modulos/README.md)
-  - [Dashboard](Docs/modulos/dashboard.md)
-  - [App Manager](Docs/modulos/app-manager.md)
-  - [Toolbox](Docs/modulos/toolbox.md)
-  - [System Cleaner](Docs/modulos/system-cleaner.md)
-  - [Startup Manager](Docs/modulos/startup-manager.md)
-  - [Windows Tools](Docs/modulos/windows-tools.md)
-  - [Maintenance Report](Docs/modulos/maintenance-report.md)
-  - [Settings & Deployment](Docs/modulos/settings-deployment.md)
-  - [Logs & Terminal](Docs/modulos/logs-terminal.md)
+- [Architecture Map and Code Analysis](Docs/analysis/00-map.md)
+- [System Architecture and Module Lifecycle](Docs/architecture.md)
+- [Developer Guide: How to Create a Module](Docs/how-to-create-a-module.md)
+- [Build, Packaging, and Distribution](Docs/build-and-distribution.md)
+- [Configuration, JSON Schemas, i18n, and Logging](Docs/configuration-and-logs.md)
+- [FAQ and Troubleshooting Guide](Docs/faq-and-troubleshooting.md)
+- [Module Index and Detailed Documentation](Docs/modules/README.md)
+  - [Dashboard](Docs/modules/dashboard.md)
+  - [App Manager](Docs/modules/app-manager.md)
+  - [Toolbox](Docs/modules/toolbox.md)
+  - [System Cleaner](Docs/modules/system-cleaner.md)
+  - [Startup Manager](Docs/modules/startup-manager.md)
+  - [Windows Tools](Docs/modules/windows-tools.md)
+  - [Maintenance Report](Docs/modules/maintenance-report.md)
+  - [Settings & Deployment](Docs/modules/settings-deployment.md)
+  - [Logs & Terminal](Docs/modules/logs-terminal.md)

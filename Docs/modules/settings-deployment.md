@@ -2,7 +2,7 @@
 
 **Module Identifier:** `settings`  
 **Type:** Host Native View (`MainWindow`)  
-**Documentation File:** `docs/modulos/settings-deployment.md`  
+**Documentation File:** `docs/modules/settings-deployment.md`  
 
 ![Installation and Deployment Dialog](../images/installer-dialog.png)
 

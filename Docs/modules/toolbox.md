@@ -3,7 +3,7 @@
 **Module Identifier:** `Toolbox`  
 **Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
 **DLL Location:** `Config\Addons\Toolbox\Toolbox.dll`  
-**Documentation File:** `docs/modulos/toolbox.md`  
+**Documentation File:** `docs/modules/toolbox.md`  
 
 ![Toolbox Interface](../images/toolbox.png)
 

@@ -1,6 +1,6 @@
 # Architecture and Code Analysis Report: OptiAssist
 
-**Document:** `docs/_analise/00-mapa.md`  
+**Document:** `docs/analysis/00-map.md`  
 **Date:** November 05, 2026  
 **System Version:** 1.1.0  
 **Software Author:** João Figueiró  
@@ -72,13 +72,13 @@ OptiAssist/
 │       ├── SystemCleaner/SystemCleaner.dll
 │       └── Toolbox/Toolbox.dll
 ├── Docs/                                   # Full technical documentation
-│   ├── arquitetura.md                      # Modular system architecture
-│   ├── como-criar-um-modulo.md             # Developer guide for creating addons
-│   ├── build-e-distribuicao.md             # Compilation and deployment guide
-│   ├── configuracao-e-logs.md              # Configuration schemas, i18n, and logs
-│   ├── faq-e-troubleshooting.md            # FAQ and edge-case troubleshooting
-│   ├── modulos/                            # Individual module documentation
-│   └── _analise/00-mapa.md                 # Complete architectural map
+│   ├── architecture.md                     # Modular system architecture
+│   ├── how-to-create-a-module.md           # Developer guide for creating addons
+│   ├── build-and-distribution.md           # Compilation and deployment guide
+│   ├── configuration-and-logs.md           # Configuration schemas, i18n, and logs
+│   ├── faq-and-troubleshooting.md          # FAQ and edge-case troubleshooting
+│   ├── modules/                            # Individual module documentation
+│   └── analysis/00-map.md                  # Complete architectural map
 ├── Maintenance/                            # Portable third-party diagnostic utilities
 │   ├── CPU-Z/                              # Portable CPU-Z
 │   └── CrystalDiskInfo/                    # Portable CrystalDiskInfo

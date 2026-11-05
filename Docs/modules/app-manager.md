@@ -3,7 +3,7 @@
 **Module Identifier:** `AppManager`  
 **Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
 **DLL Location:** `Config\Addons\AppManager\AppManager.dll`  
-**Documentation File:** `docs/modulos/app-manager.md`  
+**Documentation File:** `docs/modules/app-manager.md`  
 
 ![App Manager Interface](../images/app-manager.png)
 
