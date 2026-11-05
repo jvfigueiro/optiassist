@@ -4,6 +4,8 @@
 **Type:** Host Native View (`MainWindow`)  
 **Documentation File:** `docs/modulos/dashboard.md`  
 
+![Dashboard Interface](../images/dashboard.png)
+
 ---
 
 ## 1. Overview and Problem Solved

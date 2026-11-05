@@ -4,6 +4,8 @@
 **Type:** Host Native View (`MainWindow`)  
 **Documentation File:** `docs/modulos/windows-tools.md`  
 
+![Windows Tools Interface](../images/windows-tools.png)
+
 ---
 
 ## 1. Overview and Problem Solved

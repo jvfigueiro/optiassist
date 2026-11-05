@@ -5,6 +5,8 @@
 **DLL Location:** `Config\Addons\AppManager\AppManager.dll`  
 **Documentation File:** `docs/modulos/app-manager.md`  
 
+![App Manager Interface](../images/app-manager.png)
+
 ---
 
 ## 1. Overview and Problem Solved

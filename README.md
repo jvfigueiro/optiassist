@@ -27,6 +27,25 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 
 ---
 
+## Screenshots
+
+### Dashboard & System Telemetry
+![OptiAssist Dashboard](Docs/images/dashboard.png)
+
+### App Manager (Software Updates & Unattended Installation)
+![OptiAssist App Manager](Docs/images/app-manager.png)
+
+### Toolbox (System Repair & Automation Hub)
+![OptiAssist Toolbox](Docs/images/toolbox.png)
+
+### System Cleaner (Deep Cleaning & Dry-Run Analysis)
+![OptiAssist System Cleaner](Docs/images/system-cleaner.png)
+
+### Windows Tools (Native Management Consoles)
+![OptiAssist Windows Tools](Docs/images/windows-tools.png)
+
+---
+
 ## Recent Updates & Enhancements
 
 - **Integrated Common Tasks Customization**: The Common Tasks section on the Dashboard now incorporates an in-app customization engine. Technicians can add, edit, reorder, or remove shortcuts directly via a dedicated **Customize** dialog, including a dedicated shortcut for the `Installers` directory. External shortcuts (e.g. Chris Titus WinUtil) run in the background with visual progress indication.

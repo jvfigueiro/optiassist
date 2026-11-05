@@ -5,6 +5,8 @@
 **DLL Location:** `Config\Addons\SystemCleaner\SystemCleaner.dll`  
 **Documentation File:** `docs/modulos/system-cleaner.md`  
 
+![System Cleaner Interface](../images/system-cleaner.png)
+
 ---
 
 ## 1. Overview and Problem Solved

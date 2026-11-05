@@ -5,6 +5,8 @@
 **DLL Location:** `Config\Addons\Toolbox\Toolbox.dll`  
 **Documentation File:** `docs/modulos/toolbox.md`  
 
+![Toolbox Interface](../images/toolbox.png)
+
 ---
 
 ## 1. Overview and Problem Solved
