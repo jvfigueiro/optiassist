@@ -4,6 +4,8 @@
 **Type:** Host Native View (`MainWindow`)  
 **Documentation File:** `docs/modulos/settings-deployment.md`  
 
+![Installation and Deployment Dialog](../images/installer-dialog.png)
+
 ---
 
 ## 1. Overview and Problem Solved

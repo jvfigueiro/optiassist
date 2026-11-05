@@ -5,6 +5,8 @@
 **DLL Location:** `Config\Addons\MaintenanceReport\MaintenanceReport.dll`  
 **Documentation File:** `docs/modulos/maintenance-report.md`  
 
+![Maintenance Report Interface](../images/maintenance-report.png)
+
 ---
 
 ## 1. Overview and Problem Solved

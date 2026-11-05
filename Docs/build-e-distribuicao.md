@@ -98,6 +98,8 @@ The graphical installer is accessible via:
 1. The **Install OptiAssist** button in **Settings**.
 2. Automated prompt on first launch if running from temporary storage.
 
+![OptiAssist Installation Dialog](images/installer-dialog.png)
+
 ```mermaid
 flowchart TD
     A["Installer Launch (AppDeploymentHelper.ShowInstallDialog)"] --> B["Display GNU GPLv3 Terms"]

@@ -5,6 +5,8 @@
 **DLL Location:** `Config\Addons\StartupManager\StartupManager.dll`  
 **Documentation File:** `docs/modulos/startup-manager.md`  
 
+![Startup Manager Interface](../images/startup-manager.png)
+
 ---
 
 ## 1. Overview and Problem Solved

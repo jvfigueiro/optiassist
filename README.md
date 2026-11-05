@@ -41,8 +41,17 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 ### System Cleaner (Deep Cleaning & Dry-Run Analysis)
 ![OptiAssist System Cleaner](Docs/images/system-cleaner.png)
 
+### Startup Manager (Autostart & Scheduled Tasks)
+![OptiAssist Startup Manager](Docs/images/startup-manager.png)
+
+### Maintenance Report (Service Orders & Technical Checklist)
+![OptiAssist Maintenance Report](Docs/images/maintenance-report.png)
+
 ### Windows Tools (Native Management Consoles)
 ![OptiAssist Windows Tools](Docs/images/windows-tools.png)
+
+### Application Deployment (Standard & Portable Installation)
+![OptiAssist Installation Dialog](Docs/images/installer-dialog.png)
 
 ---
 
