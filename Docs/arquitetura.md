@@ -35,7 +35,6 @@ graph TD
             TabWinTools["Windows Tools Hub"]
             TabSettings["Settings & Deployment"]
             TabLogs["Real-Time Logs Terminal"]
-            TabAbout["About & Addon Audit"]
         end
     end
 

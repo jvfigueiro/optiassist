@@ -16,7 +16,6 @@ These modules are built directly into `OptiAssist.exe` and provide the central a
 | **Windows Tools** | [windows-tools.md](windows-tools.md) | Centralized hub for fast access to native Windows administrative consoles (`.msc`, `.cpl`, `sysnative` 64-bit redirection), technician folders, and elevated command prompts. |
 | **Settings & Deployment** | [settings-deployment.md](settings-deployment.md) | Theme management (Light/Dark/Accent), language hot-reloading (i18n), floating window preferences, Add-on DLL manager, and self-installer (`AppDeploymentHelper`) with Standard, Portable, and USB AutoRun modes. |
 | **Terminal & Logs** | [logs-terminal.md](logs-terminal.md) | Real-time diagnostic monitoring with thread-safe `Dispatcher` streaming, embedded console, and a detached floating window (`LogWindow`) with search, copy, and `.txt` export capabilities. |
-| **About Application** | [about.md](about.md) | Product version info, GNU GPLv3 license terms, open-source community credits (WinUtil / Chris Titus Tech), and dynamic `AssemblyInfo` metadata inspection of all loaded plugins. |
 
 ---
 

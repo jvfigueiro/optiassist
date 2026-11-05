@@ -146,7 +146,6 @@ OptiAssist uses a microkernel architecture where modules reside in independent a
 | **Maintenance Report**| Decoupled Add-on| `src/Addons/MaintenanceReport/*`| HardwareSummary, Local File System | No (inherits Yes) |
 | **Settings & Deployment**| Native Host Tab| `src/MainWindow.xaml.cs`, `src/ShortcutsHelper.cs`| `settings.json`, COM WScript.Shell, Registry | Yes |
 | **Logs Terminal** | Native Host Tab | `src/MainWindow.xaml.cs`, `src/LogWindow.cs` | Dispatcher, Windows Clipboard | No (inherits Yes) |
-| **About** | Native Host Tab | `src/MainWindow.xaml.cs` | `AddonHelper.LoadedAddons`, AssemblyInfo | No |
 
 ---
 

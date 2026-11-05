@@ -24,7 +24,6 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 | **Maintenance Report** | Technical service order and report generator with client/technician details, an 8-step maintenance checklist, hardware specifications, and structured `.txt` export. | [Read Guide](Docs/modulos/maintenance-report.md) |
 | **Settings & Deployment** | Theme personalization (Light/Dark/Accent colors), zero-restart language hot-reloading (i18n), Always on Top window toggle, module management, and built-in installer/uninstaller. | [Read Guide](Docs/modulos/settings-deployment.md) |
 | **Logs & Terminal** | Thread-safe real-time diagnostic terminal with an independent floating pop-out window (`LogWindow`), keyword search, clipboard copying, and `.txt` log export. | [Read Guide](Docs/modulos/logs-terminal.md) |
-| **About** | Application version specifications, GNU GPLv3 license dialog, community credits (WinUtil / Chris Titus Tech), and dynamic AssemblyInfo audit of loaded add-on plugins. | [Read Guide](Docs/modulos/about.md) |
 
 ---
 
@@ -36,7 +35,6 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 - **Streamlined Settings Layout**: Consolidated deployment controls (Install and Uninstall OptiAssist) directly into the primary actions row alongside Save and Restore Defaults. Added an **Always on Top** window option and modernized the section description.
 - **Windows Tools Refinements**: Standardized tool button labels by removing emojis and parenthetical suffixes across all native utilities (Date & Time, Windows Services, User Accounts, System Information, Registry Editor, About Windows, Network Connections), and renamed the technician folder launcher to **Maintenance Tools**.
 - **System Cleaner Warning Placement**: Moved the "Disable warnings when selecting items" option into the Developer & Deep Scan section for logical contextual alignment.
-- **About Section Cleanup**: Removed redundant license badge and maintained clean modal access to the full GNU GPLv3 terms.
 
 ---
 
@@ -194,4 +192,3 @@ For in-depth technical specifications, refer to the dedicated documentation file
   - [Maintenance Report](Docs/modulos/maintenance-report.md)
   - [Settings & Deployment](Docs/modulos/settings-deployment.md)
   - [Logs & Terminal](Docs/modulos/logs-terminal.md)
-  - [About](Docs/modulos/about.md)
