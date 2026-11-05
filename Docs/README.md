@@ -18,6 +18,20 @@ Welcome to the official technical documentation for **OptiAssist**, the portable
 
 ---
 
+## 🏛️ Transversal Engineering Guides & Module Documentation
+
+In addition to the overview chapters above, comprehensive engineering guides and per-module specifications are available:
+
+* 🏛️ [**System Architecture & Module Lifecycle**](arquitetura.md): Detailed Microkernel design, sequence diagrams, and anti-lock assembly loading.
+* 🛠️ [**Developer Guide: How to Create a Module**](como-criar-um-modulo.md): Step-by-step tutorial with complete code examples.
+* 📦 [**Build, Packaging, and Distribution**](build-e-distribuicao.md): Build targets, self-deployment, and uninstallation mechanisms.
+* ⚙️ [**Configuration, JSON Schemas, i18n, and Logging**](configuracao-e-logs.md): Data dictionary and real-time logging pipelines.
+* ❓ [**FAQ and Troubleshooting**](faq-e-troubleshooting.md): Code-based explanations of platform edge cases and error codes.
+* 🗺️ [**Complete Architecture Map & Code Analysis**](_analise/00-mapa.md): Exhaustive codebase analysis and platform integrations.
+* 📑 [**Individual Module Specifications Index**](modulos/README.md): Detailed guides for all 10 native and add-on modules.
+
+---
+
 ## 🛠️ Core Principles of OptiAssist
 
 1. **100% Portability First**: OptiAssist runs directly from a USB flash drive, external SSD, or network share without requiring an installation process. All configuration, languages, offline installers, scripts, and plugins reside alongside the executable.
