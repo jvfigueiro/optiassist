@@ -234,6 +234,33 @@ namespace OptiAssist
             {
                 new CustomShortcutItem
                 {
+                    Id = "default-toolbox",
+                    Title = "Toolbox",
+                    Icon = "🧰",
+                    TargetType = "Section",
+                    TargetValue = "toolbox",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-app-manager",
+                    Title = "App Manager",
+                    Icon = "📦",
+                    TargetType = "Section",
+                    TargetValue = "app-manager",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-run-post-install",
+                    Title = "Run Post-Install",
+                    Icon = "🚀",
+                    TargetType = "Section",
+                    TargetValue = "post-install-run",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
                     Id = "default-maintenance-folder",
                     Title = "Maintenance Folder",
                     Icon = "📁",
@@ -243,20 +270,56 @@ namespace OptiAssist
                 },
                 new CustomShortcutItem
                 {
-                    Id = "default-installers-folder",
-                    Title = "Installers Folder",
-                    Icon = "📂",
-                    TargetType = "Section",
-                    TargetValue = "installers-folder",
-                    Arguments = ""
-                },
-                new CustomShortcutItem
-                {
                     Id = "default-chris-titus",
                     Title = "Chris Titus WinUtil",
                     Icon = "🚀",
                     TargetType = "Section",
                     TargetValue = "chris-titus",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-memory-diag",
+                    Title = "Memory Diagnostic",
+                    Icon = "🧠",
+                    TargetType = "Section",
+                    TargetValue = "memory-diag",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-dev-mgmt",
+                    Title = "Device Manager",
+                    Icon = "🖥️",
+                    TargetType = "Section",
+                    TargetValue = "dev-mgmt",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-sys-dm",
+                    Title = "System Properties",
+                    Icon = "⚙️",
+                    TargetType = "Section",
+                    TargetValue = "sys-dm",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-reboot-uefi",
+                    Title = "Reboot to UEFI",
+                    Icon = "⚡",
+                    TargetType = "Section",
+                    TargetValue = "reboot-uefi",
+                    Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-installers-folder",
+                    Title = "Installers Folder",
+                    Icon = "📂",
+                    TargetType = "Section",
+                    TargetValue = "installers-folder",
                     Arguments = ""
                 }
             };

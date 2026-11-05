@@ -372,105 +372,37 @@
                                 Margin="0,0,0,8"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
-                                <TextBlock x:Name="txtCommonTasksTitle"
-                                           Text="⚡ Common Tasks"
-                                           FontWeight="Bold"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource BrushAccent}"
-                                           Margin="0,0,0,8"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <UniformGrid Columns="3" HorizontalAlignment="Stretch">
-                                    <Button x:Name="btnTaskToolbox"
-                                            Content="🧰 Toolbox"
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="txtCommonTasksTitle"
+                                               Grid.Column="0"
+                                               Text="⚡ Common Tasks"
+                                               FontWeight="Bold"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource BrushAccent}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Button x:Name="btnCustomizeCommonTasks"
+                                            Grid.Column="1"
+                                            Content="⚙️ Customize"
                                             Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open Toolbox custom actions and tools"
-                                            Click="BtnTaskToolbox_Click"/>
-                                    <Button x:Name="btnTaskPostInstall"
-                                            Content="📦 App Manager"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Go to application and installer manager"
-                                            Click="BtnTaskPostInstall_Click"/>
-                                    <Button x:Name="btnRunPostInstallTask"
-                                            Content="🚀 Run Post-Install"
-                                            Style="{StaticResource BtnAccent}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open App Manager and install all selected applications"
-                                            Click="BtnRunPostInstallTask_Click"/>
-                                    <Button x:Name="btnTaskMemoryDiag"
-                                            Content="🧠 Memory Diagnostic"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Run Windows Memory Diagnostic (mdsched.exe)"
-                                            Click="BtnMemoryDiag_Click"/>
-                                    <Button x:Name="btnTaskDevMgmt"
-                                            Content="🖥️ Device Manager"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open Device Manager (devmgmt.msc)"
-                                            Click="BtnDevMgmt_Click"/>
-                                    <Button x:Name="btnTaskSysDm"
-                                            Content="⚙️ System Properties"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Open System Properties (sysdm.cpl)"
-                                            Click="BtnSysDm_Click"/>
-                                    <Button x:Name="btnRebootBios"
-                                            Content="⚡ Reboot to UEFI"
-                                            Style="{StaticResource BtnDanger}"
-                                            Height="34" Margin="3" FontSize="11"
-                                            ToolTip="Restart computer directly into BIOS / UEFI"
-                                            Click="BtnRebootBios_Click"/>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Custom Shortcuts Section -->
-                        <Border Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0,0,0,8"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel>
-                                <TextBlock x:Name="txtCustomShortcutsTitle"
-                                           Text="⭐ Custom Shortcuts"
-                                           FontWeight="Bold"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource BrushAccent}"
-                                           Margin="0,0,0,8"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock x:Name="txtCustomShortcutsEmpty"
-                                           Text="No custom shortcuts created yet. Click '+ Add Shortcut' to pin app modules or your favorite tools."
+                                            Height="24"
+                                            Padding="10,0"
+                                            FontSize="10.5"
+                                            ToolTip="Customize shortcuts, add new tools, reorganize or remove tasks"
+                                            Click="BtnCustomizeCommonTasks_Click"/>
+                                </Grid>
+                                <TextBlock x:Name="txtCommonTasksEmpty"
+                                           Text="No common tasks configured. Click 'Customize' to add or restore default tasks."
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextMuted}"
                                            Margin="2,2,0,6"
-                                           TextWrapping="Wrap"/>
-                                <UniformGrid x:Name="ugCustomShortcuts"
-                                             Columns="3"
-                                             HorizontalAlignment="Stretch"
-                                             Visibility="Collapsed"/>
-                                <StackPanel Orientation="Horizontal"
-                                            HorizontalAlignment="Left"
-                                            Margin="3,8,0,0">
-                                    <Button x:Name="btnAddCustomShortcut"
-                                            Content="➕ Add Shortcut"
-                                            Style="{StaticResource BtnAccent}"
-                                            Height="26"
-                                            Padding="10,0"
-                                            FontSize="10.5"
-                                            Margin="0,0,6,0"
-                                            Click="BtnAddCustomShortcut_Click"/>
-                                    <Button x:Name="btnEditCustomShortcuts"
-                                            Content="✏️ Edit / Remove"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="26"
-                                            Padding="10,0"
-                                            FontSize="10.5"
-                                            Click="BtnEditCustomShortcuts_Click"/>
-                                </StackPanel>
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed"/>
+                                <UniformGrid x:Name="ugCommonTasks" Columns="3" HorizontalAlignment="Stretch"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
