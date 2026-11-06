@@ -78,5 +78,13 @@
     "TargetType": "Section",
     "TargetValue": "installers-folder",
     "Arguments": ""
+  },
+  {
+    "Id": "default-toggle-theme",
+    "Title": "Toggle Theme",
+    "Icon": "🌓",
+    "TargetType": "Section",
+    "TargetValue": "toggle-theme",
+    "Arguments": ""
   }
 ]

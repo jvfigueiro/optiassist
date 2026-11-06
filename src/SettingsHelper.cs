@@ -336,6 +336,15 @@ namespace OptiAssist
                     TargetType = "Section",
                     TargetValue = "installers-folder",
                     Arguments = ""
+                },
+                new CustomShortcutItem
+                {
+                    Id = "default-toggle-theme",
+                    Title = "Toggle Theme",
+                    Icon = "🌓",
+                    TargetType = "Section",
+                    TargetValue = "toggle-theme",
+                    Arguments = ""
                 }
             };
         }

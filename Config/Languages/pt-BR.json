@@ -10,7 +10,11 @@
   "Nav_Terminal": "📜  Logs",
   "Nav_Settings": "⚙️  Configurações",
   "Nav_About": "ℹ️  Sobre o aplicativo",
+  "Nav_Toolbox": "Toolbox",
+  "Nav_AppManager": "Gerenciador de Apps",
+  "Nav_SystemCleaner": "Limpeza do Sistema",
   "Nav_StartupManager": "Gerenciador de Inicialização",
+  "Nav_MaintenanceReport": "Registro de Manutenção",
   "Dashboard_Title": "Bem vindo ao OptiAssist!",
   "Dashboard_Subtitle": "A ferramenta suprema para manter seu equipamento em ordem",
   "Card_Hardware_Title": "🧠 Informações do hardware",
@@ -206,6 +210,8 @@
   "Btn_AboutLicense": "⚖️ Licença",
   "Tooltip_AboutLicense": "Visualizar aviso de licença GNU GPLv3",
   "LicenseWin_Title": "OptiAssist - Licença do Aplicativo (GNU GPLv3)",
+  "About_License_Body": "Este programa é um software livre: você pode redistribuí-lo e/ou modificá-lo sob os termos da Licença Pública Geral GNU (GNU General Public License) conforme publicada pela Free Software Foundation, seja a versão 3 da Licença ou (a seu critério) qualquer versão posterior.\n\nEste programa é distribuído na esperança de que seja útil, mas SEM QUALQUER GARANTIA; sem mesmo a garantia implícita de COMERCIALIZAÇÃO ou ADEQUAÇÃO A UM PROPÓSITO ESPECÍFICO. Consulte a Licença Pública Geral GNU para mais detalhes.\n\nVocê deve ter recebido uma cópia da Licença Pública Geral GNU junto com este programa. Se não, consulte <https://www.gnu.org/licenses/>.",
+  "Btn_Close": "✕ Fechar",
   "InstallWin_Title": "📥 Instalar o OptiAssist",
   "InstallWin_Subtitle": "Revise os termos de licença, escolha o modo de instalação e selecione o diretório de destino",
   "InstallWin_Label_Language": "🌐 Idioma:",
@@ -290,5 +296,7 @@
   "Module_Toolbox_Required": "Toolbox (Obrigatório / Núcleo do Sistema)",
   "InstallWin_Modules_Title": "4. Seleção de Módulos (Add-ons / Plugins)",
   "InstallWin_Modules_Subtitle": "Escolha os módulos a serem incluídos na instalação de destino.",
-  "Settings_LangAuthor": "Autor da tradução:"
+  "Settings_LangAuthor": "Autor da tradução:",
+  "Btn_InstallOnPC": "Instalar no PC",
+  "Tooltip_InstallOnPC": "Instala o OptiAssist no computador, criando atalhos na Área de Trabalho e Menu Iniciar"
 }

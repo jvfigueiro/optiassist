@@ -1268,6 +1268,12 @@ namespace OptiAssist
                 case "maintenance-report":
                     defaultIcon = "📋";
                     return LocalizationHelper.Get("Nav_MaintenanceReport", "Maintenance Report");
+                case "toggle-theme":
+                    defaultIcon = _isDarkMode ? "☀️" : "🌙";
+                    return _isDarkMode ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
+                case "install-pc":
+                    defaultIcon = "📥";
+                    return LocalizationHelper.Get("Btn_InstallOnPC", "Install on PC");
             }
 
             if (_addons != null)
@@ -1338,6 +1344,10 @@ namespace OptiAssist
                         return LocalizationHelper.Get("Tooltip_TaskInstallersFolder", "Open Installers folder");
                     case "chris-titus":
                         return LocalizationHelper.Get("Tooltip_TaskChrisTitus", "Run Chris Titus WinUtil in background");
+                    case "toggle-theme":
+                        return LocalizationHelper.Get("Tooltip_ToggleTheme", "Toggle between dark mode and light mode");
+                    case "install-pc":
+                        return LocalizationHelper.Get("Tooltip_InstallOnPC", "Install OptiAssist on this computer with Desktop and Start Menu shortcuts");
                 }
                 return string.Format("{0}: {1}", LocalizationHelper.Get("Shortcut_Type_Section", "App Section"), FormatShortcutButtonContent(item));
             }
@@ -1353,62 +1363,142 @@ namespace OptiAssist
 
             ugCommonTasks.Children.Clear();
 
-            if (_customShortcuts == null || _customShortcuts.Count == 0)
+            // 1. Render configured custom shortcuts
+            if (_customShortcuts != null)
             {
-                txtCommonTasksEmpty.Visibility = Visibility.Visible;
-                ugCommonTasks.Visibility = Visibility.Collapsed;
-                return;
+                foreach (CustomShortcutItem item in _customShortcuts)
+                {
+                    // If this item is 'install-pc' and the app is already installed on the PC, skip it
+                    if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(item.TargetValue, "install-pc", StringComparison.OrdinalIgnoreCase) &&
+                        AppDeploymentHelper.IsAppInstalled())
+                    {
+                        continue;
+                    }
+
+                    CustomShortcutItem currentItem = item;
+                    string labelText = FormatShortcutButtonContent(currentItem);
+                    string tooltipText = GetCommonTaskTooltip(currentItem);
+
+                    Style btnStyle = (Style)FindResource("BtnDefault");
+                    if (string.Equals(currentItem.TargetType, "Section", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string sec = (currentItem.TargetValue ?? "").Trim().ToLowerInvariant();
+                        if (sec == "post-install-run" || sec == "install-pc")
+                        {
+                            btnStyle = (Style)FindResource("BtnAccent");
+                        }
+                        else if (sec == "reboot-uefi")
+                        {
+                            btnStyle = (Style)FindResource("BtnDanger");
+                        }
+                    }
+
+                    Button btn = new Button
+                    {
+                        Content = labelText,
+                        Style = btnStyle,
+                        Height = 34,
+                        Margin = new Thickness(3),
+                        FontSize = 11,
+                        ToolTip = tooltipText
+                    };
+                    btn.Click += (s, e) => ExecuteCommonTask(currentItem, btn);
+
+                    ContextMenu cm = new ContextMenu();
+                    MenuItem miCustomize = new MenuItem { Header = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize...") };
+                    miCustomize.Click += (s, e) => ShowCustomizeCommonTasksDialog();
+                    MenuItem miEdit = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Edit", "✏️ Edit Task") };
+                    miEdit.Click += (s, e) => ShowCustomShortcutDialog(currentItem);
+                    MenuItem miRemove = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Remove", "🗑️ Remove Task") };
+                    miRemove.Click += (s, e) => RemoveCommonTask(currentItem);
+
+                    cm.Items.Add(miCustomize);
+                    cm.Items.Add(new Separator());
+                    cm.Items.Add(miEdit);
+                    cm.Items.Add(miRemove);
+                    btn.ContextMenu = cm;
+
+                    ugCommonTasks.Children.Add(btn);
+                }
             }
 
-            txtCommonTasksEmpty.Visibility = Visibility.Collapsed;
-            ugCommonTasks.Visibility = Visibility.Visible;
+            // 2. Add Theme Toggle button (if not already added as a custom shortcut)
+            bool hasThemeToggle = _customShortcuts != null && _customShortcuts.Exists(x =>
+                string.Equals(x.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.TargetValue, "toggle-theme", StringComparison.OrdinalIgnoreCase));
 
-            foreach (CustomShortcutItem item in _customShortcuts)
+            if (!hasThemeToggle)
             {
-                CustomShortcutItem currentItem = item;
-                string labelText = FormatShortcutButtonContent(currentItem);
-                string tooltipText = GetCommonTaskTooltip(currentItem);
-
-                Style btnStyle = (Style)FindResource("BtnDefault");
-                if (string.Equals(currentItem.TargetType, "Section", StringComparison.OrdinalIgnoreCase))
+                string themeIcon = _isDarkMode ? "☀️" : "🌙";
+                string themeTitle = _isDarkMode ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
+                Button btnTheme = new Button
                 {
-                    string sec = (currentItem.TargetValue ?? "").Trim().ToLowerInvariant();
-                    if (sec == "post-install-run")
-                    {
-                        btnStyle = (Style)FindResource("BtnAccent");
-                    }
-                    else if (sec == "reboot-uefi")
-                    {
-                        btnStyle = (Style)FindResource("BtnDanger");
-                    }
-                }
-
-                Button btn = new Button
-                {
-                    Content = labelText,
-                    Style = btnStyle,
+                    Content = string.Format("{0} {1}", themeIcon, themeTitle),
+                    Style = (Style)FindResource("BtnDefault"),
                     Height = 34,
                     Margin = new Thickness(3),
                     FontSize = 11,
-                    ToolTip = tooltipText
+                    ToolTip = LocalizationHelper.Get("Tooltip_ToggleTheme", "Toggle between dark mode and light mode")
                 };
-                btn.Click += (s, e) => ExecuteCommonTask(currentItem, btn);
+                btnTheme.Click += (s, e) =>
+                {
+                    BtnToggleTheme_Click(this, new RoutedEventArgs());
+                    RenderCommonTasks();
+                };
 
-                ContextMenu cm = new ContextMenu();
-                MenuItem miCustomize = new MenuItem { Header = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize...") };
-                miCustomize.Click += (s, e) => ShowCustomizeCommonTasksDialog();
-                MenuItem miEdit = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Edit", "✏️ Edit Task") };
-                miEdit.Click += (s, e) => ShowCustomShortcutDialog(currentItem);
-                MenuItem miRemove = new MenuItem { Header = LocalizationHelper.Get("Shortcut_Menu_Remove", "🗑️ Remove Task") };
-                miRemove.Click += (s, e) => RemoveCommonTask(currentItem);
+                ContextMenu cmTheme = new ContextMenu();
+                MenuItem miCustomizeTheme = new MenuItem { Header = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize...") };
+                miCustomizeTheme.Click += (s, e) => ShowCustomizeCommonTasksDialog();
+                cmTheme.Items.Add(miCustomizeTheme);
+                btnTheme.ContextMenu = cmTheme;
 
-                cm.Items.Add(miCustomize);
-                cm.Items.Add(new Separator());
-                cm.Items.Add(miEdit);
-                cm.Items.Add(miRemove);
-                btn.ContextMenu = cm;
+                ugCommonTasks.Children.Add(btnTheme);
+            }
 
-                ugCommonTasks.Children.Add(btn);
+            // 3. Add "Install on PC" button IF application detects that it is not installed on this system
+            if (!AppDeploymentHelper.IsAppInstalled())
+            {
+                bool hasInstallBtn = _customShortcuts != null && _customShortcuts.Exists(x =>
+                    string.Equals(x.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.TargetValue, "install-pc", StringComparison.OrdinalIgnoreCase));
+
+                if (!hasInstallBtn)
+                {
+                    Button btnInstall = new Button
+                    {
+                        Content = "📥 " + LocalizationHelper.Get("Btn_InstallOnPC", "Install on PC"),
+                        Style = (Style)FindResource("BtnAccent"),
+                        Height = 34,
+                        Margin = new Thickness(3),
+                        FontSize = 11,
+                        ToolTip = LocalizationHelper.Get("Tooltip_InstallOnPC", "Install OptiAssist on this computer with Desktop and Start Menu shortcuts")
+                    };
+                    btnInstall.Click += (s, e) =>
+                    {
+                        AppDeploymentHelper.ShowInstallDialog(this, Log);
+                        RenderCommonTasks();
+                    };
+
+                    ContextMenu cmInstall = new ContextMenu();
+                    MenuItem miCustomizeInst = new MenuItem { Header = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize...") };
+                    miCustomizeInst.Click += (s, e) => ShowCustomizeCommonTasksDialog();
+                    cmInstall.Items.Add(miCustomizeInst);
+                    btnInstall.ContextMenu = cmInstall;
+
+                    ugCommonTasks.Children.Add(btnInstall);
+                }
+            }
+
+            if (ugCommonTasks.Children.Count == 0)
+            {
+                txtCommonTasksEmpty.Visibility = Visibility.Visible;
+                ugCommonTasks.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                txtCommonTasksEmpty.Visibility = Visibility.Collapsed;
+                ugCommonTasks.Visibility = Visibility.Visible;
             }
         }
 
@@ -1513,6 +1603,18 @@ namespace OptiAssist
                         rbNavAbout.IsChecked = true;
                         NavButton_Click(rbNavAbout, new RoutedEventArgs());
                     }
+                    return;
+                }
+                if (sec == "toggle-theme")
+                {
+                    BtnToggleTheme_Click(this, new RoutedEventArgs());
+                    RenderCommonTasks();
+                    return;
+                }
+                if (sec == "install-pc")
+                {
+                    AppDeploymentHelper.ShowInstallDialog(this, Log);
+                    RenderCommonTasks();
                     return;
                 }
 
@@ -1798,6 +1900,7 @@ namespace OptiAssist
                 "toolbox", "app-manager", "post-install-run",
                 "maintenance-folder", "installers-folder", "chris-titus",
                 "memory-diag", "dev-mgmt", "sys-dm", "reboot-uefi",
+                "toggle-theme", "install-pc",
                 "system-cleaner", "startup-manager", "maintenance-report",
                 "windows-tools", "logs", "settings", "about"
             };
@@ -3290,6 +3393,8 @@ namespace OptiAssist
             {
                 _externalLogWindow.ApplyTheme(isDark);
             }
+
+            RenderCommonTasks();
         }
 
         private void SetColorResource(string key, string hex)

@@ -10,7 +10,11 @@
   "Nav_Terminal": "📜  Logs",
   "Nav_Settings": "⚙️  Settings",
   "Nav_About": "ℹ️  About",
+  "Nav_Toolbox": "Toolbox",
+  "Nav_AppManager": "App Manager",
+  "Nav_SystemCleaner": "System Cleaner",
   "Nav_StartupManager": "Startup Manager",
+  "Nav_MaintenanceReport": "Maintenance Report",
   "Dashboard_Title": "Welcome to OptiAssist!",
   "Dashboard_Subtitle": "The ultimate tool to keep your system in order",
   "Card_Hardware_Title": "🧠 Hardware Information",
@@ -206,6 +210,8 @@
   "Btn_AboutLicense": "⚖️ License",
   "Tooltip_AboutLicense": "View GNU GPLv3 license notice",
   "LicenseWin_Title": "OptiAssist - Application License (GNU GPLv3)",
+  "About_License_Body": "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.",
+  "Btn_Close": "✕ Close",
   "InstallWin_Title": "📥 Install OptiAssist",
   "InstallWin_Subtitle": "Choose installation mode, target directory, and review license terms and conditions of use",
   "InstallWin_Mode_Title": "1. Installation Mode",
@@ -289,5 +295,7 @@
   "Module_Toolbox_Required": "Toolbox (Mandatory Core Utility)",
   "InstallWin_Modules_Title": "4. Module Selection (Add-ons / Plugins)",
   "InstallWin_Modules_Subtitle": "Choose which add-on modules to deploy to the destination installation.",
-  "Settings_LangAuthor": "Translator:"
+  "Settings_LangAuthor": "Translator:",
+  "Btn_InstallOnPC": "Install on PC",
+  "Tooltip_InstallOnPC": "Install OptiAssist on this computer with Desktop and Start Menu shortcuts"
 }

@@ -356,6 +356,20 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License 
 along with this program. If not, see <https://www.gnu.org/licenses/>.";
 
+        public static string GetGplNoticeText()
+        {
+            return LocalizationHelper.Get("About_License_Body", GplLicenseNoticeText);
+        }
+
+        public static string GetFullTermsAndConditionsText()
+        {
+            string notice = GetGplNoticeText();
+            string terms = LocalizationHelper.Get("InstallWin_Terms_Conditions",
+@"CONDITIONS OF USE:
+OptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+            return notice + "\r\n\r\n" + terms;
+        }
+
         public static string GetDefaultInstallDirectory()
         {
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OptiAssist");
@@ -554,7 +568,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             TextBlock tbLicense = new TextBlock
             {
-                Text = LocalizationHelper.Get("About_License_Body", GplLicenseNoticeText),
+                Text = GetGplNoticeText(),
                 TextWrapping = TextWrapping.Wrap,
                 FontFamily = new FontFamily("Consolas, Lucida Console, Segoe UI"),
                 FontSize = 11.5,
@@ -704,9 +718,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
             licStack.Children.Add(lblLicTitle);
 
-            string fullTerms = GplLicenseNoticeText + "\r\n\r\n" +
-                LocalizationHelper.Get("InstallWin_Terms_Conditions",
-                "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+            string fullTerms = GetFullTermsAndConditionsText();
 
             TextBox txtLicenseTerms = new TextBox
             {
@@ -1120,9 +1132,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 tbSub.Text = LocalizationHelper.Get("InstallWin_Subtitle", "Review license terms, choose installation mode, and select target directory");
                 lblLang.Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:");
                 lblLicTitle.Text = LocalizationHelper.Get("InstallWin_License_Title", "1. License Terms & Conditions of Use (GNU GPLv3)");
-                txtLicenseTerms.Text = GplLicenseNoticeText + "\r\n\r\n" +
-                    LocalizationHelper.Get("InstallWin_Terms_Conditions",
-                    "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+                txtLicenseTerms.Text = GetFullTermsAndConditionsText();
                 chkAcceptLicense.Content = LocalizationHelper.Get("InstallWin_Chk_AcceptLicense", "I have read and agree to the License Terms (GNU GPLv3) and Conditions of Use");
                 lblModeTitle.Text = LocalizationHelper.Get("InstallWin_Mode_Title", "2. Installation Mode");
                 tbNormalHead.Text = LocalizationHelper.Get("InstallWin_Mode_Normal", "🖥️ Standard Installation (Recommended)");
@@ -1132,6 +1142,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 lblModTitle.Text = LocalizationHelper.Get("InstallWin_Modules_Title", "3. Module Selection (Add-ons / Plugins)");
                 lblModSub.Text = LocalizationHelper.Get("InstallWin_Modules_Subtitle", "Choose which add-on modules to deploy to the destination. Toolbox is mandatory.");
                 chkToolbox.Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)");
+                foreach (var pair in addonCheckboxes)
+                {
+                    if (!pair.Key.Equals("Toolbox", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pair.Value.Content = GetFriendlyModuleName(pair.Key);
+                    }
+                }
                 lblDirTitle.Text = LocalizationHelper.Get("InstallWin_Dir_Title", "4. Target Directory & Options");
                 btnBrowseDir.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
                 chkShortcuts.Content = LocalizationHelper.Get("InstallWin_Chk_Shortcuts", "Create Desktop and Start Menu shortcuts & register in Control Panel");
@@ -1753,6 +1770,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
 
         public static bool ShowWelcomeWizard(Window owner, AppSettings settings, Action<string> log = null)
         {
+            string curLang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : LocalizationHelper.CurrentLanguage;
+            LocalizationHelper.LoadLanguage(curLang);
+
             Window win = new Window
             {
                 Title = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist"),
@@ -1820,7 +1840,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 VerticalContentAlignment = VerticalAlignment.Center
             };
             var availableLangs = LocalizationHelper.GetAvailableLanguageItems();
-            string curLang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : LocalizationHelper.CurrentLanguage;
             int selIdx = 0;
             for (int i = 0; i < availableLangs.Count; i++)
             {
@@ -1896,9 +1915,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
             licStack.Children.Add(lblLicTitle);
 
-            string fullTerms = GplLicenseNoticeText + "\r\n\r\n" +
-                LocalizationHelper.Get("InstallWin_Terms_Conditions",
-                "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+            string fullTerms = GetFullTermsAndConditionsText();
 
             TextBox txtTerms = new TextBox
             {
@@ -2186,9 +2203,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 lblWarnTitle.Text = LocalizationHelper.Get("Welcome_Notice_Title", "1. Safety Warning & System Operation Risks");
                 tbWarnText.Text = LocalizationHelper.Get("Welcome_Notice_Text", "OptiAssist is a powerful toolkit designed for IT professionals and power users that performs deep system administrative operations (including system integrity checks, DISM/SFC repairs, system cleaning, and startup adjustments). Administrative commands modify low-level Windows settings. Ensure you review and understand actions prior to executing them.");
                 lblLicTitle.Text = LocalizationHelper.Get("Welcome_License_Title", "2. Terms of Use & Software License (GNU GPLv3)");
-                txtTerms.Text = GplLicenseNoticeText + "\r\n\r\n" +
-                    LocalizationHelper.Get("InstallWin_Terms_Conditions",
-                    "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+                txtTerms.Text = GetFullTermsAndConditionsText();
                 chkAccept.Content = LocalizationHelper.Get("Welcome_License_Chk", "I have read and agree to the Terms of Use and Software License (GNU GPLv3)");
                 lblModeTitle.Text = LocalizationHelper.Get("Welcome_Mode_Title", "3. How would you like to use OptiAssist?");
                 tbHeadRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)");
@@ -2200,6 +2215,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 lblModTitle.Text = LocalizationHelper.Get("Welcome_Modules_Title", "4. Module Selection (Add-ons / Plugins)");
                 lblModSub.Text = LocalizationHelper.Get("Welcome_Modules_Subtitle", "Choose which add-on modules to include. The Toolbox module is mandatory as the system core.");
                 chkToolbox.Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)");
+                foreach (var pair in addonCheckboxes)
+                {
+                    if (!pair.Key.Equals("Toolbox", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pair.Value.Content = GetFriendlyModuleName(pair.Key);
+                    }
+                }
                 btnBrowseUsb.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
                 btnDecline.Content = LocalizationHelper.Get("Welcome_Btn_Decline", "Decline & Exit");
                 btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch");
