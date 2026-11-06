@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Input;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace OptiAssist
@@ -402,7 +403,31 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             }
         }
 
-        public static void CreateUsbAutorun(string targetDir, Action<string> log = null)
+        public static string NormalizeDirectoryPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+            try
+            {
+                string trimmed = path.Trim().Trim('"', '\'');
+                if (trimmed.Length == 2 && trimmed[1] == ':')
+                {
+                    trimmed += "\\";
+                }
+                string full = Path.GetFullPath(trimmed);
+                string root = Path.GetPathRoot(full);
+                if (string.Equals(full, root, StringComparison.OrdinalIgnoreCase))
+                {
+                    return root.TrimEnd('\\', '/') + "\\";
+                }
+                return full.TrimEnd('\\', '/');
+            }
+            catch
+            {
+                return path.Trim().TrimEnd('\\', '/');
+            }
+        }
+
+        public static void CreateUsbAutorun(string targetDir, Action<string> log = null, bool showDialog = true)
         {
             try
             {
@@ -411,11 +436,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
 
                 if (string.IsNullOrEmpty(driveRoot))
                 {
-                    MessageBox.Show(
-                        LocalizationHelper.Get("Msg_AutorunRootError", "Could not identify the root directory of the current drive."),
-                        "AutoRun",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    if (showDialog)
+                    {
+                        MessageBox.Show(
+                            LocalizationHelper.Get("Msg_AutorunRootError", "Could not identify the root directory of the current drive."),
+                            "AutoRun",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
                     return;
                 }
 
@@ -460,20 +488,26 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
 
                 if (log != null) log(string.Format("[AUTORUN] File created successfully at: {0} (pointing to {1})", autorunPath, relativeExePath));
 
-                MessageBox.Show(
-                    string.Format(LocalizationHelper.Get("Msg_AutorunCreated", "autorun.inf file created successfully at drive root ({0})!\n\nConfigured target: {1}\n\nNote: On modern Windows 10/11 systems, USB AutoRun execution is restricted by Microsoft for security, but the custom drive icon and label will be applied when reconnecting the USB drive."), driveRoot, relativeExePath),
-                    "USB AutoRun Created",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                if (showDialog)
+                {
+                    MessageBox.Show(
+                        string.Format(LocalizationHelper.Get("Msg_AutorunCreated", "autorun.inf file created successfully at drive root ({0})!\n\nConfigured target: {1}\n\nNote: On modern Windows 10/11 systems, USB AutoRun execution is restricted by Microsoft for security, but the custom drive icon and label will be applied when reconnecting the USB drive."), driveRoot, relativeExePath),
+                        "USB AutoRun Created",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
             }
             catch (Exception ex)
             {
                 if (log != null) log(string.Format("[AUTORUN ERROR] Failed to create autorun.inf: {0}", ex.Message));
-                MessageBox.Show(
-                    string.Format(LocalizationHelper.Get("Msg_AutorunError", "Failed to create autorun.inf: {0}"), ex.Message),
-                    "AutoRun",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                if (showDialog)
+                {
+                    MessageBox.Show(
+                        string.Format(LocalizationHelper.Get("Msg_AutorunError", "Failed to create autorun.inf: {0}"), ex.Message),
+                        "AutoRun",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
             }
         }
 
@@ -1108,7 +1142,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now");
             };
 
-            btnInstallNow.Click += (s, e) =>
+            btnInstallNow.Click += async (s, e) =>
             {
                 if (chkAcceptLicense.IsChecked != true)
                 {
@@ -1141,10 +1175,50 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                     }
                 }
 
-                if (ExecuteInstallation(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, selectedMods, log))
+                btnInstallNow.IsEnabled = false;
+                btnCancel.IsEnabled = false;
+                btnCreateAutorun.IsEnabled = false;
+                btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_Installing", "⏳ Installing...");
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                bool installSuccess = false;
+                string errorMessage = null;
+
+                try
                 {
+                    installSuccess = await Task.Run(() =>
+                    {
+                        return ExecuteInstallationInternal(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, selectedMods, log, out errorMessage);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = ex.Message;
+                    installSuccess = false;
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                    btnInstallNow.IsEnabled = true;
+                    btnCancel.IsEnabled = true;
+                    btnCreateAutorun.IsEnabled = true;
+                    btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now");
+                }
+
+                if (installSuccess)
+                {
+                    string normTarget = NormalizeDirectoryPath(targetDir);
+                    string successMsg = isPortable
+                        ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), normTarget)
+                        : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), normTarget);
+
+                    MessageBox.Show(win, successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                     win.DialogResult = true;
                     win.Close();
+                }
+                else if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    MessageBox.Show(win, errorMessage, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             };
             rightBtns.Children.Add(btnInstallNow);
@@ -1165,16 +1239,47 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
 
         public static bool ExecuteInstallation(string targetDir, bool isPortable, bool createShortcutsAndRegistry, bool createAutorun, HashSet<string> selectedAddons, Action<string> log)
         {
+            string errorMsg;
+            bool result = ExecuteInstallationInternal(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, selectedAddons, log, out errorMsg);
+            if (!result && !string.IsNullOrEmpty(errorMsg))
+            {
+                MessageBox.Show(errorMsg, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            else if (result)
+            {
+                string normTarget = NormalizeDirectoryPath(targetDir);
+                string successMsg = isPortable
+                    ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), normTarget)
+                    : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), normTarget);
+                MessageBox.Show(successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            return result;
+        }
+
+        private static bool ExecuteInstallationInternal(
+            string targetDir,
+            bool isPortable,
+            bool createShortcutsAndRegistry,
+            bool createAutorun,
+            HashSet<string> selectedAddons,
+            Action<string> log,
+            out string errorMessage)
+        {
+            errorMessage = null;
             try
             {
-                string currentDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
-                targetDir = targetDir.TrimEnd('\\', '/');
+                string currentDir = NormalizeDirectoryPath(AppDomain.CurrentDomain.BaseDirectory);
+                string normalizedTarget = NormalizeDirectoryPath(targetDir);
 
-                if (string.Equals(targetDir, currentDir, StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrEmpty(normalizedTarget))
                 {
-                    MessageBox.Show(
-                        LocalizationHelper.Get("Msg_AlreadyInstalled", "OptiAssist is already running from the selected directory:\n" + targetDir),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    errorMessage = LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory.");
+                    return false;
+                }
+
+                if (string.Equals(normalizedTarget, currentDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    errorMessage = LocalizationHelper.Get("Msg_AlreadyInstalled", "OptiAssist is already running from the selected directory:\n" + normalizedTarget);
                     return false;
                 }
 
@@ -1185,22 +1290,25 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                         "Toolbox", "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport"
                     };
                 }
-                // Toolbox is MANDATORY core and must always be included
                 selectedAddons.Add("Toolbox");
 
-                if (log != null) log(string.Format("[INSTALL] Starting {0} installation to: {1}", isPortable ? "Portable" : "Standard", targetDir));
-                if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
+                if (log != null) log(string.Format("[INSTALL] Starting {0} installation from '{1}' to '{2}'", isPortable ? "Portable" : "Standard", currentDir, normalizedTarget));
 
-                CopyDirectoryRecursive(currentDir, targetDir, selectedAddons, log);
+                if (!Directory.Exists(normalizedTarget))
+                {
+                    Directory.CreateDirectory(normalizedTarget);
+                }
 
-                // Set freshstart: false in target's settings.json
+                // Deploy application payload
+                DeployApplicationFiles(currentDir, normalizedTarget, selectedAddons, log);
+
+                // Configure target settings.json (freshstart: "false")
                 try
                 {
-                    string targetConfigDir = Path.Combine(targetDir, "Config");
+                    string targetConfigDir = Path.Combine(normalizedTarget, "Config");
                     if (!Directory.Exists(targetConfigDir)) Directory.CreateDirectory(targetConfigDir);
                     string targetSettingsFile = Path.Combine(targetConfigDir, "settings.json");
-                    AppSettings targetSettings = SettingsHelper.Load();
-                    targetSettings.FreshStart = "false";
+
                     if (File.Exists(targetSettingsFile))
                     {
                         string txt = File.ReadAllText(targetSettingsFile, Encoding.UTF8);
@@ -1216,49 +1324,53 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                     }
                     else
                     {
-                        SettingsHelper.Save(targetSettings);
+                        AppSettings newSt = SettingsHelper.Load();
+                        newSt.FreshStart = "false";
+                        SettingsHelper.Save(newSt, targetSettingsFile);
                     }
                 }
-                catch { }
+                catch (Exception exSettings)
+                {
+                    if (log != null) log("[INSTALL WARNING] Could not update target settings: " + exSettings.Message);
+                }
 
-                string targetExe = Path.Combine(targetDir, "OptiAssist.exe");
+                string targetExe = Path.Combine(normalizedTarget, "OptiAssist.exe");
 
                 if (createShortcutsAndRegistry)
                 {
-                    // Start Menu Shortcut
-                    string startMenuDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms);
-                    string startMenuLnk = Path.Combine(startMenuDir, "OptiAssist.lnk");
-                    CreateShortcut(startMenuLnk, targetExe, targetDir, "OptiAssist - System Optimization and Maintenance Assistant");
+                    try
+                    {
+                        // Start Menu Shortcut
+                        string startMenuDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms);
+                        string startMenuLnk = Path.Combine(startMenuDir, "OptiAssist.lnk");
+                        CreateShortcut(startMenuLnk, targetExe, normalizedTarget, "OptiAssist - System Optimization and Maintenance Assistant");
 
-                    // Desktop Shortcut
-                    string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
-                    string desktopLnk = Path.Combine(desktopDir, "OptiAssist.lnk");
-                    CreateShortcut(desktopLnk, targetExe, targetDir, "OptiAssist - System Optimization and Maintenance Assistant");
+                        // Desktop Shortcut
+                        string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
+                        string desktopLnk = Path.Combine(desktopDir, "OptiAssist.lnk");
+                        CreateShortcut(desktopLnk, targetExe, normalizedTarget, "OptiAssist - System Optimization and Maintenance Assistant");
 
-                    // Registry Registration in Control Panel (Uninstall)
-                    RegisterInUninstall(targetDir, targetExe);
+                        // Registry Registration in Control Panel (Uninstall)
+                        RegisterInUninstall(normalizedTarget, targetExe);
+                    }
+                    catch (Exception exSc)
+                    {
+                        if (log != null) log("[INSTALL WARNING] Could not create all shortcuts/registry: " + exSc.Message);
+                    }
                 }
 
                 if (createAutorun)
                 {
-                    CreateUsbAutorun(targetDir, log);
+                    CreateUsbAutorun(normalizedTarget, log, false);
                 }
 
-                if (log != null) log("[INSTALL] OptiAssist successfully deployed to " + targetDir);
-
-                string successMsg = isPortable
-                    ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), targetDir)
-                    : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), targetDir);
-
-                MessageBox.Show(successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (log != null) log("[INSTALL] OptiAssist successfully deployed to " + normalizedTarget);
                 return true;
             }
             catch (Exception ex)
             {
                 if (log != null) log("[INSTALL ERROR] " + ex.Message);
-                MessageBox.Show(
-                    string.Format(LocalizationHelper.Get("Msg_InstallError", "Failed to install OptiAssist: {0}"), ex.Message),
-                    "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                errorMessage = string.Format(LocalizationHelper.Get("Msg_InstallError", "Failed to install OptiAssist: {0}"), ex.Message);
                 return false;
             }
         }
@@ -1365,43 +1477,194 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             }
         }
 
-        private static void CopyDirectoryRecursive(string sourceDir, string targetDir, HashSet<string> selectedAddons, Action<string> log)
+        private static void DeployApplicationFiles(string sourceDir, string targetDir, HashSet<string> selectedAddons, Action<string> log)
         {
-            foreach (string file in Directory.GetFiles(sourceDir))
+            // 1. Root application files
+            string[] rootFilesToCopy = new string[]
             {
-                string fName = Path.GetFileName(file);
-                if (fName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) continue;
-                string dest = Path.Combine(targetDir, fName);
-                try { File.Copy(file, dest, true); } catch { }
+                "OptiAssist.exe",
+                "OptiAssist.exe.config",
+                "app.ico",
+                "app.png"
+            };
+
+            foreach (string fileName in rootFilesToCopy)
+            {
+                string srcFile = Path.Combine(sourceDir, fileName);
+                if (File.Exists(srcFile))
+                {
+                    string dstFile = Path.Combine(targetDir, fileName);
+                    try
+                    {
+                        File.Copy(srcFile, dstFile, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (log != null) log(string.Format("[INSTALL WARNING] Could not copy {0}: {1}", fileName, ex.Message));
+                    }
+                }
             }
 
-            string currentDirName = Path.GetFileName(sourceDir);
-            bool isAddonsParent = currentDirName.Equals("Addons", StringComparison.OrdinalIgnoreCase);
-
-            foreach (string sub in Directory.GetDirectories(sourceDir))
+            // Also copy any standalone root .dll files if any exist
+            try
             {
-                string dirName = Path.GetFileName(sub);
-                if (dirName.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
-                    dirName.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
-                    dirName.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-                    dirName.Equals("obj", StringComparison.OrdinalIgnoreCase))
+                foreach (string file in Directory.GetFiles(sourceDir, "*.dll"))
                 {
-                    continue;
+                    try
+                    {
+                        string fName = Path.GetFileName(file);
+                        File.Copy(file, Path.Combine(targetDir, fName), true);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+            // 2. Config directory
+            string srcConfigDir = Path.Combine(sourceDir, "Config");
+            string dstConfigDir = Path.Combine(targetDir, "Config");
+            if (!Directory.Exists(dstConfigDir)) Directory.CreateDirectory(dstConfigDir);
+
+            // Root Config files
+            string[] configFiles = new string[] { "custom_shortcuts.json", "settings.json" };
+            foreach (string cName in configFiles)
+            {
+                string srcC = Path.Combine(srcConfigDir, cName);
+                if (File.Exists(srcC))
+                {
+                    try { File.Copy(srcC, Path.Combine(dstConfigDir, cName), true); } catch { }
+                }
+            }
+
+            // Languages folder
+            string srcLangDir = Path.Combine(srcConfigDir, "Languages");
+            string dstLangDir = Path.Combine(dstConfigDir, "Languages");
+            if (Directory.Exists(srcLangDir))
+            {
+                if (!Directory.Exists(dstLangDir)) Directory.CreateDirectory(dstLangDir);
+                try
+                {
+                    foreach (string lFile in Directory.GetFiles(srcLangDir, "*.json"))
+                    {
+                        try
+                        {
+                            File.Copy(lFile, Path.Combine(dstLangDir, Path.GetFileName(lFile)), true);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+
+            // Addons folder
+            string srcAddonsDir = Path.Combine(srcConfigDir, "Addons");
+            string dstAddonsDir = Path.Combine(dstConfigDir, "Addons");
+            if (Directory.Exists(srcAddonsDir))
+            {
+                if (!Directory.Exists(dstAddonsDir)) Directory.CreateDirectory(dstAddonsDir);
+
+                string srcAddonsReadme = Path.Combine(srcAddonsDir, "README.md");
+                if (File.Exists(srcAddonsReadme))
+                {
+                    try { File.Copy(srcAddonsReadme, Path.Combine(dstAddonsDir, "README.md"), true); } catch { }
                 }
 
-                if (isAddonsParent && selectedAddons != null)
+                try
                 {
-                    bool isToolbox = dirName.Equals("Toolbox", StringComparison.OrdinalIgnoreCase);
-                    if (!isToolbox && !selectedAddons.Contains(dirName))
+                    foreach (string addonPath in Directory.GetDirectories(srcAddonsDir))
                     {
-                        if (log != null) log(string.Format("[INSTALL] Skipping unselected module: {0}", dirName));
-                        continue;
+                        string addonName = Path.GetFileName(addonPath);
+                        bool isToolbox = addonName.Equals("Toolbox", StringComparison.OrdinalIgnoreCase);
+
+                        if (!isToolbox && selectedAddons != null && !selectedAddons.Contains(addonName))
+                        {
+                            if (log != null) log(string.Format("[INSTALL] Skipping unselected module: {0}", addonName));
+                            continue;
+                        }
+
+                        string dstAddonPath = Path.Combine(dstAddonsDir, addonName);
+                        CopyDirectoryRecursiveSafe(addonPath, dstAddonPath, targetDir, log);
+                    }
+                }
+                catch { }
+            }
+
+            // 3. Auxiliary folders (Installers, Maintenance, Reports)
+            string[] auxFolders = new string[] { "Installers", "Maintenance", "Reports" };
+            foreach (string aux in auxFolders)
+            {
+                string dstAux = Path.Combine(targetDir, aux);
+                if (!Directory.Exists(dstAux)) Directory.CreateDirectory(dstAux);
+
+                string srcReadme = Path.Combine(sourceDir, aux, "README.txt");
+                if (File.Exists(srcReadme))
+                {
+                    try { File.Copy(srcReadme, Path.Combine(dstAux, "README.txt"), true); } catch { }
+                }
+            }
+        }
+
+        private static void CopyDirectoryRecursiveSafe(string sourceDir, string targetDir, string mainTargetRoot, Action<string> log)
+        {
+            try
+            {
+                if (!Directory.Exists(targetDir))
+                {
+                    Directory.CreateDirectory(targetDir);
+                }
+
+                string normMainTarget = string.IsNullOrEmpty(mainTargetRoot) ? string.Empty : NormalizeDirectoryPath(mainTargetRoot);
+
+                foreach (string file in Directory.GetFiles(sourceDir))
+                {
+                    try
+                    {
+                        string fName = Path.GetFileName(file);
+                        if (fName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) continue;
+                        string dest = Path.Combine(targetDir, fName);
+                        File.Copy(file, dest, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (log != null) log(string.Format("[INSTALL WARNING] Could not copy file '{0}': {1}", file, ex.Message));
                     }
                 }
 
-                string destSub = Path.Combine(targetDir, dirName);
-                if (!Directory.Exists(destSub)) Directory.CreateDirectory(destSub);
-                CopyDirectoryRecursive(sub, destSub, selectedAddons, log);
+                foreach (string sub in Directory.GetDirectories(sourceDir))
+                {
+                    try
+                    {
+                        string dirName = Path.GetFileName(sub);
+                        if (dirName.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals("$RECYCLE.BIN", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals("Recovery", StringComparison.OrdinalIgnoreCase) ||
+                            dirName.Equals("$WinREAgent", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        string normSub = NormalizeDirectoryPath(sub);
+                        if (!string.IsNullOrEmpty(normMainTarget) && normSub.StartsWith(normMainTarget, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        string destSub = Path.Combine(targetDir, dirName);
+                        CopyDirectoryRecursiveSafe(sub, destSub, mainTargetRoot, log);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (log != null) log(string.Format("[INSTALL WARNING] Could not process directory '{0}': {1}", sub, ex.Message));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (log != null) log(string.Format("[INSTALL WARNING] Skipping folder '{0}': {1}", sourceDir, ex.Message));
             }
         }
 
@@ -1943,7 +2206,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             };
 
             bool success = false;
-            btnContinue.Click += (s, e) =>
+            btnContinue.Click += async (s, e) =>
             {
                 if (chkAccept.IsChecked != true) return;
 
@@ -1977,41 +2240,69 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                     win.DialogResult = true;
                     win.Close();
                 }
-                else if (rbInstallPC.IsChecked == true)
+                else if (rbInstallPC.IsChecked == true || rbInstallUsb.IsChecked == true)
                 {
-                    string pcDir = GetDefaultInstallDirectory();
-                    if (ExecuteInstallation(pcDir, false, true, false, selectedMods, log))
+                    bool isPortable = (rbInstallUsb.IsChecked == true);
+                    string targetDir = isPortable ? txtUsbDir.Text.Trim() : GetDefaultInstallDirectory();
+
+                    if (string.IsNullOrWhiteSpace(targetDir))
                     {
-                        if (settings != null)
-                        {
-                            settings.FreshStart = "false";
-                            SettingsHelper.Save(settings);
-                        }
-                        success = true;
-                        win.DialogResult = true;
-                        win.Close();
-                    }
-                }
-                else if (rbInstallUsb.IsChecked == true)
-                {
-                    string usbDir = txtUsbDir.Text.Trim();
-                    if (string.IsNullOrWhiteSpace(usbDir))
-                    {
-                        MessageBox.Show(
+                        MessageBox.Show(win,
                             LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory."),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
-                    if (ExecuteInstallation(usbDir, true, false, true, selectedMods, log))
+
+                    btnContinue.IsEnabled = false;
+                    btnDecline.IsEnabled = false;
+                    btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Installing", "⏳ Installing...");
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    bool installSuccess = false;
+                    string errorMessage = null;
+
+                    try
+                    {
+                        installSuccess = await Task.Run(() =>
+                        {
+                            return ExecuteInstallationInternal(targetDir, isPortable, !isPortable, isPortable, selectedMods, log, out errorMessage);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        errorMessage = ex.Message;
+                        installSuccess = false;
+                    }
+                    finally
+                    {
+                        Mouse.OverrideCursor = null;
+                        btnContinue.IsEnabled = true;
+                        btnDecline.IsEnabled = true;
+                        btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch");
+                    }
+
+                    if (installSuccess)
                     {
                         if (settings != null)
                         {
                             settings.FreshStart = "false";
                             SettingsHelper.Save(settings);
                         }
+
+                        string normTarget = NormalizeDirectoryPath(targetDir);
+                        string successMsg = isPortable
+                            ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), normTarget)
+                            : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), normTarget);
+
+                        MessageBox.Show(win, successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+
                         success = true;
                         win.DialogResult = true;
                         win.Close();
+                    }
+                    else if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        MessageBox.Show(win, errorMessage, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
             };

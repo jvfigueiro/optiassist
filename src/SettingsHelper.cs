@@ -156,11 +156,11 @@ namespace OptiAssist
             return settings;
         }
 
-        public static void Save(AppSettings settings)
+        public static void Save(AppSettings settings, string customPath = null)
         {
             try
             {
-                string path = GetSettingsFilePath();
+                string path = string.IsNullOrEmpty(customPath) ? GetSettingsFilePath() : customPath;
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("{");
                 sb.AppendLine(string.Format("  \"CustomerName\": \"{0}\",", EscapeJson(settings.CustomerName)));
