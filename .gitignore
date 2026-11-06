@@ -22,3 +22,8 @@ Reports/*.txt
 # Execution and terminal logs
 *.log
 
+# Release packages and staging
+*.7z
+*.zip
+release_stage/
+
