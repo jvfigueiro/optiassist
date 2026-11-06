@@ -786,7 +786,104 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             modeCard.Child = modeStack;
             bodyStack.Children.Add(modeCard);
 
-            // Card 3: Target Directory & Options
+            // Card 3: Modular Add-ons Selection
+            Border modCard = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            modCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            modCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel modStack = new StackPanel();
+            TextBlock lblModTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("InstallWin_Modules_Title", "3. Module Selection (Add-ons / Plugins)"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblModTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            modStack.Children.Add(lblModTitle);
+
+            TextBlock lblModSub = new TextBlock
+            {
+                Text = LocalizationHelper.Get("InstallWin_Modules_Subtitle", "Choose which add-on modules to deploy to the destination. Toolbox is mandatory."),
+                FontSize = 10.5,
+                Margin = new Thickness(0, 0, 0, 8),
+                TextWrapping = TextWrapping.Wrap
+            };
+            lblModSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            modStack.Children.Add(lblModSub);
+
+            WrapPanel wpModules = new WrapPanel { Orientation = Orientation.Horizontal };
+            var addonCheckboxes = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
+
+            CheckBox chkToolbox = new CheckBox
+            {
+                Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)"),
+                IsChecked = true,
+                IsEnabled = false,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 2, 16, 6)
+            };
+            chkToolbox.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            wpModules.Children.Add(chkToolbox);
+            addonCheckboxes["Toolbox"] = chkToolbox;
+
+            string[] knownAddons = new string[] { "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport" };
+            foreach (var mod in knownAddons)
+            {
+                CheckBox chk = new CheckBox
+                {
+                    Content = GetFriendlyModuleName(mod),
+                    Tag = mod,
+                    IsChecked = true,
+                    FontSize = 11,
+                    Margin = new Thickness(0, 2, 16, 6),
+                    Cursor = Cursors.Hand
+                };
+                chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                wpModules.Children.Add(chk);
+                addonCheckboxes[mod] = chk;
+            }
+
+            try
+            {
+                string addonsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons");
+                if (Directory.Exists(addonsDir))
+                {
+                    foreach (var dir in Directory.GetDirectories(addonsDir))
+                    {
+                        string name = Path.GetFileName(dir);
+                        if (!addonCheckboxes.ContainsKey(name))
+                        {
+                            CheckBox chk = new CheckBox
+                            {
+                                Content = name,
+                                Tag = name,
+                                IsChecked = true,
+                                FontSize = 11,
+                                Margin = new Thickness(0, 2, 16, 6),
+                                Cursor = Cursors.Hand
+                            };
+                            chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                            wpModules.Children.Add(chk);
+                            addonCheckboxes[name] = chk;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            modStack.Children.Add(wpModules);
+            modCard.Child = modStack;
+            bodyStack.Children.Add(modCard);
+
+            // Card 4: Target Directory & Options
             Border dirCard = new Border
             {
                 BorderThickness = new Thickness(1),
@@ -800,7 +897,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             StackPanel dirStack = new StackPanel();
             TextBlock lblDirTitle = new TextBlock
             {
-                Text = LocalizationHelper.Get("InstallWin_Dir_Title", "3. Target Directory & Options"),
+                Text = LocalizationHelper.Get("InstallWin_Dir_Title", "4. Target Directory & Options"),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 8)
@@ -998,7 +1095,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 tbNormalDesc.Text = LocalizationHelper.Get("InstallWin_Mode_NormalDesc", "Installs OptiAssist on this computer, creates Desktop and Start Menu shortcuts, and registers an entry in Windows Control Panel (Programs and Features).");
                 tbPortableHead.Text = LocalizationHelper.Get("InstallWin_Mode_Portable", "💾 Portable Installation (USB Flash Drive / External Drive)");
                 tbPortableDesc.Text = LocalizationHelper.Get("InstallWin_Mode_PortableDesc", "Deploys a standalone portable copy of OptiAssist to any folder, partition, or USB drive without modifying the local Windows registry or Control Panel.");
-                lblDirTitle.Text = LocalizationHelper.Get("InstallWin_Dir_Title", "3. Target Directory & Options");
+                lblModTitle.Text = LocalizationHelper.Get("InstallWin_Modules_Title", "3. Module Selection (Add-ons / Plugins)");
+                lblModSub.Text = LocalizationHelper.Get("InstallWin_Modules_Subtitle", "Choose which add-on modules to deploy to the destination. Toolbox is mandatory.");
+                chkToolbox.Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)");
+                lblDirTitle.Text = LocalizationHelper.Get("InstallWin_Dir_Title", "4. Target Directory & Options");
                 btnBrowseDir.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
                 chkShortcuts.Content = LocalizationHelper.Get("InstallWin_Chk_Shortcuts", "Create Desktop and Start Menu shortcuts & register in Control Panel");
                 chkAutorunAfterInstall.Content = LocalizationHelper.Get("InstallWin_Chk_Autorun", "Create USB AutoRun (autorun.inf) on destination drive root");
@@ -1031,7 +1131,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 bool createShortcutsAndRegistry = !isPortable && (chkShortcuts.IsChecked == true);
                 bool createAutorun = (chkAutorunAfterInstall.IsChecked == true);
 
-                if (ExecuteInstallation(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, log))
+                var selectedMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                selectedMods.Add("Toolbox");
+                foreach (var pair in addonCheckboxes)
+                {
+                    if (pair.Value.IsChecked == true)
+                    {
+                        selectedMods.Add(pair.Key);
+                    }
+                }
+
+                if (ExecuteInstallation(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, selectedMods, log))
                 {
                     win.DialogResult = true;
                     win.Close();
@@ -1050,6 +1160,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
 
         public static bool ExecuteInstallation(string targetDir, bool isPortable, bool createShortcutsAndRegistry, bool createAutorun, Action<string> log = null)
         {
+            return ExecuteInstallation(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, null, log);
+        }
+
+        public static bool ExecuteInstallation(string targetDir, bool isPortable, bool createShortcutsAndRegistry, bool createAutorun, HashSet<string> selectedAddons, Action<string> log)
+        {
             try
             {
                 string currentDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
@@ -1063,10 +1178,48 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                     return false;
                 }
 
+                if (selectedAddons == null)
+                {
+                    selectedAddons = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        "Toolbox", "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport"
+                    };
+                }
+                // Toolbox is MANDATORY core and must always be included
+                selectedAddons.Add("Toolbox");
+
                 if (log != null) log(string.Format("[INSTALL] Starting {0} installation to: {1}", isPortable ? "Portable" : "Standard", targetDir));
                 if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
 
-                CopyDirectoryRecursive(currentDir, targetDir, log);
+                CopyDirectoryRecursive(currentDir, targetDir, selectedAddons, log);
+
+                // Set freshstart: false in target's settings.json
+                try
+                {
+                    string targetConfigDir = Path.Combine(targetDir, "Config");
+                    if (!Directory.Exists(targetConfigDir)) Directory.CreateDirectory(targetConfigDir);
+                    string targetSettingsFile = Path.Combine(targetConfigDir, "settings.json");
+                    AppSettings targetSettings = SettingsHelper.Load();
+                    targetSettings.FreshStart = "false";
+                    if (File.Exists(targetSettingsFile))
+                    {
+                        string txt = File.ReadAllText(targetSettingsFile, Encoding.UTF8);
+                        if (txt.Contains("\"freshstart\""))
+                        {
+                            txt = System.Text.RegularExpressions.Regex.Replace(txt, "\"freshstart\"\\s*:\\s*\"[^\"]*\"", "\"freshstart\": \"false\"");
+                        }
+                        else
+                        {
+                            txt = txt.Replace("\"DisabledAddons\":", "\"freshstart\": \"false\",\r\n  \"DisabledAddons\":");
+                        }
+                        File.WriteAllText(targetSettingsFile, txt, Encoding.UTF8);
+                    }
+                    else
+                    {
+                        SettingsHelper.Save(targetSettings);
+                    }
+                }
+                catch { }
 
                 string targetExe = Path.Combine(targetDir, "OptiAssist.exe");
 
@@ -1212,7 +1365,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
             }
         }
 
-        private static void CopyDirectoryRecursive(string sourceDir, string targetDir, Action<string> log)
+        private static void CopyDirectoryRecursive(string sourceDir, string targetDir, HashSet<string> selectedAddons, Action<string> log)
         {
             foreach (string file in Directory.GetFiles(sourceDir))
             {
@@ -1222,17 +1375,33 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 try { File.Copy(file, dest, true); } catch { }
             }
 
+            string currentDirName = Path.GetFileName(sourceDir);
+            bool isAddonsParent = currentDirName.Equals("Addons", StringComparison.OrdinalIgnoreCase);
+
             foreach (string sub in Directory.GetDirectories(sourceDir))
             {
                 string dirName = Path.GetFileName(sub);
                 if (dirName.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
-                    dirName.Equals(".vs", StringComparison.OrdinalIgnoreCase))
+                    dirName.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("obj", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
+
+                if (isAddonsParent && selectedAddons != null)
+                {
+                    bool isToolbox = dirName.Equals("Toolbox", StringComparison.OrdinalIgnoreCase);
+                    if (!isToolbox && !selectedAddons.Contains(dirName))
+                    {
+                        if (log != null) log(string.Format("[INSTALL] Skipping unselected module: {0}", dirName));
+                        continue;
+                    }
+                }
+
                 string destSub = Path.Combine(targetDir, dirName);
                 if (!Directory.Exists(destSub)) Directory.CreateDirectory(destSub);
-                CopyDirectoryRecursive(sub, destSub, log);
+                CopyDirectoryRecursive(sub, destSub, selectedAddons, log);
             }
         }
 
@@ -1302,6 +1471,567 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.";
                 Registry.LocalMachine.DeleteSubKeyTree(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\OptiAssist", false);
             }
             catch { }
+        }
+
+        public static string GetFriendlyModuleName(string addonId)
+        {
+            if (string.Equals(addonId, "Toolbox", StringComparison.OrdinalIgnoreCase))
+                return LocalizationHelper.Get("Nav_Toolbox", "Toolbox");
+            if (string.Equals(addonId, "AppManager", StringComparison.OrdinalIgnoreCase))
+                return LocalizationHelper.Get("Nav_AppManager", "App Manager");
+            if (string.Equals(addonId, "SystemCleaner", StringComparison.OrdinalIgnoreCase))
+                return LocalizationHelper.Get("Nav_SystemCleaner", "System Cleaner");
+            if (string.Equals(addonId, "StartupManager", StringComparison.OrdinalIgnoreCase))
+                return LocalizationHelper.Get("Nav_StartupManager", "Startup Manager");
+            if (string.Equals(addonId, "MaintenanceReport", StringComparison.OrdinalIgnoreCase))
+                return LocalizationHelper.Get("Nav_MaintenanceReport", "Maintenance Report");
+            return addonId;
+        }
+
+        public static bool ShowWelcomeWizard(Window owner, AppSettings settings, Action<string> log = null)
+        {
+            Window win = new Window
+            {
+                Title = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist"),
+                Width = 700,
+                Height = 670,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.SingleBorderWindow
+            };
+            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
+
+            Grid root = new Grid { Margin = new Thickness(18) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Header
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Body Scroll
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Footer Buttons
+
+            // Header (Title, Subtitle, Language ComboBox)
+            Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            StackPanel headerStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            TextBlock tbTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist"),
+                FontSize = 17,
+                FontWeight = FontWeights.Bold
+            };
+            tbTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            TextBlock tbSub = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Subtitle", "Modular System Maintenance, Diagnostic, and Post-Install Assistant"),
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 0),
+                TextWrapping = TextWrapping.Wrap
+            };
+            tbSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            headerStack.Children.Add(tbTitle);
+            headerStack.Children.Add(tbSub);
+            Grid.SetColumn(headerStack, 0);
+            headerGrid.Children.Add(headerStack);
+
+            StackPanel langPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0)
+            };
+            TextBlock lblLang = new TextBlock
+            {
+                Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            lblLang.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            langPanel.Children.Add(lblLang);
+
+            ComboBox cmbLang = new ComboBox
+            {
+                Width = 150,
+                Height = 28,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            var availableLangs = LocalizationHelper.GetAvailableLanguageItems();
+            string curLang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : LocalizationHelper.CurrentLanguage;
+            int selIdx = 0;
+            for (int i = 0; i < availableLangs.Count; i++)
+            {
+                var item = availableLangs[i];
+                cmbLang.Items.Add(new ComboBoxItem { Content = item.Name, Tag = item.Code });
+                if (string.Equals(item.Code, curLang, StringComparison.OrdinalIgnoreCase))
+                {
+                    selIdx = i;
+                }
+            }
+            if (cmbLang.Items.Count > 0) cmbLang.SelectedIndex = selIdx;
+            langPanel.Children.Add(cmbLang);
+            Grid.SetColumn(langPanel, 1);
+            headerGrid.Children.Add(langPanel);
+
+            Grid.SetRow(headerGrid, 0);
+            root.Children.Add(headerGrid);
+
+            // Body Scroll
+            ScrollViewer bodyScroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            StackPanel bodyStack = new StackPanel();
+
+            // Card 1: Risk & Administrative Warning
+            Border warnCard = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            warnCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            warnCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            StackPanel warnStack = new StackPanel();
+            TextBlock lblWarnTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Notice_Title", "1. Safety Warning & System Operation Risks"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            lblWarnTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushWarning");
+            warnStack.Children.Add(lblWarnTitle);
+            TextBlock tbWarnText = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Notice_Text", "OptiAssist is a powerful toolkit designed for IT professionals and power users that performs deep system administrative operations (including system integrity checks, DISM/SFC repairs, system cleaning, and startup adjustments). Administrative commands modify low-level Windows settings. Ensure you review and understand actions prior to executing them."),
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap,
+                LineHeight = 16
+            };
+            tbWarnText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            warnStack.Children.Add(tbWarnText);
+            warnCard.Child = warnStack;
+            bodyStack.Children.Add(warnCard);
+
+            // Card 2: License Terms & Conditions of Use (GNU GPLv3)
+            Border licCard = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            licCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            licCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            StackPanel licStack = new StackPanel();
+            TextBlock lblLicTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_License_Title", "2. Terms of Use & Software License (GNU GPLv3)"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            licStack.Children.Add(lblLicTitle);
+
+            string fullTerms = GplLicenseNoticeText + "\r\n\r\n" +
+                LocalizationHelper.Get("InstallWin_Terms_Conditions",
+                "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+
+            TextBox txtTerms = new TextBox
+            {
+                Text = fullTerms,
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Height = 95,
+                FontFamily = new FontFamily("Consolas, Lucida Console, Segoe UI"),
+                FontSize = 10,
+                Padding = new Thickness(8),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            txtTerms.SetResourceReference(TextBox.BackgroundProperty, "BrushBgPrimary");
+            txtTerms.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
+            txtTerms.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
+            licStack.Children.Add(txtTerms);
+
+            CheckBox chkAccept = new CheckBox
+            {
+                Content = LocalizationHelper.Get("Welcome_License_Chk", "I have read and agree to the Terms of Use and Software License (GNU GPLv3)"),
+                IsChecked = false,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Cursor = Cursors.Hand
+            };
+            chkAccept.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            licStack.Children.Add(chkAccept);
+            licCard.Child = licStack;
+            bodyStack.Children.Add(licCard);
+
+            // Card 3: Execution / Installation Mode
+            Border modeCard = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            modeCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            modeCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            StackPanel modeStack = new StackPanel();
+            TextBlock lblModeTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Mode_Title", "3. How would you like to use OptiAssist?"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            lblModeTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            modeStack.Children.Add(lblModeTitle);
+
+            RadioButton rbRunAsIs = new RadioButton { IsChecked = true, Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand };
+            rbRunAsIs.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
+            StackPanel spRunAsIs = new StackPanel();
+            TextBlock tbHeadRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 };
+            tbHeadRun.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            TextBlock tbDescRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs the application directly from the current folder without moving files or registering system shortcuts."), FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            tbDescRun.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spRunAsIs.Children.Add(tbHeadRun);
+            spRunAsIs.Children.Add(tbDescRun);
+            rbRunAsIs.Content = spRunAsIs;
+            modeStack.Children.Add(rbRunAsIs);
+
+            RadioButton rbInstallPC = new RadioButton { IsChecked = false, Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand };
+            rbInstallPC.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
+            StackPanel spInstallPC = new StackPanel();
+            TextBlock tbHeadPC = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_InstallPC", "Install on this PC (Recommended for daily use)"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 };
+            tbHeadPC.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            TextBlock tbDescPC = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_InstallPCDesc", "Installs OptiAssist to local drive (C:\\Program Files\\OptiAssist), creates Desktop and Start Menu shortcuts, and registers in Control Panel."), FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            tbDescPC.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spInstallPC.Children.Add(tbHeadPC);
+            spInstallPC.Children.Add(tbDescPC);
+            rbInstallPC.Content = spInstallPC;
+            modeStack.Children.Add(rbInstallPC);
+
+            RadioButton rbInstallUsb = new RadioButton { IsChecked = false, Margin = new Thickness(0, 0, 0, 4), Cursor = Cursors.Hand };
+            rbInstallUsb.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
+            StackPanel spInstallUsb = new StackPanel();
+            TextBlock tbHeadUsb = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_Usb", "Install to USB drive / External media"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 };
+            tbHeadUsb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            TextBlock tbDescUsb = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_UsbDesc", "Deploys a custom standalone copy to any chosen USB drive or partition."), FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            tbDescUsb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spInstallUsb.Children.Add(tbHeadUsb);
+            spInstallUsb.Children.Add(tbDescUsb);
+            rbInstallUsb.Content = spInstallUsb;
+            modeStack.Children.Add(rbInstallUsb);
+
+            // Sub-panel for Target Path (visible when USB is selected)
+            StackPanel spTargetDir = new StackPanel { Margin = new Thickness(24, 6, 0, 0), Visibility = Visibility.Collapsed };
+            Grid gdDir = new Grid();
+            gdDir.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            gdDir.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            TextBox txtUsbDir = new TextBox { Height = 28, FontSize = 11, Padding = new Thickness(6, 2, 6, 2), VerticalContentAlignment = VerticalAlignment.Center };
+            txtUsbDir.SetResourceReference(TextBox.BackgroundProperty, "BrushInputBg");
+            txtUsbDir.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
+            txtUsbDir.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
+            Grid.SetColumn(txtUsbDir, 0);
+            gdDir.Children.Add(txtUsbDir);
+            Button btnBrowseUsb = new Button { Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse..."), Height = 28, Padding = new Thickness(10, 0, 10, 0), Margin = new Thickness(6, 0, 0, 0) };
+            btnBrowseUsb.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnBrowseUsb.Click += (s, e) =>
+            {
+                using (var fbd = new System.Windows.Forms.FolderBrowserDialog())
+                {
+                    fbd.Description = LocalizationHelper.Get("InstallWin_Browse_Desc", "Select destination directory or drive:");
+                    fbd.SelectedPath = txtUsbDir.Text;
+                    if (fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
+                    {
+                        string sel = fbd.SelectedPath;
+                        if (!sel.EndsWith("OptiAssist", StringComparison.OrdinalIgnoreCase)) sel = Path.Combine(sel, "OptiAssist");
+                        txtUsbDir.Text = sel;
+                    }
+                }
+            };
+            Grid.SetColumn(btnBrowseUsb, 1);
+            gdDir.Children.Add(btnBrowseUsb);
+            spTargetDir.Children.Add(gdDir);
+            modeStack.Children.Add(spTargetDir);
+
+            rbRunAsIs.Checked += (s, e) => { spTargetDir.Visibility = Visibility.Collapsed; };
+            rbInstallPC.Checked += (s, e) => { spTargetDir.Visibility = Visibility.Collapsed; };
+            rbInstallUsb.Checked += (s, e) =>
+            {
+                spTargetDir.Visibility = Visibility.Visible;
+                if (string.IsNullOrWhiteSpace(txtUsbDir.Text))
+                {
+                    txtUsbDir.Text = @"D:\OptiAssist";
+                }
+            };
+
+            modeCard.Child = modeStack;
+            bodyStack.Children.Add(modeCard);
+
+            // Card 4: Module Selection (Add-ons / Plugins)
+            Border modCard = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            modCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            modCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            StackPanel modStack = new StackPanel();
+            TextBlock lblModTitle = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Modules_Title", "4. Module Selection (Add-ons / Plugins)"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            lblModTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            modStack.Children.Add(lblModTitle);
+            TextBlock lblModSub = new TextBlock
+            {
+                Text = LocalizationHelper.Get("Welcome_Modules_Subtitle", "Choose which add-on modules to include. The Toolbox module is mandatory as the system core."),
+                FontSize = 10.5,
+                Margin = new Thickness(0, 0, 0, 8),
+                TextWrapping = TextWrapping.Wrap
+            };
+            lblModSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            modStack.Children.Add(lblModSub);
+
+            WrapPanel wpModules = new WrapPanel { Orientation = Orientation.Horizontal };
+            var addonCheckboxes = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
+
+            CheckBox chkToolbox = new CheckBox
+            {
+                Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)"),
+                IsChecked = true,
+                IsEnabled = false,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 2, 16, 6)
+            };
+            chkToolbox.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            wpModules.Children.Add(chkToolbox);
+            addonCheckboxes["Toolbox"] = chkToolbox;
+
+            string[] knownAddons = new string[] { "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport" };
+            foreach (var mod in knownAddons)
+            {
+                CheckBox chk = new CheckBox
+                {
+                    Content = GetFriendlyModuleName(mod),
+                    Tag = mod,
+                    IsChecked = true,
+                    FontSize = 11,
+                    Margin = new Thickness(0, 2, 16, 6),
+                    Cursor = Cursors.Hand
+                };
+                chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                wpModules.Children.Add(chk);
+                addonCheckboxes[mod] = chk;
+            }
+
+            try
+            {
+                string addonsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons");
+                if (Directory.Exists(addonsDir))
+                {
+                    foreach (var dir in Directory.GetDirectories(addonsDir))
+                    {
+                        string name = Path.GetFileName(dir);
+                        if (!addonCheckboxes.ContainsKey(name))
+                        {
+                            CheckBox chk = new CheckBox
+                            {
+                                Content = name,
+                                Tag = name,
+                                IsChecked = true,
+                                FontSize = 11,
+                                Margin = new Thickness(0, 2, 16, 6),
+                                Cursor = Cursors.Hand
+                            };
+                            chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                            wpModules.Children.Add(chk);
+                            addonCheckboxes[name] = chk;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            modStack.Children.Add(wpModules);
+            modCard.Child = modStack;
+            bodyStack.Children.Add(modCard);
+
+            bodyScroll.Content = bodyStack;
+            Grid.SetRow(bodyScroll, 1);
+            root.Children.Add(bodyScroll);
+
+            // Footer
+            Grid footerGrid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            Button btnDecline = new Button
+            {
+                Content = LocalizationHelper.Get("Welcome_Btn_Decline", "Decline & Exit"),
+                Height = 32,
+                Padding = new Thickness(16, 0, 16, 0),
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+            btnDecline.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnDecline.Click += (s, e) =>
+            {
+                win.DialogResult = false;
+                win.Close();
+                Application.Current.Shutdown();
+            };
+            Grid.SetColumn(btnDecline, 0);
+            footerGrid.Children.Add(btnDecline);
+
+            Button btnContinue = new Button
+            {
+                Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch"),
+                Height = 32,
+                Padding = new Thickness(20, 0, 20, 0),
+                IsEnabled = false
+            };
+            btnContinue.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            chkAccept.Checked += (s, e) => { btnContinue.IsEnabled = true; };
+            chkAccept.Unchecked += (s, e) => { btnContinue.IsEnabled = false; };
+
+            cmbLang.SelectionChanged += (s, e) =>
+            {
+                ComboBoxItem cbi = cmbLang.SelectedItem as ComboBoxItem;
+                if (cbi == null || cbi.Tag == null) return;
+                string newLang = cbi.Tag.ToString();
+                LocalizationHelper.LoadLanguage(newLang);
+                if (settings != null)
+                {
+                    settings.Language = newLang;
+                    SettingsHelper.Save(settings);
+                }
+                MainWindow mw = owner as MainWindow;
+                if (mw != null) mw.SetLanguage(newLang);
+
+                win.Title = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist");
+                tbTitle.Text = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist");
+                tbSub.Text = LocalizationHelper.Get("Welcome_Subtitle", "Modular System Maintenance, Diagnostic, and Post-Install Assistant");
+                lblLang.Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:");
+                lblWarnTitle.Text = LocalizationHelper.Get("Welcome_Notice_Title", "1. Safety Warning & System Operation Risks");
+                tbWarnText.Text = LocalizationHelper.Get("Welcome_Notice_Text", "OptiAssist is a powerful toolkit designed for IT professionals and power users that performs deep system administrative operations (including system integrity checks, DISM/SFC repairs, system cleaning, and startup adjustments). Administrative commands modify low-level Windows settings. Ensure you review and understand actions prior to executing them.");
+                lblLicTitle.Text = LocalizationHelper.Get("Welcome_License_Title", "2. Terms of Use & Software License (GNU GPLv3)");
+                txtTerms.Text = GplLicenseNoticeText + "\r\n\r\n" +
+                    LocalizationHelper.Get("InstallWin_Terms_Conditions",
+                    "CONDITIONS OF USE:\r\nOptiAssist provides system optimization, maintenance automation, and administrative tools. By installing or deploying OptiAssist, you acknowledge that administrative operations modify system configurations and that you are responsible for reviewing selected tasks prior to execution.");
+                chkAccept.Content = LocalizationHelper.Get("Welcome_License_Chk", "I have read and agree to the Terms of Use and Software License (GNU GPLv3)");
+                lblModeTitle.Text = LocalizationHelper.Get("Welcome_Mode_Title", "3. How would you like to use OptiAssist?");
+                tbHeadRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)");
+                tbDescRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs the application directly from the current folder without moving files or registering system shortcuts.");
+                tbHeadPC.Text = LocalizationHelper.Get("Welcome_Mode_InstallPC", "Install on this PC (Recommended for daily use)");
+                tbDescPC.Text = LocalizationHelper.Get("Welcome_Mode_InstallPCDesc", "Installs OptiAssist to local drive (C:\\Program Files\\OptiAssist), creates Desktop and Start Menu shortcuts, and registers in Control Panel.");
+                tbHeadUsb.Text = LocalizationHelper.Get("Welcome_Mode_Usb", "Install to USB drive / External media");
+                tbDescUsb.Text = LocalizationHelper.Get("Welcome_Mode_UsbDesc", "Deploys a custom standalone copy to any chosen USB drive or partition.");
+                lblModTitle.Text = LocalizationHelper.Get("Welcome_Modules_Title", "4. Module Selection (Add-ons / Plugins)");
+                lblModSub.Text = LocalizationHelper.Get("Welcome_Modules_Subtitle", "Choose which add-on modules to include. The Toolbox module is mandatory as the system core.");
+                chkToolbox.Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)");
+                btnBrowseUsb.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
+                btnDecline.Content = LocalizationHelper.Get("Welcome_Btn_Decline", "Decline & Exit");
+                btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch");
+            };
+
+            bool success = false;
+            btnContinue.Click += (s, e) =>
+            {
+                if (chkAccept.IsChecked != true) return;
+
+                var selectedMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                selectedMods.Add("Toolbox");
+                foreach (var pair in addonCheckboxes)
+                {
+                    if (pair.Value.IsChecked == true) selectedMods.Add(pair.Key);
+                }
+
+                if (rbRunAsIs.IsChecked == true)
+                {
+                    if (settings != null)
+                    {
+                        if (settings.DisabledAddons == null) settings.DisabledAddons = new List<string>();
+                        foreach (var pair in addonCheckboxes)
+                        {
+                            if (pair.Value.IsChecked != true)
+                            {
+                                if (!settings.DisabledAddons.Contains(pair.Key)) settings.DisabledAddons.Add(pair.Key);
+                            }
+                            else
+                            {
+                                settings.DisabledAddons.Remove(pair.Key);
+                            }
+                        }
+                        settings.FreshStart = "false";
+                        SettingsHelper.Save(settings);
+                    }
+                    success = true;
+                    win.DialogResult = true;
+                    win.Close();
+                }
+                else if (rbInstallPC.IsChecked == true)
+                {
+                    string pcDir = GetDefaultInstallDirectory();
+                    if (ExecuteInstallation(pcDir, false, true, false, selectedMods, log))
+                    {
+                        if (settings != null)
+                        {
+                            settings.FreshStart = "false";
+                            SettingsHelper.Save(settings);
+                        }
+                        success = true;
+                        win.DialogResult = true;
+                        win.Close();
+                    }
+                }
+                else if (rbInstallUsb.IsChecked == true)
+                {
+                    string usbDir = txtUsbDir.Text.Trim();
+                    if (string.IsNullOrWhiteSpace(usbDir))
+                    {
+                        MessageBox.Show(
+                            LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory."),
+                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    if (ExecuteInstallation(usbDir, true, false, true, selectedMods, log))
+                    {
+                        if (settings != null)
+                        {
+                            settings.FreshStart = "false";
+                            SettingsHelper.Save(settings);
+                        }
+                        success = true;
+                        win.DialogResult = true;
+                        win.Close();
+                    }
+                }
+            };
+            Grid.SetColumn(btnContinue, 1);
+            footerGrid.Children.Add(btnContinue);
+
+            Grid.SetRow(footerGrid, 2);
+            root.Children.Add(footerGrid);
+
+            win.Closing += (s, e) =>
+            {
+                if (!success && win.DialogResult != true)
+                {
+                    Application.Current.Shutdown();
+                }
+            };
+
+            win.Content = root;
+            bool? res = win.ShowDialog();
+            return success || (res == true);
         }
     }
 }

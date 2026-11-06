@@ -1,4 +1,4 @@
-﻿{
+{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
   "Language": "en-US",
@@ -7,10 +7,11 @@
   "EnableWingetFallback": true,
   "Theme": "Light",
   "AccentColor": "#0EA5E9",
-  "ServiceProviderMode": true,
+  "ServiceProviderMode": false,
   "EnableMaintenanceReport": false,
   "OpenExternalLogsByDefault": false,
-  "AlwaysOnTop": true,
+  "AlwaysOnTop": false,
   "CustomLogoPath": "",
+  "freshstart": "true",
   "DisabledAddons": ""
 }

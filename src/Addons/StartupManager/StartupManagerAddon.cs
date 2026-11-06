@@ -117,6 +117,18 @@ namespace OptiAssist.Addons.StartupManager
             return isEnabled ? T("Startup_Status_Enabled", "Enabled") : T("Startup_Status_Disabled", "Disabled");
         }
 
+        private string FormatTrigger(StartupTaskItem task)
+        {
+            if (task == null) return "";
+            if (string.Equals(task.TriggerType, "Boot", StringComparison.OrdinalIgnoreCase))
+                return T("Startup_Trigger_Boot", "At System Boot");
+            if (string.Equals(task.TriggerType, "Logon", StringComparison.OrdinalIgnoreCase))
+                return T("Startup_Trigger_Logon", "At User Logon");
+            if (string.Equals(task.TriggerType, "StartupOrLogon", StringComparison.OrdinalIgnoreCase))
+                return T("Startup_Trigger_StartupOrLogon", "At Startup / Logon");
+            return string.IsNullOrEmpty(task.TriggerDisplay) ? T("Startup_Trigger_StartupOrLogon", "At Startup / Logon") : task.TriggerDisplay;
+        }
+
         #endregion
 
         public FrameworkElement CreateView()
@@ -755,7 +767,7 @@ namespace OptiAssist.Addons.StartupManager
             bTrigger.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             TextBlock tbTrigger = new TextBlock
             {
-                Text = task.TriggerDisplay,
+                Text = FormatTrigger(task),
                 FontSize = 9.5
             };
             tbTrigger.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");

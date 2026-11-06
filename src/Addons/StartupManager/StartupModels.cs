@@ -84,6 +84,7 @@ namespace OptiAssist.Addons.StartupManager
         public string FullTaskPath { get; set; }
         public string ActionPath { get; set; }
         public string Arguments { get; set; }
+        public string TriggerType { get; set; }
         public string TriggerDisplay { get; set; }
         public string Author { get; set; }
         public string Publisher { get; set; }

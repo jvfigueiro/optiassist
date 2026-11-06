@@ -21,6 +21,7 @@ namespace OptiAssist
         public bool AlwaysOnTop { get; set; }
         public List<string> DisabledAddons { get; set; }
         public string CustomLogoPath { get; set; }
+        public string FreshStart { get; set; }
 
         // A new instance always holds the factory default values
         public AppSettings()
@@ -39,6 +40,7 @@ namespace OptiAssist
             AlwaysOnTop = false;
             DisabledAddons = new List<string>();
             CustomLogoPath = "";
+            FreshStart = "true";
         }
     }
 
@@ -117,6 +119,18 @@ namespace OptiAssist
                 {
                     settings.CustomLogoPath = dict["CustomLogoPath"];
                 }
+                if (dict.ContainsKey("freshstart"))
+                {
+                    settings.FreshStart = dict["freshstart"];
+                }
+                else if (dict.ContainsKey("FreshStart"))
+                {
+                    settings.FreshStart = dict["FreshStart"];
+                }
+                else
+                {
+                    settings.FreshStart = "true";
+                }
                 if (dict.ContainsKey("DisabledAddons"))
                 {
                     string val = dict["DisabledAddons"];
@@ -162,6 +176,7 @@ namespace OptiAssist
                 sb.AppendLine(string.Format("  \"OpenExternalLogsByDefault\": {0},", settings.OpenExternalLogsByDefault ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"AlwaysOnTop\": {0},", settings.AlwaysOnTop ? "true" : "false"));
                 sb.AppendLine(string.Format("  \"CustomLogoPath\": \"{0}\",", EscapeJson(settings.CustomLogoPath)));
+                sb.AppendLine(string.Format("  \"freshstart\": \"{0}\",", EscapeJson(string.IsNullOrEmpty(settings.FreshStart) ? "true" : settings.FreshStart)));
                 string disabledStr = settings.DisabledAddons != null ? string.Join(",", settings.DisabledAddons.ToArray()) : "";
                 sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\"", EscapeJson(disabledStr)));
                 sb.AppendLine("}");

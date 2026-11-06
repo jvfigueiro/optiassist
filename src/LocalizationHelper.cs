@@ -5,6 +5,18 @@ using System.Collections.Generic;
 
 namespace OptiAssist
 {
+    public class LanguageItem
+    {
+        public string Code { get; set; }
+        public string Name { get; set; }
+        public string Author { get; set; }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
     public static class LocalizationHelper
     {
         private static Dictionary<string, string> _strings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -58,6 +70,50 @@ namespace OptiAssist
             return list;
         }
 
+        public static List<LanguageItem> GetAvailableLanguageItems()
+        {
+            var list = new List<LanguageItem>();
+            try
+            {
+                string dir = GetLanguagesDirectory();
+                if (Directory.Exists(dir))
+                {
+                    var files = Directory.GetFiles(dir, "*.json");
+                    foreach (var f in files)
+                    {
+                        string code = Path.GetFileNameWithoutExtension(f);
+                        string name = code;
+                        string author = "";
+                        try
+                        {
+                            string json = File.ReadAllText(f, Encoding.UTF8);
+                            var dict = ParseLanguageJson(json);
+                            if (dict.ContainsKey("LanguageName") && !string.IsNullOrWhiteSpace(dict["LanguageName"]))
+                                name = dict["LanguageName"];
+                            else if (dict.ContainsKey("Lang_Name") && !string.IsNullOrWhiteSpace(dict["Lang_Name"]))
+                                name = dict["Lang_Name"];
+
+                            if (dict.ContainsKey("LanguageAuthor") && !string.IsNullOrWhiteSpace(dict["LanguageAuthor"]))
+                                author = dict["LanguageAuthor"];
+                            else if (dict.ContainsKey("Author") && !string.IsNullOrWhiteSpace(dict["Author"]))
+                                author = dict["Author"];
+                        }
+                        catch { }
+                        list.Add(new LanguageItem { Code = code, Name = name, Author = author });
+                    }
+                }
+            }
+            catch { }
+
+            if (list.Count == 0)
+            {
+                list.Add(new LanguageItem { Code = "en-US", Name = "English (US)", Author = "João Figueiró" });
+                list.Add(new LanguageItem { Code = "pt-BR", Name = "Português BR", Author = "João Figueiró" });
+            }
+
+            return list;
+        }
+
         public static string GetLanguageDisplayName(string langCode)
         {
             try
@@ -67,6 +123,10 @@ namespace OptiAssist
                 {
                     string json = File.ReadAllText(filePath, Encoding.UTF8);
                     var dict = ParseLanguageJson(json);
+                    if (dict.ContainsKey("LanguageName") && !string.IsNullOrEmpty(dict["LanguageName"]))
+                    {
+                        return dict["LanguageName"];
+                    }
                     if (dict.ContainsKey("Lang_Name") && !string.IsNullOrEmpty(dict["Lang_Name"]))
                     {
                         return dict["Lang_Name"];
@@ -75,6 +135,29 @@ namespace OptiAssist
             }
             catch { }
             return langCode;
+        }
+
+        public static string GetLanguageAuthor(string langCode)
+        {
+            try
+            {
+                string filePath = GetLanguageFilePath(langCode);
+                if (File.Exists(filePath))
+                {
+                    string json = File.ReadAllText(filePath, Encoding.UTF8);
+                    var dict = ParseLanguageJson(json);
+                    if (dict.ContainsKey("LanguageAuthor") && !string.IsNullOrEmpty(dict["LanguageAuthor"]))
+                    {
+                        return dict["LanguageAuthor"];
+                    }
+                    if (dict.ContainsKey("Author") && !string.IsNullOrEmpty(dict["Author"]))
+                    {
+                        return dict["Author"];
+                    }
+                }
+            }
+            catch { }
+            return "";
         }
 
         public static void LoadLanguage(string langCode)

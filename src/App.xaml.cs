@@ -31,20 +31,49 @@ namespace OptiAssist
                 try
                 {
                     AppSettings settings = SettingsHelper.Load();
-                    string lang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : "pt-BR";
+                    string lang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : "en-US";
                     LocalizationHelper.LoadLanguage(lang);
                 }
                 catch { }
 
-                string title = LocalizationHelper.Get("Msg_AdminRequiredTitle", "OptiAssist - Permissão de Administrador Necessária");
-                string message = LocalizationHelper.Get("Msg_AdminRequiredBody",
-                    "O OptiAssist é uma aplicação de manutenção, diagnóstico e pós-instalação que roda exclusivamente com privilégios elevados de Administrador.\n\n" +
-                    "A permissão de execução como Administrador não foi autorizada ou o aplicativo foi iniciado sem privilégios elevados.\n\n" +
-                    "Por favor, execute o OptiAssist clicando com o botão direito sobre o executável e selecionando 'Executar como administrador'.");
+                try
+                {
+                    System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    };
 
-                MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
-                this.Shutdown();
-                return;
+                    if (e.Args != null && e.Args.Length > 0)
+                    {
+                        psi.Arguments = string.Join(" ", e.Args);
+                    }
+
+                    System.Diagnostics.Process.Start(psi);
+                    this.Shutdown();
+                    return;
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // User denied the UAC elevation prompt (NativeErrorCode 1223: ERROR_CANCELLED)
+                    string title = LocalizationHelper.Get("Msg_AdminRequiredTitle", "OptiAssist - Administrator Permission Required");
+                    string message = LocalizationHelper.Get("Msg_AdminRequiredBody",
+                        "Administrator permission was refused or cancelled.\n\n" +
+                        "OptiAssist is a system maintenance, diagnostic, and post-installation utility that requires administrative privileges to operate.\n\n" +
+                        "Please grant Administrator privileges when prompted to use OptiAssist.");
+
+                    MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    this.Shutdown();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    string title = LocalizationHelper.Get("Msg_AdminRequiredTitle", "OptiAssist - Administrator Permission Required");
+                    MessageBox.Show("Failed to elevate to Administrator:\n\n" + ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                    this.Shutdown();
+                    return;
+                }
             }
 
             // Check for command-line arguments (e.g. uninstaller registration in Windows Programs & Features)

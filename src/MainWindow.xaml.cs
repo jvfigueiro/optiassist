@@ -38,6 +38,18 @@ namespace OptiAssist
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             LoadApplicationSettings();
+
+            if (_settings != null && (string.Equals(_settings.FreshStart, "true", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(_settings.FreshStart)))
+            {
+                bool completed = AppDeploymentHelper.ShowWelcomeWizard(this, _settings, Log);
+                if (!completed)
+                {
+                    Application.Current.Shutdown();
+                    return;
+                }
+                LoadApplicationSettings();
+            }
+
             LoadAppLogo();
             UpdateDeploymentButtonsUI();
             ReloadAddonsList();
@@ -843,6 +855,30 @@ namespace OptiAssist
         {
             Log("[SHORTCUT] Opening Windows Date & Time administrative settings (timedate.cpl)...");
             ShortcutsHelper.OpenDateTimeSettings();
+        }
+
+        private void BtnCleanmgr_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[SHORTCUT] Opening Windows Disk Cleanup (cleanmgr.exe)...");
+            ShortcutsHelper.OpenWindowsTool("cleanmgr.exe");
+        }
+
+        private void BtnDfrgui_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[SHORTCUT] Opening Windows Drive Optimizer (dfrgui.exe)...");
+            ShortcutsHelper.OpenWindowsTool("dfrgui.exe");
+        }
+
+        private void BtnFirewall_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[SHORTCUT] Opening Windows Defender Firewall (wf.msc)...");
+            ShortcutsHelper.OpenWindowsTool("wf.msc");
+        }
+
+        private void BtnOsk_Click(object sender, RoutedEventArgs e)
+        {
+            Log("[SHORTCUT] Opening On-Screen Keyboard (osk.exe)...");
+            ShortcutsHelper.OpenWindowsTool("osk.exe");
         }
 
         private void BtnAdminCmd_Click(object sender, RoutedEventArgs e) { ShortcutsHelper.OpenAdminCmd(); }
@@ -2418,6 +2454,19 @@ namespace OptiAssist
         #endregion
 
         #region SETTINGS & LOCALIZATION
+        private bool _isUpdatingLanguageCombo = false;
+
+        private void CmbSettingsLanguage_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingLanguageCombo) return;
+            ComboBoxItem item = cmbSettingsLanguage != null ? cmbSettingsLanguage.SelectedItem as ComboBoxItem : null;
+            if (item != null && item.Tag != null)
+            {
+                string code = item.Tag.ToString();
+                SetLanguage(code);
+            }
+        }
+
         private void BtnLangPt_Click(object sender, RoutedEventArgs e)
         {
             SetLanguage("pt-BR");
@@ -2509,6 +2558,26 @@ namespace OptiAssist
                 btnDateTimeTool.Content = LocalizationHelper.Get("Tool_DateTime", "Date & Time");
                 btnDateTimeTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolDateTime", "Windows Date & Time administrative settings (timedate.cpl)");
             }
+            if (btnCleanmgrTool != null)
+            {
+                btnCleanmgrTool.Content = LocalizationHelper.Get("Tool_Cleanmgr", "Disk Cleanup");
+                btnCleanmgrTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolCleanmgr", "Windows Disk Cleanup utility (cleanmgr.exe)");
+            }
+            if (btnDfrguiTool != null)
+            {
+                btnDfrguiTool.Content = LocalizationHelper.Get("Tool_Dfrgui", "Drive Optimizer");
+                btnDfrguiTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolDfrgui", "Windows Drive Optimizer and Defragmenter (dfrgui.exe)");
+            }
+            if (btnFirewallTool != null)
+            {
+                btnFirewallTool.Content = LocalizationHelper.Get("Tool_Firewall", "Windows Firewall");
+                btnFirewallTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolFirewall", "Windows Defender Firewall with Advanced Security (wf.msc)");
+            }
+            if (btnOskTool != null)
+            {
+                btnOskTool.Content = LocalizationHelper.Get("Tool_Osk", "On-Screen Keyboard");
+                btnOskTool.ToolTip = LocalizationHelper.Get("Tooltip_ToolOsk", "Windows On-Screen Keyboard utility (osk.exe)");
+            }
             if (btnOpenMaintenanceFolderTool != null)
             {
                 btnOpenMaintenanceFolderTool.Content = LocalizationHelper.Get("Btn_OpenMaintenanceFolder", "📁 Maintenance Tools");
@@ -2561,7 +2630,7 @@ namespace OptiAssist
             if (txtSettingsTitle != null) txtSettingsTitle.Text = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
             if (txtSettingsSub != null) txtSettingsSub.Text = LocalizationHelper.Get("Settings_Subtitle", "Configure general preferences, language, visual theme, system installation, and modular add-ons");
             if (txtLangLabel != null) txtLangLabel.Text = LocalizationHelper.Get("Settings_Label_Language", "Application Language:");
-            SetupLanguageButtons(langCode);
+            SetupLanguageControls(langCode);
 
             if (chkSettingWinget != null) chkSettingWinget.Content = LocalizationHelper.Get("Settings_Chk_WingetFallback", "Enable Winget download fallback when program is not in Installers folder");
             if (chkSettingAutoRefresh != null) chkSettingAutoRefresh.Content = LocalizationHelper.Get("Settings_Chk_AutoRefresh", "Automatically refresh hardware specs on startup");
@@ -2688,55 +2757,55 @@ namespace OptiAssist
             }
         }
 
-        private void SetupLanguageButtons(string activeLang)
+        private void SetupLanguageControls(string activeLang)
         {
-            if (btnLangPt != null)
+            if (cmbSettingsLanguage == null) return;
+            _isUpdatingLanguageCombo = true;
+            try
             {
-                btnLangPt.Style = (activeLang == "pt-BR") ? (Style)FindResource("BtnAccent") : (Style)FindResource("BtnDefault");
-            }
-            if (btnLangEn != null)
-            {
-                btnLangEn.Style = (activeLang == "en-US") ? (Style)FindResource("BtnAccent") : (Style)FindResource("BtnDefault");
-            }
-            if (lblCurrentLanguage != null)
-            {
-                lblCurrentLanguage.Text = LocalizationHelper.Get("Settings_Current_Lang", (activeLang == "pt-BR") ? "Atual: Português (pt-BR)" : "Current: English (en-US)");
-            }
-
-            if (pnlLanguageButtons == null) return;
-
-            var allLangs = LocalizationHelper.GetAvailableLanguages();
-            foreach (var lang in allLangs)
-            {
-                if (lang.Equals("pt-BR", StringComparison.OrdinalIgnoreCase) || lang.Equals("en-US", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                string btnName = "btnLang_" + lang.Replace("-", "_");
-                Button dynamicBtn = pnlLanguageButtons.FindName(btnName) as Button;
-                if (dynamicBtn == null)
+                cmbSettingsLanguage.Items.Clear();
+                var items = LocalizationHelper.GetAvailableLanguageItems();
+                ComboBoxItem selectedItem = null;
+                foreach (var lang in items)
                 {
-                    dynamicBtn = new Button();
-                    dynamicBtn.Name = btnName;
-                    dynamicBtn.Content = LocalizationHelper.GetLanguageDisplayName(lang);
-                    dynamicBtn.Height = 32;
-                    dynamicBtn.Padding = new Thickness(14, 4, 14, 4);
-                    dynamicBtn.Margin = new Thickness(0, 0, 8, 0);
-                    dynamicBtn.Tag = lang;
-                    dynamicBtn.Click += (s, e) =>
+                    ComboBoxItem cbi = new ComboBoxItem
                     {
-                        var btn = s as Button;
-                        if (btn != null && btn.Tag != null)
-                        {
-                            SetLanguage(btn.Tag.ToString());
-                        }
+                        Content = lang.Name,
+                        Tag = lang.Code
                     };
-                    int idx = pnlLanguageButtons.Children.IndexOf(lblCurrentLanguage);
-                    if (idx >= 0)
-                        pnlLanguageButtons.Children.Insert(idx, dynamicBtn);
-                    else
-                        pnlLanguageButtons.Children.Add(dynamicBtn);
+                    cmbSettingsLanguage.Items.Add(cbi);
+                    if (string.Equals(lang.Code, activeLang, StringComparison.OrdinalIgnoreCase))
+                    {
+                        selectedItem = cbi;
+                    }
                 }
-                dynamicBtn.Style = (activeLang == lang) ? (Style)FindResource("BtnAccent") : (Style)FindResource("BtnDefault");
+                if (selectedItem != null)
+                {
+                    cmbSettingsLanguage.SelectedItem = selectedItem;
+                }
+                else if (cmbSettingsLanguage.Items.Count > 0)
+                {
+                    cmbSettingsLanguage.SelectedIndex = 0;
+                }
+
+                if (lblCurrentLanguageAuthor != null)
+                {
+                    string author = LocalizationHelper.GetLanguageAuthor(activeLang);
+                    if (!string.IsNullOrWhiteSpace(author))
+                    {
+                        lblCurrentLanguageAuthor.Text = LocalizationHelper.Get("Settings_LangAuthor", "Translator:") + " " + author;
+                        lblCurrentLanguageAuthor.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        lblCurrentLanguageAuthor.Text = "";
+                        lblCurrentLanguageAuthor.Visibility = Visibility.Collapsed;
+                    }
+                }
+            }
+            finally
+            {
+                _isUpdatingLanguageCombo = false;
             }
         }
 
@@ -2953,8 +3022,8 @@ namespace OptiAssist
                     bmp.EndInit();
                     bmp.Freeze();
 
+                    // Only update the top header bar logo per configuration
                     if (imgAppHeaderLogo != null) imgAppHeaderLogo.Source = bmp;
-                    if (imgAboutLogo != null) imgAboutLogo.Source = bmp;
                 }
             }
             catch (Exception ex)

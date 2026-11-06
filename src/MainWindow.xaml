@@ -483,6 +483,30 @@
                                             Margin="3"
                                             Click="BtnDateTime_Click"
                                             ToolTip="Windows Date &amp; Time administrative settings (timedate.cpl)"/>
+                                    <Button x:Name="btnCleanmgrTool"
+                                            Content="Disk Cleanup"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnCleanmgr_Click"
+                                            ToolTip="Windows Disk Cleanup utility (cleanmgr.exe)"/>
+                                    <Button x:Name="btnDfrguiTool"
+                                            Content="Drive Optimizer"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnDfrgui_Click"
+                                            ToolTip="Windows Drive Optimizer and Defragmenter (dfrgui.exe)"/>
+                                    <Button x:Name="btnFirewallTool"
+                                            Content="Windows Firewall"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnFirewall_Click"
+                                            ToolTip="Windows Defender Firewall with Advanced Security (wf.msc)"/>
+                                    <Button x:Name="btnOskTool"
+                                            Content="On-Screen Keyboard"
+                                            Style="{StaticResource BtnDefault}"
+                                            Margin="3"
+                                            Click="BtnOsk_Click"
+                                            ToolTip="Windows On-Screen Keyboard utility (osk.exe)"/>
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
@@ -535,28 +559,21 @@
                                 Padding="12"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
-                                <!-- Language Selection Buttons -->
+                                <!-- Language Selection ComboBox -->
                                 <TextBlock x:Name="txtLangLabel" Text="Application Language:" FontSize="10" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <StackPanel x:Name="pnlLanguageButtons" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Button x:Name="btnLangPt"
-                                            Content="🇧🇷 Português (Brasil)"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="32"
-                                            Padding="14,4"
-                                            Margin="0,0,8,0"
-                                            Click="BtnLangPt_Click"/>
-                                    <Button x:Name="btnLangEn"
-                                            Content="🇺🇸 English (US)"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="32"
-                                            Padding="14,4"
-                                            Margin="0,0,8,0"
-                                            Click="BtnLangEn_Click"/>
-                                    <TextBlock x:Name="lblCurrentLanguage"
-                                               Text="Current: English (en-US)"
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <ComboBox x:Name="cmbSettingsLanguage"
+                                              Width="240"
+                                              Height="32"
+                                              FontSize="11.5"
+                                              VerticalContentAlignment="Center"
+                                              SelectionChanged="CmbSettingsLanguage_SelectionChanged"/>
+                                    <TextBlock x:Name="lblCurrentLanguageAuthor"
+                                               Text=""
                                                FontSize="11"
-                                               Foreground="{DynamicResource BrushAccent}"
-                                               VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0"/>
                                 </StackPanel>
 
                                 <CheckBox x:Name="chkSettingWinget"

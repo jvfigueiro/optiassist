@@ -421,7 +421,8 @@ namespace OptiAssist.Addons.StartupManager
                         }
                         catch { }
 
-                        string triggerDisplay = "Na Inicialização / Ao Fazer Logon";
+                        string triggerType = "StartupOrLogon";
+                        string triggerDisplay = "At Startup / User Logon";
                         bool hasStartupTrigger = false;
                         try
                         {
@@ -430,10 +431,18 @@ namespace OptiAssist.Addons.StartupManager
                             {
                                 int trgType = (int)trg.Type;
                                 // 8 = BootTrigger, 9 = LogonTrigger, 7 = RegistrationTrigger
-                                if (trgType == 8 || trgType == 9 || trgType == 7)
+                                if (trgType == 8)
                                 {
                                     hasStartupTrigger = true;
-                                    triggerDisplay = (trgType == 8) ? "Na Inicialização (Boot)" : "Ao Fazer Logon (Logon)";
+                                    triggerType = "Boot";
+                                    triggerDisplay = "At System Boot";
+                                    break;
+                                }
+                                else if (trgType == 9 || trgType == 7)
+                                {
+                                    hasStartupTrigger = true;
+                                    triggerType = "Logon";
+                                    triggerDisplay = "At User Logon";
                                     break;
                                 }
                             }
@@ -476,6 +485,7 @@ namespace OptiAssist.Addons.StartupManager
                                 FullTaskPath = taskPath,
                                 ActionPath = actionPath,
                                 Arguments = args,
+                                TriggerType = triggerType,
                                 TriggerDisplay = triggerDisplay,
                                 Author = author,
                                 Publisher = !string.IsNullOrEmpty(publisher) && publisher != "Unknown" ? publisher : (string.IsNullOrEmpty(author) ? "Unknown" : author),
