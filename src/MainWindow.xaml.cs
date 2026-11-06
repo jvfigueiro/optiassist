@@ -3446,23 +3446,13 @@ namespace OptiAssist
         {
             try
             {
-                string docsReadme = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Docs", "README.md");
-                if (File.Exists(docsReadme))
-                {
-                    Process.Start(new ProcessStartInfo(docsReadme) { UseShellExecute = true });
-                }
-                else
-                {
-                    MessageBox.Show(
-                        LocalizationHelper.Get("Msg_DocumentationInDevelopment", "The documentation page is currently under development and will be available in an upcoming update."),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                Process.Start(new ProcessStartInfo("https://github.com/jvfigueiro/optiassist/tree/main/Docs") { UseShellExecute = true });
             }
-            catch
+            catch (Exception ex)
             {
                 MessageBox.Show(
-                    LocalizationHelper.Get("Msg_DocumentationInDevelopment", "The documentation page is currently under development and will be available in an upcoming update."),
-                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message),
+                    "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
