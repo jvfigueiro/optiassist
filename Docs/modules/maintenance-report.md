@@ -1,9 +1,8 @@
-# Maintenance Report (Service Order & Technical Report)
+# Maintenance Report & Service Orders
 
-**Module Identifier:** `MaintenanceReport`  
-**Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
-**DLL Location:** `Config\Addons\MaintenanceReport\MaintenanceReport.dll`  
-**Documentation File:** `docs/modules/maintenance-report.md`  
+**Module Identifier:** `maintenance-report`  
+**Module Type:** Decoupled Add-on DLL (`Config/Addons/MaintenanceReport/MaintenanceReport.dll`)  
+**Documentation Path:** `docs/modules/maintenance-report.md`  
 
 ![Maintenance Report Interface](../images/maintenance-report.png)
 
@@ -11,68 +10,123 @@
 
 ## 1. Overview and Problem Solved
 
-Providing customers with a professional summary of hardware diagnostic results and maintenance procedures is critical for transparency and credibility in computer repair workshops. Without automated reporting, technicians must manually write down specs and steps taken, which is tedious and error-prone.
+Computer maintenance workshops, freelance technicians, and corporate IT departments must generate professional service records and work order summaries for clients and internal asset documentation. Creating these documents manually in Word or Notepad is repetitive, prone to omitted machine specifications, and disconnected from the diagnostics workbench.
 
-The **Maintenance Report** module solves this by generating standardized, formatted technical reports that consolidate:
-- Client and technician identification.
-- Automatically captured hardware and operating system telemetry.
-- An 8-step maintenance checklist covering physical cleaning, thermal paste replacement, updates, and integrity scans.
-- One-click clipboard copying (for instant WhatsApp/Email updates) and formatted `.txt` file export.
+The **Maintenance Report** module solves this problem by automatically combining customer metadata, a standardized 8-step technical procedure checklist, free-form technician observations, and the host's audited hardware telemetry into a structured plain-text report (`.txt`) ready for customer handoff or digital archiving.
 
 ---
 
 ## 2. Step-by-Step Usage Guide
 
-1. In the sidebar, click **📋 Report** (enable in Settings if hidden).
-2. Complete the service order fields:
-   - **Customer Name**: Client or business name.
-   - **Contact / Phone**: Phone number or email.
-   - **Technician Notes**: Additional observations.
-3. Review the **Maintenance Checklist** and check performed steps:
-   - *Physical internal cleaning & dust removal*
-   - *Thermal paste replacement*
-   - *Operating system integrity scan (SFC / DISM)*
-   - *Disk health check (SMART / CHKDSK)*
-   - *Temporary files & cache cleanup*
-   - *Windows updates installation*
-   - *Essential software installation*
-   - *Hardware stress test & thermal benchmark*
-4. Click **📋 Copy Report** to copy the full report to the clipboard.
-5. Click **💾 Save Report** to export to `Reports\MaintenanceReport_<Customer>_<Date>.txt` (and optionally save to the custom path configured in Settings).
+1. Navigate to **Maintenance Report** on the sidebar.
+2. **Fill Service Order Metadata**:
+   - **Service Order (SO) Number**: Enter your internal tracking or invoice number (e.g., `SO-2026-1042`).
+   - **Client Name**: Enter the customer or department name (e.g., `Acme Corp / John Doe`).
+   - **Serial Number / Service Tag**: Automatically populated with the hardware serial number discovered by the Dashboard. Can be edited manually if needed.
+3. **Select Performed Procedures (Checklist)**:
+   - Check off all procedures performed during the maintenance session:
+     - [x] Disk diagnostic and SMART health check
+     - [x] Clean Windows format and reinstallation
+     - [x] Essential application installation
+     - [x] System integrity repair (DISM / SFC)
+     - [x] Preventive internal cleaning & thermal paste replacement
+     - [x] Full driver and BIOS update
+     - [x] Deep temporary file cleanup
+     - [x] Network and printer setup
+4. **Enter Technical Report & Observations**:
+   - Type specific technical notes, recommendations, bench findings, or component upgrade suggestions in the multiline text box.
+5. **Generate and Export**:
+   - **Default Report File Path**: Choose the output file path (defaults to `C:\MaintenanceReport.txt` or configured path in `Reports/`).
+   - Click **Generate Maintenance Report**: Writes the complete document to disk and opens it in the default text viewer (Notepad).
+   - Click **Copy Technical Report**: Instantly copies the full formatted text report to the Windows clipboard for pasting into ticketing systems or emails.
+   - Click **Open Reports Folder**: Opens the reports destination directory in Windows Explorer.
 
 ---
 
-## 3. Internal Architecture and Implementation
+## 3. Internal Architecture and Technical Execution Flow
 
-### 3.1 Report Formatting Engine
-The static method `ReportHelper.GenerateReportText(MaintenanceRecord rec)` builds the output using `StringBuilder`:
+```
++-----------------------------------------------------------------------------------------+
+|                        Technician Clicks "Generate Maintenance Report"                  |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | MaintenanceReportAddon.GenerateReport()     |
+                      +---------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Gather Host Data:                           |
+                      | - IOptiAssistHost.Hardware (HardwareSummary)|
+                      | - IOptiAssistHost.Settings (Company/Contact)|
+                      +---------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Build Formatted StringBuilder:              |
+                      | 1. Header & Organization Information        |
+                      | 2. Work Order Metadata (SO #, Client, Date) |
+                      | 3. Hardware Telemetry & Windows Build Audit |
+                      | 4. Performed Procedures (8-step Checklist)  |
+                      | 5. Technician Observations & Diagnosis      |
+                      | 6. Technician & Customer Signature Lines    |
+                      +---------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | File.WriteAllText(destinationPath, text)    |
+                      | Process.Start("notepad.exe", path)          |
+                      | Host.Log("[REPORT] Successfully generated") |
+                      +---------------------------------------------+
+```
 
+### Sample Generated Report Output:
 ```text
-======================================================================
-                  TECHNICAL MAINTENANCE SERVICE REPORT
-======================================================================
-Date: 2026-11-05 17:30
-Technician / Workshop: OptiAssist Support
-Customer: John Doe (Phone: +1 555-0199)
+================================================================================
+                         TECHNICAL MAINTENANCE REPORT
+================================================================================
+Technician / Company: OptiAssist
+Contact / Support:    https://github.com/jvfigueiro/optiassist
+Generated On:         11/09/2026 08:35:00
 
--------------------------- HARDWARE AUDIT ----------------------------
-Operating System: Windows 11 Pro 64-bit (Build 22631.3007)
-Processor: AMD Ryzen 5 5600X (6 Cores, 12 Threads)
-Memory: 32.0 GB Physical RAM
-Motherboard: ASUS PRIME B550M-A
-Graphics Card: NVIDIA GeForce RTX 3070
-Serial Number: MS-7C91-001
+--------------------------------------------------------------------------------
+1. SERVICE ORDER INFORMATION
+--------------------------------------------------------------------------------
+Service Order (SO):   SO-2026-1042
+Client / Department:  Acme Corp / John Doe
+Machine Serial / Tag: System Serial Number
 
------------------------- COMPLETED PROCEDURES ------------------------
-[X] Physical internal cleaning & dust removal
-[X] Thermal paste replacement
-[X] System integrity scan (SFC / DISM)
-[X] Temporary files & cache cleanup
-[ ] Windows updates installation
+--------------------------------------------------------------------------------
+2. SYSTEM HARDWARE & OPERATING SYSTEM SPECIFICATIONS
+--------------------------------------------------------------------------------
+Operating System:     Microsoft Windows 11 Pro (Build 10.0.26300.9818)
+Processor:            13th Gen Intel Core i5-13400 (10 Cores / 16 Threads)
+Total RAM:            31.8 GB RAM
+Graphics (GPU):       NVIDIA GeForce RTX 2070
+Motherboard:          ASUSTeK COMPUTER INC. PRIME H610M-E D4
+BIOS Version:         American Megatrends Inc. v4004 (03/06/2026)
+Security Posture:     TPM Available (2.0) | Secure Boot: Active | BitLocker: Inactive
 
---------------------------- TECHNICIAN NOTES -------------------------
-System running cool, CPU max temperature 68°C under load.
-======================================================================
+--------------------------------------------------------------------------------
+3. PERFORMED TECHNICAL PROCEDURES
+--------------------------------------------------------------------------------
+ [X] Disk diagnostic and SMART health check
+ [X] Clean Windows format and reinstallation
+ [X] Essential application installation
+ [X] System integrity repair (DISM / SFC)
+ [X] Full driver and BIOS update
+ [X] Deep temporary file cleanup
+
+--------------------------------------------------------------------------------
+4. TECHNICAL OBSERVATIONS & DIAGNOSIS
+--------------------------------------------------------------------------------
+System was cleaned of temporary files and thermal paste was reapplied.
+All drivers updated to latest vendor releases. Windows fully updated.
+
+================================================================================
+Technician Signature: _______________________   Client: _______________________
+================================================================================
 ```
 
 ---
@@ -80,38 +134,40 @@ System running cool, CPU max temperature 68°C under load.
 ## 4. Inputs, Outputs, and Configurations
 
 * **Inputs**:
-  * Form fields (Customer, Contact, Notes).
-  * Checkbox states.
-  * `_host.Hardware` telemetry object.
+  * User inputs: Service order number, client name, serial number override, procedure checkboxes, and observation notes.
+  * Host inputs: `HardwareSummary` and company preferences from `settings.json`.
 * **Outputs**:
-  * Formatted text copied to clipboard.
-  * Exported report files in `Reports/`.
+  * Formatted `.txt` report file saved to the specified filesystem path.
+  * Text content copied to Windows clipboard.
 * **Configurations in `Config/settings.json`**:
-  * `"ReportSavePath"`: Custom destination file path (default `C:\MaintenanceReport.txt`).
-  * `"EnableMaintenanceReport"`: Controls tab visibility in the sidebar.
+  * `"CustomerName"`: Custom technician or company name displayed in report headers.
+  * `"ContactInfo"`: Support URL, telephone, or email address.
+  * `"ReportSavePath"`: Default target filesystem path (e.g., `C:\MaintenanceReport.txt`).
 
 ---
 
-## 5. Requirements and Dependencies
+## 5. Requirements
 
-* **Administrator Privileges**: Inherited from the host; saving to `Reports/` requires standard file write access.
-* **Supported Windows Versions**: Windows 10 and Windows 11.
-* **External Dependencies**: None.
-
----
-
-## 6. Risks and Reversibility
-
-* **Safe Operation**: 100% non-destructive. Creates local text documents without modifying system settings.
+* **Administrative Privileges**: Inherited from Host. Writing to root `C:\` requires administrator elevation.
+* **Windows Version**: Windows 10 and Windows 11 (64-bit).
+* **External Dependencies**: Zero. Relies entirely on .NET Framework file I/O and clipboard APIs.
 
 ---
 
-## 7. Error Handling and Logging
+## 6. Risks and Side Effects
 
-* File system access exceptions during report export are caught and logged, alerting the technician via a friendly error dialog.
+* **Filesystem Changes**: Overwrites the specified output `.txt` file if it already exists.
+* **Reversibility**: Non-destructive reporting operation.
+
+---
+
+## 7. Logging and Error Handling
+
+* Unauthorized path write exceptions (e.g., trying to write to a write-protected USB drive or invalid directory) are caught gracefully, displaying an informational alert prompting the technician to select a writable path.
+* Successful report generation and clipboard copy events are recorded in `IOptiAssistHost.Log`.
 
 ---
 
 ## 8. Related Source Files
 
-* [`src/Addons/MaintenanceReport/MaintenanceReportAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/MaintenanceReport/MaintenanceReportAddon.cs): Addon implementation, UI forms, and report formatting engine.
+* [`src/Addons/MaintenanceReport/MaintenanceReportAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/MaintenanceReport/MaintenanceReportAddon.cs): Complete UI, form binding, report generation string builder, and clipboard exporter.

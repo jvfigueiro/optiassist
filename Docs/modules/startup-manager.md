@@ -1,9 +1,8 @@
-# Startup Manager (Autostart & Scheduled Tasks)
+# Startup Manager & Scheduled Tasks
 
-**Module Identifier:** `StartupManager`  
-**Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
-**DLL Location:** `Config\Addons\StartupManager\StartupManager.dll`  
-**Documentation File:** `docs/modules/startup-manager.md`  
+**Module Identifier:** `startup-manager`  
+**Module Type:** Decoupled Add-on DLL (`Config/Addons/StartupManager/StartupManager.dll`)  
+**Documentation Path:** `docs/modules/startup-manager.md`  
 
 ![Startup Manager Interface](../images/startup-manager.png)
 
@@ -11,98 +10,132 @@
 
 ## 1. Overview and Problem Solved
 
-Software applications frequently configure automatic startup entries without explicit user awareness, degrading system boot performance and consuming background RAM and CPU resources. In Windows, autostart entries are scattered across multiple registry locations (HKCU and HKLM in both 32-bit and 64-bit views), file system Startup folders, and the Windows Task Scheduler.
+Slow boot times and high idle RAM/CPU consumption on customer machines are frequently caused by unwanted applications that register themselves to run at system startup. Windows spreads startup configurations across multiple fragmented locations:
+- 32-bit and 64-bit Registry hives (`Run` and `RunOnce`).
+- The native Windows `StartupApproved` binary management hive.
+- Per-user and all-users Startup folders on the filesystem.
+- The Windows Task Scheduler engine (`Schedule.Service`).
 
-The **Startup Manager** solves this problem by providing a unified, centralized inspector for all system entry points. It enables technicians to:
-- Audit autostart applications across Registry keys (`Run`, `RunOnce`) and file system folders.
-- Inspect and toggle Windows Scheduled Tasks triggered at boot or user logon.
-- Filter native Microsoft/Windows entries to isolate third-party software.
-- Safely disable or enable entries using Windows' official `StartupApproved` registry architecture (allowing full reversibility).
-- Protect critical system services with risk warning confirmation dialogs.
+Using native tools like Windows Task Manager only displays a fraction of these items, does not allow editing command arguments, and cannot manage scheduled tasks directly.
+
+The **Startup Manager** provides a unified diagnostic inspector that aggregates autostart entries from all registry hives, filesystem startup directories, and COM-based scheduled tasks into a single, clean management interface. It enables non-destructive disabling, editing, and creation of autostart entries.
 
 ---
 
 ## 2. Step-by-Step Usage Guide
 
-### 2.1 Auditing Autostart Applications
-1. In the sidebar, click **🚀 Startup Manager**.
-2. Select the **Applications (Registry & Folders)** tab.
-3. Review detected entries: Name, Executable Path, Location, and Status (*Enabled* or *Disabled*).
-4. Use the search bar to locate specific programs.
-5. To toggle an application:
-   - Click the **Disable / Enable** button on the entry card.
-   - The application changes its autostart state immediately without deleting registry values.
+### 2.1 Managing Startup Programs
+1. Navigate to **Startup Manager** on the sidebar.
+2. Select the **Startup Programs** tab.
+3. Review populated entries showing:
+   - Application Name and Publisher
+   - Scope: `Current User` or `All Users`
+   - File size and executable path
+   - Current Status: **Enabled** (green) or **Disabled** (grey)
+   - Missing Executable Warning: Items pointing to nonexistent paths are highlighted with a red badge (`⚠️ Not found`).
+4. **Enable or Disable an Application**:
+   - Click **Disable** to prevent an application from launching at boot without deleting its registry entry.
+   - Click **Enable** to restore automatic execution.
+5. **Edit an Entry**:
+   - Click **Edit** to modify the program name, target executable path, or launch arguments.
+6. **Add a New Startup Item**:
+   - Click **+ Add Program** in the upper toolbar, browse for an executable, assign a friendly name, and choose between Current User or All Users scope.
 
-### 2.2 Auditing Scheduled Tasks
-1. Select the **Scheduled Tasks** tab.
-2. The list displays active tasks, their triggers, actions, and current status.
-3. **Filter Native Entries**: Keep *"Hide native Microsoft / Windows entries"* checked to focus on third-party software.
-4. If you uncheck the native filter, a risk warning dialog alerts you that modifying core Windows tasks can affect operating system stability.
-5. To disable a task, select it and click **Disable Task**.
+### 2.2 Inspecting Scheduled Tasks
+1. Switch to the **Scheduled Tasks** tab.
+2. By default, **Hide native Microsoft / Windows entries** is checked to protect essential operating system tasks from accidental modification.
+3. If deep administrative inspection is required, uncheck the box. OptiAssist presents an explicit warning dialog to confirm that modifying native tasks may cause system instability.
+4. Review the tasks list detailing:
+   - Task Name and Folder Path
+   - Author / Application Publisher
+   - Trigger Schedule: At Startup, At User Logon, or Periodic Interval
+   - State: **Ready**, **Running**, or **Disabled**
+5. Click **Disable** or **Enable** on third-party updater tasks (e.g. Google Update, Adobe Update, telemetry tasks) to prevent unnecessary background wakeups.
 
 ---
 
-## 3. Internal Architecture and Implementation
+## 3. Internal Architecture and Technical Execution Flow
 
-### 3.1 Registry Inspection and `StartupApproved` Standard
-Windows 8, 10, and 11 use the `StartupApproved\Run` registry key to disable entries without deleting the original `Run` command value:
-- **Registry Keys Inspected**:
-  - `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
-  - `HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce`
-  - `HKLM\Software\Microsoft\Windows\CurrentVersion\Run` (64-bit view)
-  - `HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run` (32-bit view)
-- **StartupApproved Mechanism**:
-  - When enabled: Binary value starts with `02 00 00 00...`.
-  - When disabled: Binary value starts with `03 00 00 00...`.
-  OptiAssist reads and writes this binary format, preserving user configuration without corrupting paths.
-
-### 3.2 Scheduled Tasks via COM Interop
-Rather than relying on fragile parsing of `schtasks.exe /query`, Startup Manager connects directly to the Task Scheduler 2.0 COM API:
-```csharp
-Type taskServiceType = Type.GetTypeFromProgID("Schedule.Service");
-dynamic taskService = Activator.CreateInstance(taskServiceType);
-taskService.Connect();
-dynamic rootFolder = taskService.GetFolder("\\");
 ```
-This enables recursive enumeration, inspection of executable action paths, and state modifications (`task.Enabled = false`).
++-----------------------------------------------------------------------------------------+
+|                               StartupEngine.LoadAllEntries()                            |
++-----------------------------------------------------------------------------------------+
+                                             |
+        +------------------------------------+------------------------------------+
+        |                                    |                                    |
+        v                                    v                                    v
++-------------------------------+  +-------------------------------+  +-----------------------+
+| Registry Run / RunOnce Scan   |  | Filesystem Startup Folders    |  | COM Schedule.Service  |
+| - HKCU\...\Run & RunOnce      |  | - %APPDATA%\...\Startup       |  | - Type.GetTypeFrom    |
+| - HKLM\...\Run & RunOnce      |  | - %PROGRAMDATA%\...\Startup   |  |   ProgID("Schedule.   |
+| - HKLM\WOW6432Node\...\Run    |  | - Scans .lnk and .exe files   |  |   Service")           |
++-------------------------------+  +-------------------------------+  | - Connect()           |
+        |                                            |                | - Recursive folder    |
+        v                                            v                |   traversal           |
++-------------------------------+  +-------------------------------+  +-----------------------+
+| StartupApproved Inspection    |  | Resolves COM .lnk Shortcuts   |              |
+| Reads binary DWORD:           |  | via WScript.Shell to extract  |              |
+| - Byte 0 == 0x02: Enabled     |  | target executable paths       |              |
+| - Byte 0 == 0x03: Disabled    |  +-------------------------------+              |
++-------------------------------+                    |                            |
+        |                                            |                            |
+        +--------------------------------------------+----------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Verifies File.Exists(targetPath)            |
+                      | Reads file metadata (Size, Publisher, Ver)  |
+                      | Binds to ObservableCollection<StartupEntry> |
+                      +---------------------------------------------+
+```
+
+### Non-Destructive Disabling Mechanism:
+Rather than deleting registry keys (which would cause data loss if the technician later wanted to re-enable the item), OptiAssist interacts with Windows Explorer's official `StartupApproved` hive:
+- `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run`
+- `HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run`
+
+To disable an entry, the first byte of its binary value is updated to `0x03`. To enable it, the byte is restored to `0x02`. This matches the behavior of native Windows Task Manager.
 
 ---
 
 ## 4. Inputs, Outputs, and Configurations
 
 * **Inputs**:
-  * Windows Registry keys (`HKLM`, `HKCU`).
-  * Startup folders (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`).
-  * Task Scheduler COM hierarchy.
+  * Windows Registry autostart keys (`HKCU`, `HKLM`, `WOW6432Node`).
+  * Startup directory filesystem folders.
+  * Windows Task Scheduler 2.0 COM service.
 * **Outputs**:
-  * Updated `StartupApproved` binary registry values.
-  * Modified task states in Task Scheduler.
+  * Real-time list of startup applications and scheduled tasks.
+  * Modified binary values in `StartupApproved`.
+  * New or edited `.lnk` shortcuts and registry values.
 
 ---
 
-## 5. Requirements and Dependencies
+## 5. Requirements
 
-* **Administrator Privileges**: Required to modify `HKLM` keys and system-level Scheduled Tasks.
-* **Supported Windows Versions**: Windows 10 and Windows 11.
-* **External Dependencies**: None.
-
----
-
-## 6. Risks and Reversibility
-
-* **High Reversibility**: Disabling entries does not delete them; they can be re-enabled at any time.
-* **System Task Warnings**: Unchecking the native filter displays an explicit warning dialog to prevent accidental modification of critical Windows services.
+* **Administrative Privileges**: Required. Managing machine-wide autostart (`HKLM`, `ProgramData`, and root scheduled tasks) requires full administrative elevation.
+* **Windows Version**: Windows 10 and Windows 11 (64-bit).
+* **External Dependencies**: Zero. Interacts directly with Windows Registry and the built-in Windows Task Scheduler COM interface (`Schedule.Service`).
 
 ---
 
-## 7. Error Handling and Logging
+## 6. Risks and Side Effects
 
-* Permission denied errors on protected tasks or registry keys are caught and reported to the log console without crashing.
+* **Disabling Vital Hardware Drivers**: Disabling startup items associated with audio control panels (Realtek), trackpads (Synaptics), or GPU helpers may disable tray utilities (hardware functions remain operational via Windows drivers).
+* **Reversibility**: **100% Reversible**. Disabled items can be re-enabled instantly with a single click.
+
+---
+
+## 7. Logging and Error Handling
+
+* Any COM access violations (e.g. attempting to read protected system tasks that deny access to administrator accounts) are caught and skipped gracefully without interrupting task enumeration.
+* Corrupted shortcut files (`.lnk`) that fail target resolution fall back to displaying the raw shortcut path.
+* All state changes (Enable, Disable, Edit, Add) write structured log entries to `MainWindow.Log()`.
 
 ---
 
 ## 8. Related Source Files
 
-* [`src/Addons/StartupManager/StartupManagerAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/StartupManager/StartupManagerAddon.cs): UI layout, controls, and search filtering.
-* [`src/Addons/StartupManager/StartupEngine.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/StartupManager/StartupEngine.cs): Registry `StartupApproved` logic and Task Scheduler COM engine.
-* [`src/Addons/StartupManager/StartupModels.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/StartupManager/StartupModels.cs): Data models for startup items and tasks.
+* [`src/Addons/StartupManager/StartupManagerAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/StartupManager/StartupManagerAddon.cs): UI layout, tab coordinator, and search filter.
+* [`src/Addons/StartupManager/StartupEngine.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/StartupManager/StartupEngine.cs): Registry parser, `StartupApproved` binary manipulator, and COM Task Scheduler traversal.
+* [`src/Addons/StartupManager/StartupModels.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/StartupManager/StartupModels.cs): Data models for `StartupEntry` and `ScheduledTaskEntry`.

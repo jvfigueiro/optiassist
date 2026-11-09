@@ -1,8 +1,8 @@
-# Windows Administrative Tools (Windows Tools)
+# Windows Tools & Native Consoles
 
 **Module Identifier:** `windows-tools`  
-**Type:** Host Native View (`MainWindow`)  
-**Documentation File:** `docs/modules/windows-tools.md`  
+**Module Type:** Host Native View (`MainWindow`)  
+**Documentation Path:** `docs/modules/windows-tools.md`  
 
 ![Windows Tools Interface](../images/windows-tools.png)
 
@@ -10,69 +10,121 @@
 
 ## 1. Overview and Problem Solved
 
-System administration, hardware debugging, and OS diagnostics often require opening built-in Windows consoles (`services.msc`, `compmgmt.msc`, `regedit`, `devmgmt.msc`, `cleanmgr`). Navigating through the Windows Control Panel, Start Menu, or searching Windows Settings often takes unnecessary clicks and time, especially on newly formatted systems.
+Windows incorporates dozens of powerful built-in administrative consoles, configuration applets, and diagnostics utilities (`devmgmt.msc`, `diskmgmt.msc`, `services.msc`, `sysdm.cpl`, `netplwiz.exe`, `regedit.exe`, `cleanmgr.exe`, `dfrgui.exe`, `wf.msc`, `osk.exe`). However, Microsoft has fragmented these tools across the legacy Control Panel, modern Settings app, Windows Administrative Tools folder, and arbitrary system directories. Technicians often spend time searching for run commands or clicking through nested menus to reach the console they need.
 
-The **Windows Tools** view solves this by providing a unified, fast-launch control panel:
-- Over 20 native Microsoft Management Consoles (`.msc`), Control Panel applets (`.cpl`), and system executables organized cleanly.
-- Automatic handling of 64-bit redirection (`sysnative`) to ensure utilities launch properly on 64-bit Windows.
-- Quick-launch buttons for technician folders (`Maintenance/` and `Installers/`).
-- Direct reboot to UEFI firmware (`shutdown /r /fw /t 0`).
+The **Windows Tools** view provides a single, high-efficiency control panel that aggregates the most vital native administrative consoles, technician storage directories, and firmware boot options into organized, single-click buttons.
 
 ---
 
 ## 2. Step-by-Step Usage Guide
 
-1. In the sidebar, click **🛠️ Windows Tools**.
-2. Click any tool button to launch the corresponding console immediately:
-   - **Administrative Tools**: Device Manager (`devmgmt.msc`), Disk Management (`diskmgmt.msc`), Windows Services (`services.msc`), Task Manager (`taskmgr.exe`), Classic Control Panel (`control.exe`), System Information (`msinfo32.exe`), System Properties (`sysdm.cpl`), Registry Editor (`regedit.exe`), Event Viewer (`eventvwr.msc`), Resource Monitor (`resmon.exe`), Disk Cleanup (`cleanmgr.exe`), Drive Optimizer (`dfrgui.exe`), Windows Firewall (`wf.msc`), Network Connections (`ncpa.cpl`).
-   - **Security Tools**: BitLocker Drive Encryption, TPM Management Console (`tpm.msc`), Local Security Policy (`secpol.msc`).
-   - **Folders and Prompts**: Maintenance Tools folder (`Maintenance/`), Installers folder (`Installers/`), Command Prompt (Admin), PowerShell (Admin).
-   - **Firmware**: Reboot to UEFI Firmware.
+1. Navigate to **Windows Tools** on the sidebar.
+2. **Access Administrative Tools**:
+   - Click any button in the primary grid to instantly launch the desired native console:
+     - **Device Manager**: `devmgmt.msc` (Hardware inspection, driver updates, error code analysis).
+     - **User Accounts**: `netplwiz.exe` (User profiles, password requirements, auto-login).
+     - **Disk Management**: `diskmgmt.msc` (Partitioning, volume resizing, drive letter assignments).
+     - **Classic Control Panel**: `control.exe` (Legacy system configuration).
+     - **System Information**: `msinfo32.exe` (Hardware abstraction and driver status).
+     - **About Windows**: `winver.exe` (OS build verification).
+     - **MSCONFIG Tool**: `msconfig.exe` (Boot options and safe mode selector).
+     - **System Properties**: `sysdm.cpl` (Computer name, domain membership, environment variables).
+     - **Network Connections**: `ncpa.cpl` (Network adapter properties, IP/DNS configuration).
+     - **Windows Features**: `optionalfeatures.exe` (Enabling/disabling WSL, Hyper-V, .NET 3.5).
+     - **Registry Editor**: `regedit.exe` (Windows Registry manipulation).
+     - **Task Manager**: `taskmgr.exe` (Performance graphs, process monitoring).
+     - **Resource Monitor**: `resmon.exe` (Real-time disk queue, memory commit, and network socket inspection).
+     - **Memory Diagnostic**: `mdsched.exe` (RAM integrity test on reboot).
+     - **Reliability Monitor**: `perfmon /rel` (Windows stability index and crash history).
+     - **Event Viewer**: `eventvwr.msc` (System, Security, and Application error logs).
+     - **GPEDIT Tool**: `gpedit.msc` (Group Policy editor on Pro and Enterprise editions).
+     - **Windows Services**: `services.msc` (Background service control and startup types).
+     - **Date & Time**: `timedate.cpl` (Clock settings and internet time servers).
+     - **Disk Cleanup**: `cleanmgr.exe` (Native Windows drive cleaning).
+     - **Defragment and Optimize Drives**: `dfrgui.exe` (SSD TRIM and HDD defragmentation).
+     - **Windows Defender Firewall**: `wf.msc` (Inbound/outbound firewall rules).
+     - **On-Screen Keyboard**: `osk.exe` (Virtual keyboard for tablet or broken keyboard scenarios).
+3. **Access Maintenance Tools & Technician Folders**:
+   - **Maintenance Folder**: Opens the local `Maintenance/` directory in Windows Explorer.
+   - **Installers Folder**: Opens the local `Installers/` repository in Windows Explorer.
+   - **Command Prompt (Admin)**: Launches an elevated CMD terminal.
+   - **PowerShell (Admin)**: Launches an elevated Windows PowerShell console.
+   - **Reboot to UEFI Firmware**: Prompts for confirmation and reboots directly into the motherboard BIOS/UEFI.
 
 ---
 
-## 3. Internal Architecture and Implementation
+## 3. Internal Architecture and Technical Execution Flow
 
-### 3.1 64-Bit File System Redirection (`sysnative`)
-When a 32-bit process attempts to launch tools in `System32`, Windows redirects calls to `SysWOW64`. OptiAssist is compiled strictly in 64-bit mode (`Prefer32Bit = false`), ensuring direct, native access to 64-bit system consoles.
+```
++-----------------------------------------------------------------------------------------+
+|                              Technician Clicks a Tool Button                            |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | ShortcutsHelper.OpenWindowsTool(cmd, args)  |
+                      +---------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | ProcessStartInfo setup:                     |
+                      | - FileName = cmd                            |
+                      | - Arguments = args                          |
+                      | - UseShellExecute = true                    |
+                      | - Verb = "runas" (inherits Host elevation)  |
+                      +---------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Process.Start(psi)                          |
+                      | Native Windows console opens instantly      |
+                      +---------------------------------------------+
+```
 
-### 3.2 Process Launch Fallback
-Launches use `ShortcutsHelper.SafeStartProcess`:
-1. Attempts `Process.Start(new ProcessStartInfo(toolName) { UseShellExecute = true })`.
-2. If association locks or permissions block execution, an un-elevated detached fallback executes without crashing the application.
+### Direct Firmware Reboot Engine:
+When the technician clicks **Reboot to UEFI**, the system executes:
+```cmd
+shutdown.exe /r /fw /t 0
+```
+- If the hardware is non-UEFI (Legacy BIOS / MBR), Windows returns error code `0x5B3` (`ERROR_NOT_SUPPORTED`).
+- OptiAssist catches this exception and alerts the user that the system does not support software-triggered firmware reboot, avoiding an unexpected application crash.
 
 ---
 
 ## 4. Inputs, Outputs, and Configurations
 
-* **Inputs**: Button click events.
-* **Outputs**: Spawned native Windows administrative windows.
-* **Configurations**: None required.
+* **Inputs**:
+  * User button clicks on the tool grid.
+* **Outputs**:
+  * Launched native Windows `.msc`, `.cpl`, or `.exe` processes running with elevated administrator privileges.
+  * Windows Explorer windows focused on local maintenance directories.
 
 ---
 
-## 5. Requirements and Dependencies
+## 5. Requirements
 
-* **Administrator Privileges**: Inherited from the host; required for administrative consoles.
-* **Supported Windows Versions**: Windows 10 and Windows 11.
-* **Edition Notes**: `gpedit.msc` and `secpol.msc` are exclusive to Windows Pro/Enterprise/Education.
-
----
-
-## 6. Risks and Reversibility
-
-* **Safe Launch**: Merely opens native Windows utilities. Any system alterations occur inside those native consoles under user direction.
+* **Administrative Privileges**: Required to launch administrative consoles without secondary UAC prompts.
+* **Windows Version**: Windows 10 and Windows 11.
+* **Edition Notes**: `gpedit.msc` is natively available on Windows Pro, Enterprise, and Education editions; clicking it on Windows Home editions displays a notice that Group Policy is not present.
 
 ---
 
-## 7. Error Handling and Logging
+## 6. Risks and Side Effects
 
-* Missing tools (e.g. `gpedit.msc` on Windows Home) catch `Win32Exception` and log a helpful notification without UI disruption.
+* **Console Actions**: Any changes made by the technician inside launched native consoles (e.g. deleting registry keys in `regedit`, stopping services in `services.msc`, or repartitioning in `diskmgmt.msc`) directly impact the host operating system.
+* **Reboot to UEFI**: Reboots the machine immediately; unsaved user work in other applications will be lost. OptiAssist presents an explicit confirmation dialog before executing the reboot command.
+
+---
+
+## 7. Logging and Error Handling
+
+* All launcher calls are wrapped in defensive `try-catch` blocks.
+* If a console executable is missing or restricted by Windows AppLocker/SRP policies, an error message is recorded in `MainWindow.Log()` and an informational warning dialog is presented to the user.
 
 ---
 
 ## 8. Related Source Files
 
-* [`src/MainWindow.xaml`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml): Windows Tools panel layout and buttons.
-* [`src/MainWindow.xaml.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml.cs): Button click handlers.
-* [`src/ShortcutsHelper.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/ShortcutsHelper.cs): Safe launch helper routines.
+* [`src/MainWindow.xaml`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml): Windows Tools grid layout and button bindings.
+* [`src/MainWindow.xaml.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml.cs): Button click events and coordinator.
+* [`src/ShortcutsHelper.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/ShortcutsHelper.cs): `ShortcutsHelper` methods (`OpenWindowsTool`, `OpenBitLockerSettings`, `OpenGpedit`, `OpenDateTimeSettings`, etc.).

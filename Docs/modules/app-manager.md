@@ -1,9 +1,8 @@
-# App Manager (Automated Software Installation & Updates)
+# App Manager & Software Deployment
 
-**Module Identifier:** `AppManager`  
-**Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
-**DLL Location:** `Config\Addons\AppManager\AppManager.dll`  
-**Documentation File:** `docs/modules/app-manager.md`  
+**Module Identifier:** `app-manager`  
+**Module Type:** Decoupled Add-on DLL (`Config/Addons/AppManager/AppManager.dll`)  
+**Documentation Path:** `docs/modules/app-manager.md`  
 
 ![App Manager Interface](../images/app-manager.png)
 
@@ -11,105 +10,146 @@
 
 ## 1. Overview and Problem Solved
 
-After formatting or repairing a Windows installation, setting up essential software (web browsers, archivers, PDF viewers, runtime libraries, remote support tools) is traditionally a slow, repetitive, and manual process. Technicians often download separate installers, click through endless setup wizards, and manually uncheck bundled adware.
+Following a clean Windows reinstallation, upgrade, or routine workstation setup, technicians must install standard software suites (web browsers, archivers, PDF readers, media players, developer tools, communication clients). Downloading and clicking through individual installation wizards manually is tedious, prone to human error, and wastes hours of technician labor.
 
-The **App Manager** solves this problem by providing a dual-engine automated software manager:
-1. **Application Updates (Winget)**: Automatically detects installed applications with newer versions available in Microsoft's official repository and updates them in batch or individually in 100% silent mode.
-2. **Post-Installation Deployment**: Installs a curated list of essential software unattended. It uses offline installers from `Installers/` for maximum USB 3.0/SSD deployment speed and automatically falls back to silent Winget downloads when an installer is absent.
-3. **In-App Visual Catalog Editor**: Allows technicians to add custom software, toggle between Local and Winget install types, configure custom silent arguments, and reorder installation priority without manually editing JSON files.
+The **App Manager** solves this problem by providing a centralized, unattended software installation and update workbench. It implements a dual-mode deployment strategy:
+1. **Offline-First Local Installers**: Prioritizes local executable packages stored in the technician's `Installers/` directory, detecting installer types and running them with automated silent switches without consuming internet bandwidth.
+2. **Microsoft Winget Fallback**: When an installer is not found locally, the system seamlessly falls back to the official Microsoft Windows Package Manager (`winget.exe`), downloading and installing the requested application silently.
+
+Additionally, the App Manager incorporates an **Application Updates** scanner that queries the local system for installed packages with pending updates, allowing single-click batch upgrades.
 
 ---
 
 ## 2. Step-by-Step Usage Guide
 
-### 2.1 Checking and Updating Installed Applications
-1. In the sidebar, click **📦 App Manager**.
-2. Select the **🔄 Application Updates** tab.
-3. Click **🔄 Check for Updates**. The application runs a background scan using Winget and populates the table with:
-   - Application Name and ID.
-   - Currently Installed Version.
-   - Latest Available Version in the repository.
-4. Mark the items you want to update (or click **Select All**).
-5. Click **🔄 Update Selected** or **🚀 Update All**. The updates run silently in the background while streaming progress to the real-time log.
+### 2.1 Batch Unattended Software Installation
+1. Open OptiAssist and navigate to **App Manager** on the sidebar.
+2. Select the **Automated Application Installation** tab.
+3. Review available software packages grouped into categorized checkboxes:
+   - *Browsers*: Google Chrome, Mozilla Firefox, Brave, Microsoft Edge.
+   - *Utilities*: 7-Zip, WinRAR, Notepad++, AnyDesk, TeamViewer.
+   - *Media & Graphics*: VLC Media Player, OBS Studio, GIMP, Spotify.
+   - *Productivity & Runtime*: Adobe Acrobat Reader, LibreOffice, Microsoft Visual C++ Redistributables.
+4. Select packages individually or use quick preset buttons (**Select All**, **Deselect All**, **Defaults / Essentials**).
+5. Click **Install Selected**:
+   - The App Manager verifies whether the executable exists locally in `Installers/`.
+   - If present, it executes the local installer with silent flags.
+   - If absent and `EnableWingetFallback` is enabled in Settings, it invokes `winget install --id <Id> --silent`.
+   - Live installation progress and console output stream directly to the terminal.
 
-### 2.2 Unattended Post-Installation Deployment
-1. Select the **📦 Post-Installation** tab.
-2. Review the list of pre-configured applications (Google Chrome, 7-Zip, VLC Media Player, AnyDesk, Visual C++ Runtimes, etc.).
-3. Choose your selection:
-   - **Select Essentials**: Checks recommended standard tools.
-   - **Select All / Deselect All**: Bulk toggles all checkboxes.
-4. Click **🚀 Install Selected Applications**.
-5. The execution engine processes items sequentially:
-   - If a corresponding installer exists in the `Installers/` folder, it executes locally with silent switches (`/S`, `/SILENT`, `/qn`).
-   - If missing locally and `EnableWingetFallback` is enabled in `settings.json`, it triggers `winget install --id <Id> --silent --accept-package-agreements --accept-source-agreements`.
+### 2.2 Updating Installed Applications
+1. On the **Application Updates** tab, click **Check for Updates**.
+2. OptiAssist executes an asynchronous scan via Winget to detect installed packages with newer available releases.
+3. Review the populated list displaying:
+   - Application Name
+   - Current Version vs New Available Version
+   - Package Identifier (e.g., `Google.Chrome.EXE`, `Microsoft.Edge`)
+4. Check the desired applications and click **Update Selected** (or **Update All**).
 
-### 2.3 Customizing the Catalog (`autoinstall.json`)
-1. In the Post-Installation tab, click **⚙️ Customize Catalog**.
-2. To add a software:
-   - Enter the application name and select the type (**Local Installer** or **Winget**).
-   - If Local, click **Browse...** to pick the setup file from `Installers/`.
-   - If Winget, enter the official Package ID (e.g. `Mozilla.Firefox`).
-   - Define custom silent arguments (e.g. `/VERYSILENT /NORESTART`).
-   - Click **Add Application**.
-3. Use the **▲ Move Up** and **▼ Move Down** buttons to prioritize prerequisites (e.g. Runtimes installed before dependent apps).
-4. Click **💾 Save Catalog** to persist changes to `Config/autoinstall.json`.
+### 2.3 Editing the Software Catalog
+1. Click the **Edit Catalog** button to open the visual catalog manager.
+2. Add new software definitions, specify custom silent switches, configure offline package filenames, or modify Winget package identifiers.
 
 ---
 
-## 3. Internal Architecture and Implementation
+## 3. Internal Architecture and Technical Execution Flow
 
-### 3.1 Upgrade Detection Flow
-1. `CheckWingetUpgradesAsync()` runs in a background thread via `ThreadPool.QueueUserWorkItem`.
-2. It launches `winget.exe upgrade` with standard output and error redirection.
-3. The parser processes table lines, matching columns (`Name`, `Id`, `Version`, `Available`) and discarding header lines.
-4. Extracted entries populate an `ObservableCollection<WingetUpgradeItem>` bound to the UI.
+```
++------------------------------------------------------------------------------------+
+|                         Technician Clicks "Install Selected"                       |
++------------------------------------------------------------------------------------+
+                                           |
+                                           v
+                   +-----------------------------------------------+
+                   | Iterates over checked items from catalog      |
+                   | (autoinstall.json)                            |
+                   +-----------------------------------------------+
+                                           |
+                                           v
+                   +-----------------------------------------------+
+                   | Does package file exist in Installers/ folder?|
+                   +-----------------------------------------------+
+                                  /                 \
+                          Yes    /                   \   No
+                                v                     v
+      +---------------------------------+   +------------------------------------+
+      | Offline Local Installer Found   |   | Is EnableWingetFallback true in    |
+      +---------------------------------+   | settings.json?                     |
+                      |                     +------------------------------------+
+                      v                                  /            \
+      +---------------------------------+        Yes    /              \   No
+      | Detect Installer Type & Flags:  |              v                v
+      | - Inno Setup: /VERYSILENT /NORE |   +--------------------+  +------------+
+      | - NSIS: /S                      |   | Execute Winget:    |  | Log error: |
+      | - InstallShield: /s /v/qn       |   | winget install     |  | Package    |
+      | - MSI: msiexec /i <file> /qn    |   | --id <PackageId>   |  | unavailable|
+      +---------------------------------+   | --silent           |  +------------+
+                      |                     | --accept-agreements|
+                      v                     +--------------------+
+      +---------------------------------+              |
+      | Process.Start() with redirected |              |
+      | stdout/stderr to Host.Log()     |              |
+      +---------------------------------+              |
+                      |                                |
+                      +----------------+---------------+
+                                       |
+                                       v
+                      +---------------------------------+
+                      | Verify Exit Code (0 = Success)  |
+                      | Advance to next queued software |
+                      +---------------------------------+
+```
 
-### 3.2 Post-Install Execution Flow
-1. `BtnInstallSelected_Click` filters apps with `Selected == true`.
-2. For each selected application, `InstallerHelper.InstallAppAsync()` evaluates:
-   - **Local Mode**: Checks if `Path.Combine(baseDir, "Installers", app.LocalInstallerFile)` exists. If found, starts `Process.Start(psi)` with `app.SilentArgs`.
-   - **Winget Fallback Mode**: If the local file is not found, switches to `winget.exe install --id {app.WingetId} --silent --accept-package-agreements --accept-source-agreements`.
-3. Process stdout and stderr stream asynchronously to the central host log (`_host.Log`).
+### Updates Inspection Engine:
+1. When **Check for Updates** is clicked, `InstallerHelper.ScanUpdatesAsync()` executes:
+   ```cmd
+   winget.exe upgrade --include-unknown
+   ```
+2. The output table is parsed using regular expressions, extracting package name, ID, current version, and available version.
+3. Items are loaded into an `ObservableCollection<AppUpdateItem>` and bound to the WPF `DataGrid` / `ItemsControl`.
 
 ---
 
 ## 4. Inputs, Outputs, and Configurations
 
 * **Inputs**:
-  * `Config/autoinstall.json`: Master software catalog.
-  * Local installers directory (`Installers/`).
-  * Winget repository metadata.
+  * `Config/Addons/AppManager/autoinstall.json` (or root `Config/autoinstall.json`): Software catalog containing package IDs, display names, categories, local file patterns, silent command arguments, and Winget package tags.
+  * Local installer files residing in the `Installers/` directory (e.g. `ChromeSetup.exe`, `7z-x64.msi`).
 * **Outputs**:
-  * Silently installed software packages.
-  * Real-time logs of setup processes.
+  * Installed applications registered in the operating system.
+  * Real-time deployment status logs streamed to `MainWindow.Log`.
 * **Configurations in `Config/settings.json`**:
-  * `"EnableWingetFallback": true`: Toggles Winget fallback when local installers are missing.
+  * `"EnableWingetFallback": true`: Controls whether the engine should query Microsoft Winget if an installer is missing from the local folder.
 
 ---
 
-## 5. Requirements and Dependencies
+## 5. Requirements
 
-* **Administrator Privileges**: Required. Silent software installations write to `%ProgramFiles%`, `%ProgramData%`, and `HKLM`.
-* **Supported Windows Versions**: Windows 10 (1809+) and Windows 11.
-* **External Tool**: `winget.exe` (included natively in modern Windows via App Installer). If absent, App Manager operates in Local Installer mode.
-
----
-
-## 6. Risks and Reversibility
-
-* **System Alterations**: Installs third-party software on the machine.
-* **Reversibility**: All installed applications can be uninstalled via Windows Control Panel or Winget (`winget uninstall <Id>`).
+* **Administrative Privileges**: Required. Software installation modifies `%ProgramFiles%`, writes to `HKLM\SOFTWARE`, and registers Windows services.
+* **Windows Version**: Windows 10 (1809+) and Windows 11 (64-bit recommended).
+* **External Dependencies**: 
+  * None for local offline installers.
+  * Microsoft Windows Package Manager (`winget.exe`) is required for online downloads and updates scanning.
 
 ---
 
-## 7. Error Handling and Logging
+## 6. Risks and Side Effects
 
-* Corrupted installer files or non-zero exit codes are logged to `MainWindow.Log`.
-* If `winget.exe` is absent from `PATH`, the `Win32Exception` is safely caught and fallback logic is engaged without crashing the UI.
+* **Software Changes**: Installs desktop applications onto the host system.
+* **Network Bandwidth**: If falling back to Winget, downloading large packages (e.g. LibreOffice, browser suites) consumes internet bandwidth.
+* **Reversibility**: Reversible by uninstalling packages via Windows Settings / Control Panel, or by running silent uninstallation commands.
+
+---
+
+## 7. Logging and Error Handling
+
+* Non-zero process exit codes are detected and logged as warnings in the terminal (e.g., `[INSTALL ERROR] ExitCode 1603`).
+* If `winget.exe` is absent on older Windows 10 LTSC installations and no local installer exists, the engine logs a clear notice advising the technician to place the offline installer into `Installers/` or install the App Installer package.
 
 ---
 
 ## 8. Related Source Files
 
-* [`src/Addons/AppManager/AppManagerAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/AppManager/AppManagerAddon.cs): Add-on view, controls, and event coordinators.
-* [`src/Addons/AppManager/InstallerHelper.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/AppManager/InstallerHelper.cs): JSON catalog manager, process execution, and Winget parsing.
+* [`src/Addons/AppManager/AppManagerAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/AppManager/AppManagerAddon.cs): UI construction, tab navigation, and catalog bindings.
+* [`src/Addons/AppManager/InstallerHelper.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/AppManager/InstallerHelper.cs): Installer detection, switch builders, and Winget CLI runner.
+* [`Config/Addons/AppManager/autoinstall.json`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/Config/Addons/AppManager/autoinstall.json): Default software catalog definitions.

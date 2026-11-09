@@ -1,113 +1,116 @@
-# Logs Terminal & Floating Log Window
+# Logs & Diagnostic Terminal
 
-**Module Identifier:** `logs`  
-**Type:** Host Native View (`MainWindow`) & Floating Window (`LogWindow`)  
-**Documentation File:** `docs/modules/logs-terminal.md`  
+**Module Identifier:** `terminal`  
+**Module Type:** Host Native View (`MainWindow`)  
+**Documentation Path:** `docs/modules/logs-terminal.md`  
 
 ---
 
 ## 1. Overview and Problem Solved
 
-Automated maintenance utilities that execute silent commands without visible feedback often leave technicians uncertain about whether a process has succeeded, stalled, or crashed (e.g. running `sfc /scannow`, `dism`, or `winget install`).
+When automating batch operations (installing software suites, executing disk cleanups, running DISM/SFC system repairs, or applying registry scripts), technicians need complete real-time visibility into the execution output of background subprocesses. Traditional GUI utilities often hide console output behind generic progress bars, leaving technicians unaware of silent errors, download stalls, or non-zero exit codes.
 
-The **Logs Terminal** solves this by providing complete transparency:
-- Real-time timestamped event stream capturing host operations, module activities, and external subprocess stdout/stderr streams.
-- Dual visual modes: an **embedded console** inside the main window, and a **detached, floating `LogWindow`** designed for multi-monitor setups.
-- Export and auditing tools: fast keyword search, one-click clipboard copying, and `.txt` file export.
+The **Logs & Diagnostic Terminal** provides a thread-safe, centralized logging and output streaming console embedded directly within the OptiAssist interface. It features real-time autoscrolling, keyword search filtering, one-click clipboard copying, `.txt` file export, and an independent floating pop-out window (`LogWindow`) that can be detached and positioned on a secondary monitor while navigating other modules.
 
 ---
 
 ## 2. Step-by-Step Usage Guide
 
-### 2.1 Using the Embedded Console
-1. In the sidebar, click **📄 Logs**.
-2. Review the timestamped event stream (`[HH:mm:ss] Message`).
-3. Click **📋 Copy All** to copy the full buffer to the Windows Clipboard.
-4. Click **🗑️ Clear Logs** to flush the buffer.
-5. Click **💾 Export to .txt** to save a timestamped text log for customer records.
-
-### 2.2 Using the Floating Log Window (`LogWindow`)
-1. Click **🪟 Detach / Floating Window** in the Logs header (or enable *"Open External Logs By Default"* in Settings).
-2. The independent window can be resized, minimized, or moved to a secondary monitor.
-3. Output synchronizes live with the main console.
+1. Navigate to **Logs** on the left sidebar.
+2. **Review Real-Time Diagnostic Output**:
+   - The terminal displays timestamped logs from hardware telemetry audits, module loader events, executed PowerShell/CMD commands, Winget package downloads, and file deletion routines.
+3. **Search the Log Stream**:
+   - Type in the **Search...** box at the top of the terminal. Matching lines are highlighted, allowing technicians to quickly find error codes or specific package names.
+4. **Copy Output**:
+   - Click **Copy All** to place the entire log buffer onto the Windows clipboard.
+5. **Export to Plain Text**:
+   - Click **Export Log**: A native `SaveFileDialog` prompts for a destination path, saving the complete session log as a `.txt` file for ticketing systems or customer records.
+6. **Clear the Buffer**:
+   - Click **Clear** to reset the console buffer for a new diagnostic session.
+7. **Use the Detached Pop-Out Window**:
+   - Click the **Pop-Out Window** button (or configure `"OpenExternalLogsByDefault": true` in Settings).
+   - A dedicated `LogWindow` opens independently of the main window. Technicians can move this window to a second monitor and continue using the Dashboard, Toolbox, or App Manager while watching live output streams.
 
 ---
 
-## 3. Internal Architecture and Implementation
+## 3. Internal Architecture and Technical Execution Flow
 
-### 3.1 Central Host Logging Pipeline
-All components and add-ons invoke `_host.Log(msg)`:
-
-```csharp
-public void Log(string message)
-{
-    if (!Dispatcher.CheckAccess())
-    {
-        Dispatcher.Invoke(new Action(() => Log(message)));
-        return;
-    }
-
-    string stamped = string.Format("[{0:HH:mm:ss}] {1}", DateTime.Now, message);
-    txtConsoleLog.AppendText(stamped + Environment.NewLine);
-    txtConsoleLog.ScrollToEnd();
-
-    if (_externalLogWindow != null && _externalLogWindow.IsLoaded)
-    {
-        _externalLogWindow.AppendLog(stamped);
-    }
-}
+```
++-----------------------------------------------------------------------------------------+
+|                  Any Module, Subprocess, or Thread Calls: MainWindow.Log()              |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Is caller executing on a background thread? |
+                      +---------------------------------------------+
+                                     /             \
+                             Yes    /               \   No
+                                   v                 v
+                 +-----------------------+     +-----------------------+
+                 | Dispatcher.BeginInvoke|     | Direct UI Execution   |
+                 +-----------------------+     +-----------------------+
+                                   \                 /
+                                    \               /
+                                     v             v
+                      +---------------------------------------------+
+                      | Timestamp Prepended: [HH:mm:ss] <message>   |
+                      | Appends to StringBuilder in-memory buffer   |
+                      +---------------------------------------------+
+                                             |
+        +------------------------------------+------------------------------------+
+        |                                                                         |
+        v                                                                         v
++-------------------------------+                                 +-------------------------------+
+| Embedded Console (txtConsoleLog)                                | Floating Window (_logWindow)  |
+| - Appends line to TextBox     |                                 | - If open: appends line to    |
+| - txtConsoleLog.ScrollToEnd() |                                 |   external LogWindow TextBox  |
++-------------------------------+                                 | - Auto-scrolls external view  |
+                                                                  +-------------------------------+
 ```
 
-### 3.2 Asynchronous Subprocess Stream Redirection
-When launching external processes:
-
-```csharp
-ProcessStartInfo psi = new ProcessStartInfo(fileName, args)
-{
-    RedirectStandardOutput = true,
-    RedirectStandardError = true,
-    UseShellExecute = false,
-    CreateNoWindow = true
-};
-
-proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) Log("[CMD] " + e.Data); };
-proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) Log("[ERROR] " + e.Data); };
-```
+### Buffer Management:
+The logging pipeline streams text directly to the native WPF `TextBox txtConsoleLog`. When messages originate from background worker threads, `Dispatcher.Invoke` marshals the call onto the UI thread to guarantee safe, crash-free UI updates. Clearing the console (`BtnClearLog_Click`) flushes both the embedded console and the detached floating window.
 
 ---
 
 ## 4. Inputs, Outputs, and Configurations
 
-* **Inputs**: Internal application events and subprocess stdout/stderr.
-* **Outputs**: Formatted console text, clipboard buffers, and `.txt` log files.
+* **Inputs**:
+  * Formatted log strings emitted by Host routines, Add-on modules (`IOptiAssistHost.Log`), and redirected subprocess streams (`OutputDataReceived`, `ErrorDataReceived`).
+* **Outputs**:
+  * Real-time text display in the embedded terminal and floating `LogWindow`.
+  * Plain text files exported via `SaveFileDialog`.
+  * Text content copied to Windows clipboard.
 * **Configurations in `Config/settings.json`**:
-  * `"OpenExternalLogsByDefault": true`: Launches the floating log window automatically on startup.
+  * `"OpenExternalLogsByDefault": true`: Automatically spawns the floating `LogWindow` whenever the Logs tab is clicked.
 
 ---
 
-## 5. Requirements and Dependencies
+## 5. Requirements
 
-* **Administrator Privileges**: Inherited from the host; logging requires no special permissions.
-* **Supported Windows Versions**: Windows 10 and Windows 11.
-* **External Dependencies**: None.
-
----
-
-## 6. Risks and Reversibility
-
-* **Safe Operation**: 100% read-only diagnostic telemetry.
+* **Administrative Privileges**: Inherited from Host.
+* **Windows Version**: Windows 10 and Windows 11 (64-bit).
+* **External Dependencies**: Zero. Uses native WPF controls and standard .NET string builders.
 
 ---
 
-## 7. Error Handling and Logging
+## 6. Risks and Side Effects
 
-* Large log buffers are managed within memory limits; the Clear action frees memory immediately.
-* Clipboard access exceptions are caught safely if another application holds a clipboard lock.
+* **System Impact**: Zero. The logging subsystem is strictly read-only and in-memory.
+* **Reversibility**: Clearing the log empties the active buffer without altering persistent files.
+
+---
+
+## 7. Logging and Error Handling
+
+* The `MainWindow.Log()` method is designed never to throw exceptions back to calling threads; any Dispatcher failure is suppressed to prevent diagnostic logging from crashing critical maintenance tasks.
+* File export operations handle write-access errors cleanly via standard `try-catch` blocks.
 
 ---
 
 ## 8. Related Source Files
 
-* [`src/MainWindow.xaml`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml): Embedded console layout.
-* [`src/MainWindow.xaml.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml.cs): Central `Log(string message)` pipeline.
-* [`src/LogWindow.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/LogWindow.cs): Detached floating log window implementation.
+* [`src/MainWindow.xaml`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml): Embedded terminal UI elements (`txtConsoleLog`, action buttons).
+* [`src/MainWindow.xaml.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml.cs): Central `Log(string message)` coordinator and buffer management.
+* [`src/LogWindow.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/LogWindow.cs): Independent floating WPF window with search, copy, export, and auto-scroll capabilities.

@@ -1,9 +1,8 @@
-# System Cleaner (BleachBit-Style Safe Cleaning Engine)
+# System Cleaner & Deep Disk Cleanup
 
-**Module Identifier:** `SystemCleaner`  
-**Type:** Decoupled Modular Add-on (`IOptiAssistAddon`)  
-**DLL Location:** `Config\Addons\SystemCleaner\SystemCleaner.dll`  
-**Documentation File:** `docs/modules/system-cleaner.md`  
+**Module Identifier:** `system-cleaner`  
+**Module Type:** Decoupled Add-on DLL (`Config/Addons/SystemCleaner/SystemCleaner.dll`)  
+**Documentation Path:** `docs/modules/system-cleaner.md`  
 
 ![System Cleaner Interface](../images/system-cleaner.png)
 
@@ -11,93 +10,136 @@
 
 ## 1. Overview and Problem Solved
 
-Temporary files, browser caches, thumbnail databases, and log files accumulate rapidly during daily Windows usage, wasting storage and degrading disk performance. Many commercial cleaners employ aggressive, opaque cleaning routines that risk damaging system stability or corrupting user registries.
+Over months of daily use, Windows systems accumulate gigabytes of junk files: browser caches, obsolete memory dumps, error reporting buffers, Windows Update temporary caches, thumbnail databases, and orphan developer dependencies (`node_modules`, `venv`, `__pycache__`). Native tools like Windows Disk Cleanup (`cleanmgr.exe`) are slow, lack fine-grained control over third-party applications, and do not provide non-destructive preview analysis.
 
-The **System Cleaner** solves this by implementing a safe, BleachBit-inspired modular cleaner architecture:
-- **Non-Destructive Dry-Run (`Scan`)**: Simulates cleaning before any deletion occurs, showing exact file counts and byte sizes to be reclaimed.
-- **PathSanitizer Scope Protection**: Strictly prevents scanning or deleting root drives, `%WINDIR%\System32`, or active user documents.
-- **Locked-File Resilience**: Skips files in use by active processes without terminating the cleaning routine.
-- **23 Specialized Cleaner Routines**: Covers Windows Core, Explorer Shell, Chromium multi-profiles (with SQLite `VACUUM;`), Windows Defender, and recursive Deep Scan for developer artifacts (`node_modules`, `venv`, `__pycache__`).
+The **System Cleaner** provides a modular disk cleanup engine inspired by BleachBit. It organizes cleaning targets into hierarchical categories across native Windows components, web browsers, and developer environments. Technicians can execute a safe **Dry-Run Analysis** to preview recoverable storage space and examine file lists before performing permanent deletion.
 
 ---
 
 ## 2. Step-by-Step Usage Guide
 
-1. In the sidebar, click **🧹 System Cleaner**.
-2. Select target categories:
-   - **Windows Core**: `%TEMP%`, `C:\Windows\Temp`, Recycle Bin, Error Reporting, Windows Update download cache (`SoftwareDistribution\Download`).
-   - **Explorer Shell**: Run MRU history, Recent Docs, Thumbnail caches, Shellbags.
-   - **Chromium Browsers**: Google Chrome, Microsoft Edge, Brave, and Opera caches, GPU cache, and SQLite database compaction via `VACUUM;`.
-   - **Windows Defender**: Scan and update cache cleanup.
-   - **Developer & Deep Scan**: Recursive removal of `node_modules`, Python virtual environments (`.venv`, `venv`), compiled caches (`__pycache__`), Rust (`target`), and temporary `.log` files.
-3. Click **🔍 Scan (Dry Run)**:
-   - The scanner evaluates files, counts items, and calculates reclaimable space without modifying any data.
-4. Click **🧹 Clean**:
-   - Executes the safe deletion routine, streaming progress to the console.
+1. Navigate to **System Cleaner** on the sidebar.
+2. **Select Cleaning Modules**:
+   - Choose between the **Windows** and **Applications** tabs:
+     - **Windows Tab**:
+       - *System*: Recycle Bin, User Temporary Files (`%TEMP%`), Windows System Temp (`C:\Windows\Temp`), Clipboard, Memory Dumps (`*.dmp`, `MEMORY.DMP`), Windows Update cache (`SoftwareDistribution\Download`), Windows Prefetch, Event Logs, Windows Error Reporting (WER), DNS Cache (Flush DNS).
+       - *Windows Explorer*: Thumbnail Cache (`thumbcache_*.db`), Run Command History, Recent Documents.
+       - *Windows Defender*: Scan Logs & History.
+     - **Applications Tab**:
+       - *Microsoft Edge & Google Chrome*: Internet Cache, Browsing History, Cookies, Autofill Form Information, Saved Sessions, SQLite Database Compaction (VACUUM).
+       - *Developer & Deep Scan*: Node.js (`node_modules`), Python Virtual Environments (`venv`), Python bytecode (`__pycache__`).
+3. **Use Presets**:
+   - Click **Defaults** to load a safe, recommended technician preset.
+   - Click **Select All** or **Deselect All** to adjust choices.
+4. **Run Dry-Run Analysis (Scan)**:
+   - Click the **Analyze** button.
+   - The engine scans targeted directories, calculates recoverable bytes, and counts matched files without deleting anything.
+   - Click **View Files** on any result row to view the matched file paths in a popup dialog.
+5. **Execute Permanent Cleaning**:
+   - Click **Run Cleaner**.
+   - OptiAssist presents a confirmation prompt detailing the total gigabytes to be removed.
+   - After confirmation, the cleaner purges targeted items, showing real-time progress on the percentage bar.
 
 ---
 
-## 3. Internal Architecture and Implementation
+## 3. Internal Architecture and Technical Execution Flow
 
-### 3.1 BaseCleaner and CleanerRegistry
-Every cleaner inherits from `BaseCleaner`:
-
-```csharp
-public abstract class BaseCleaner : INotifyPropertyChanged
-{
-    public abstract string Id { get; }
-    public abstract string Name { get; }
-    public abstract string Category { get; }
-    public abstract string Description { get; }
-
-    public abstract ScanResult Scan(CleanerContext ctx);
-    public abstract CleanResult Clean(CleanerContext ctx);
-}
+```
++-----------------------------------------------------------------------------------------+
+|                              Technician Clicks "Analyze"                                |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | SystemCleaner.RunAnalysisAsync()            |
+                      | Iterates through checked cleaning modules   |
+                      +---------------------------------------------+
+                                             |
+        +------------------------------------+------------------------------------+
+        |                                    |                                    |
+        v                                    v                                    v
++-------------------------------+  +-------------------------------+  +-----------------------+
+| File System Directory Scans   |  | P/Invoke Win32 API            |  | SQLite VACUUM Queries |
+| - PathSanitizer.Validate()    |  | - SHQueryRecycleBin()         |  | - Opens DB connections|
+| - Directory.EnumerateFiles()  |  | - Calculates Recycle Bin size |  | - Calculates overhead |
+| - Aggregates FileInfo.Length  |  +-------------------------------+  +-----------------------+
++-------------------------------+                    |                            |
+        |                                            |                            |
+        +--------------------------------------------+----------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Populates AnalysisSummary Model             |
+                      | Updates UI: "Analysis complete - X GB found"|
+                      | Enables "Run Cleaner" Button                |
+                      +---------------------------------------------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|                             Technician Clicks "Run Cleaner"                             |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | Deletion Execution Pipeline:                |
+                      | - System files: File.Delete() / Dir.Delete()|
+                      | - Locked files: catch IOException (skip)    |
+                      | - Recycle Bin: SHEmptyRecycleBin()          |
+                      | - Chrome/Edge: VACUUM query executed        |
+                      | - DNS: ipconfig /flushdns                   |
+                      +---------------------------------------------+
+                                             |
+                                             v
+                      +---------------------------------------------+
+                      | UI Progress Bar reaches 100%                |
+                      | Real-time summary logged to Host.Log()      |
+                      +---------------------------------------------+
 ```
 
-### 3.2 PathSanitizer Safety Guard
-Before any file or directory deletion is attempted, `PathSanitizer` validates:
-- Target path is not empty and has a valid drive root.
-- Path is not a drive root (e.g. `C:\`).
-- Path is not a protected system path (`C:\Windows`, `C:\Windows\System32`, `C:\Program Files`).
-- Path is strictly located within designated temporary or cache boundaries.
-
-### 3.3 Chromium SQLite Compaction
-For web browsers, `ChromiumSqliteVacuumCleaner` executes SQLite `VACUUM;` commands on history and cookie databases, defragmenting files and reclaiming space without deleting saved user data.
+### Safety Engine (`PathSanitizer`):
+To prevent accidental damage, all delete operations pass through strict path safety checks:
+- Verifies that target directories are not critical system roots (`C:\`, `C:\Windows`, `C:\Windows\System32`, `C:\Program Files`, `C:\Users`).
+- Ensures target paths belong to authorized temporary, cache, or log locations.
 
 ---
 
 ## 4. Inputs, Outputs, and Configurations
 
-* **Inputs**: Selected cleaner categories and checkboxes.
-* **Outputs**: Deleted temporary files, compacted SQLite databases, and reclaimed disk space metrics.
+* **Inputs**:
+  * User checkbox selections across Windows and Application cleaning modules.
+  * Local filesystem metadata and browser profile directories (`AppData\Local\Google\Chrome\User Data`, `AppData\Local\Microsoft\Edge\User Data`).
+* **Outputs**:
+  * Cleaned disk space reflected on system drives.
+  * Real-time operation log detailing removed gigabytes and processed modules.
 * **Configurations in `Config/settings.json`**:
-  * Category selections and warning preferences.
+  * System Cleaner selections can be persisted across sessions.
 
 ---
 
-## 5. Requirements and Dependencies
+## 5. Requirements
 
-* **Administrator Privileges**: Required to clean system temporary files (`C:\Windows\Temp`, Windows Update cache, Defender logs).
-* **Supported Windows Versions**: Windows 10 and Windows 11.
-* **External Dependencies**: None.
-
----
-
-## 6. Risks and Reversibility
-
-* **Safe Deletions**: Deletes transient temporary data and caches; cannot be undone, but will not damage operating system integrity.
-* **Developer Artifacts**: Deleting `node_modules` or `.venv` requires re-running package managers (`npm install`, `pip install`).
+* **Administrative Privileges**: Required. Deleting system temp files (`C:\Windows\Temp`), Prefetch, Windows Update downloads (`SoftwareDistribution`), and clearing Event Logs require full administrator permissions.
+* **Windows Version**: Windows 10 and Windows 11 (64-bit).
+* **External Dependencies**: Zero. Employs native .NET filesystem APIs, P/Invoke, and standard Windows command utilities.
 
 ---
 
-## 7. Error Handling and Logging
+## 6. Risks and Side Effects
 
-* In-use locked files are caught and counted as skipped items in the final summary.
-* Access violations do not interrupt remaining cleaning routines.
+* **Permanent Deletion**: Deleted temporary files and cache entries bypass the Windows Recycle Bin and cannot be recovered via standard undelete tools.
+* **Browser Sessions**: If "Saved Sessions & Tabs" or "Cookies" are checked, active browser logins will be closed, requiring users to log back into websites.
+* **Developer Artifacts**: Purging `node_modules` or `venv` requires running `npm install` or recreating virtual environments in affected programming projects.
+* **Reversibility**: **Irreversible**. Always verify selections before confirming deletion.
+
+---
+
+## 7. Logging and Error Handling
+
+* **Locked Files**: Files currently in use by active Windows processes (e.g., active telemetry logs or open browser locks) generate an `IOException` or `UnauthorizedAccessException`. The engine catches these errors silently, logs them to the debug stream, and continues cleaning remaining files.
+* **Safety Abort**: If a module path fails `PathSanitizer` validation, execution for that target is halted immediately and an alert is recorded in `Host.Log()`.
 
 ---
 
 ## 8. Related Source Files
 
-* [`src/Addons/SystemCleaner/SystemCleanerAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/SystemCleaner/SystemCleanerAddon.cs): Complete cleaner engine, `BaseCleaner`, `PathSanitizer`, and UI controls.
+* [`src/Addons/SystemCleaner/SystemCleanerAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/SystemCleaner/SystemCleanerAddon.cs): Complete cleaner engine, UI layout, analysis models, safety sanitizer, and deletion runners.
