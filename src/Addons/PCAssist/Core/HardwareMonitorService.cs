@@ -13,6 +13,7 @@ namespace OptiAssist.Addons.PCAssist.Core
         public int Threads { get; set; }
         public double UsagePercent { get; set; }
         public double ClockGhz { get; set; }
+        public int ClockMhz { get; set; }
         public double? TemperatureC { get; set; }
     }
 
@@ -78,6 +79,7 @@ namespace OptiAssist.Addons.PCAssist.Core
     public class HardwareMonitorService : IDisposable
     {
         private PerformanceCounter _cpuCounter;
+        private PerformanceCounter _cpuPerfPercentCounter;
         private PerformanceCounter _diskReadCounter;
         private PerformanceCounter _diskWriteCounter;
         private PerformanceCounter _gpuCounter;
@@ -85,6 +87,7 @@ namespace OptiAssist.Addons.PCAssist.Core
         private string _cachedCpuName = "";
         private int _cachedCpuCores = 0;
         private int _cachedCpuThreads = 0;
+        private int _cachedBaseClockMhz = 2500;
         private string _cachedGpuName = "";
         private string _cachedGpuDriver = "";
         private long _cachedGpuVramMb = 0;
@@ -102,9 +105,17 @@ namespace OptiAssist.Addons.PCAssist.Core
             try
             {
                 _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
-                _cpuCounter.NextValue(); // Prime first sample
+                _cpuCounter.NextValue();
             }
             catch { _cpuCounter = null; }
+
+            try
+            {
+                // Dynamic CPU Clock % (real-time turboboost and throttling)
+                _cpuPerfPercentCounter = new PerformanceCounter("Processor Information", "% Processor Performance", "_Total", true);
+                _cpuPerfPercentCounter.NextValue();
+            }
+            catch { _cpuPerfPercentCounter = null; }
 
             try
             {
@@ -122,7 +133,6 @@ namespace OptiAssist.Addons.PCAssist.Core
 
             try
             {
-                // Attempt to hook GPU Engine counter for 3D engine on Windows 10/11
                 PerformanceCounterCategory category = new PerformanceCounterCategory("GPU Engine");
                 string[] instanceNames = category.GetInstanceNames();
                 foreach (string inst in instanceNames)
@@ -145,13 +155,15 @@ namespace OptiAssist.Addons.PCAssist.Core
 
             try
             {
-                using (var searcher = new ManagementObjectSearcher("SELECT Name, NumberOfCores, NumberOfLogicalProcessors FROM Win32_Processor"))
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, CurrentClockSpeed FROM Win32_Processor"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
                     {
                         _cachedCpuName = obj["Name"] != null ? obj["Name"].ToString().Trim() : "";
                         if (obj["NumberOfCores"] != null) int.TryParse(obj["NumberOfCores"].ToString(), out _cachedCpuCores);
                         if (obj["NumberOfLogicalProcessors"] != null) int.TryParse(obj["NumberOfLogicalProcessors"].ToString(), out _cachedCpuThreads);
+                        if (obj["MaxClockSpeed"] != null) int.TryParse(obj["MaxClockSpeed"].ToString(), out _cachedBaseClockMhz);
+                        if (_cachedBaseClockMhz <= 0 && obj["CurrentClockSpeed"] != null) int.TryParse(obj["CurrentClockSpeed"].ToString(), out _cachedBaseClockMhz);
                         break;
                     }
                 }
@@ -160,6 +172,7 @@ namespace OptiAssist.Addons.PCAssist.Core
 
             if (_cachedCpuThreads == 0) _cachedCpuThreads = Environment.ProcessorCount;
             if (_cachedCpuCores == 0) _cachedCpuCores = _cachedCpuThreads;
+            if (_cachedBaseClockMhz <= 0) _cachedBaseClockMhz = 2500;
 
             try
             {
@@ -220,7 +233,23 @@ namespace OptiAssist.Addons.PCAssist.Core
                 try { snapshot.Cpu.UsagePercent = Math.Round(_cpuCounter.NextValue(), 1); }
                 catch { }
             }
-            snapshot.Cpu.ClockGhz = QueryCpuClock();
+
+            // Real-time Dynamic Clock via % Processor Performance
+            int dynamicMhz = _cachedBaseClockMhz;
+            if (_cpuPerfPercentCounter != null)
+            {
+                try
+                {
+                    float perfPct = _cpuPerfPercentCounter.NextValue();
+                    if (perfPct > 0)
+                    {
+                        dynamicMhz = (int)Math.Round(_cachedBaseClockMhz * (perfPct / 100.0f));
+                    }
+                }
+                catch { }
+            }
+            snapshot.Cpu.ClockMhz = dynamicMhz;
+            snapshot.Cpu.ClockGhz = Math.Round(dynamicMhz / 1000.0, 2);
             snapshot.Cpu.TemperatureC = QueryCpuTemperature();
 
             // 2. RAM (via ultra-fast GlobalMemoryStatusEx)
@@ -286,34 +315,14 @@ namespace OptiAssist.Addons.PCAssist.Core
             }
             catch { }
 
-            // SMART Status
             CheckSmartStatus(snapshot.Storage);
 
             return snapshot;
         }
 
-        private double QueryCpuClock()
-        {
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher("SELECT CurrentClockSpeed FROM Win32_Processor"))
-                {
-                    foreach (ManagementObject obj in searcher.Get())
-                    {
-                        if (obj["CurrentClockSpeed"] != null)
-                        {
-                            double mhz = Convert.ToDouble(obj["CurrentClockSpeed"]);
-                            return Math.Round(mhz / 1000.0, 2);
-                        }
-                    }
-                }
-            }
-            catch { }
-            return 0;
-        }
-
         private double? QueryCpuTemperature()
         {
+            // 1. Try ACPI Thermal Zone in root\wmi
             try
             {
                 using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature"))
@@ -324,7 +333,7 @@ namespace OptiAssist.Addons.PCAssist.Core
                         {
                             double kelvinTenths = Convert.ToDouble(obj["CurrentTemperature"]);
                             double celsius = (kelvinTenths - 2732.0) / 10.0;
-                            if (celsius > 0 && celsius < 130)
+                            if (celsius > 10.0 && celsius < 125.0)
                             {
                                 return Math.Round(celsius, 1);
                             }
@@ -333,6 +342,28 @@ namespace OptiAssist.Addons.PCAssist.Core
                 }
             }
             catch { }
+
+            // 2. Try ThermalZoneInformation in root\cimv2
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        if (obj["Temperature"] != null)
+                        {
+                            double kelvin = Convert.ToDouble(obj["Temperature"]);
+                            double celsius = kelvin - 273.15;
+                            if (celsius > 10.0 && celsius < 125.0)
+                            {
+                                return Math.Round(celsius, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
             return null;
         }
 
@@ -364,7 +395,6 @@ namespace OptiAssist.Addons.PCAssist.Core
             }
             catch { }
 
-            // Fallback to Win32_DiskDrive Status
             try
             {
                 using (var searcher = new ManagementObjectSearcher("SELECT Status FROM Win32_DiskDrive"))
@@ -390,6 +420,7 @@ namespace OptiAssist.Addons.PCAssist.Core
         public void Dispose()
         {
             if (_cpuCounter != null) { try { _cpuCounter.Dispose(); } catch { } _cpuCounter = null; }
+            if (_cpuPerfPercentCounter != null) { try { _cpuPerfPercentCounter.Dispose(); } catch { } _cpuPerfPercentCounter = null; }
             if (_diskReadCounter != null) { try { _diskReadCounter.Dispose(); } catch { } _diskReadCounter = null; }
             if (_diskWriteCounter != null) { try { _diskWriteCounter.Dispose(); } catch { } _diskWriteCounter = null; }
             if (_gpuCounter != null) { try { _gpuCounter.Dispose(); } catch { } _gpuCounter = null; }

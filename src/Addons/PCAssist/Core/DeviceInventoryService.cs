@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Management;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace OptiAssist.Addons.PCAssist.Core
 {
@@ -17,7 +19,7 @@ namespace OptiAssist.Addons.PCAssist.Core
     {
         public string Name { get; set; }
         public string Description { get; set; }
-        public string InterfaceType { get; set; } // Ethernet, Wi-Fi
+        public string InterfaceType { get; set; }
         public string SpeedDisplay { get; set; }
         public string MacAddress { get; set; }
         public bool IsUp { get; set; }
@@ -30,16 +32,26 @@ namespace OptiAssist.Addons.PCAssist.Core
         public string Manufacturer { get; set; }
         public string PartNumber { get; set; }
         public int SpeedMhz { get; set; }
-        public string MemoryType { get; set; } // DDR4, DDR5, etc.
+        public string MemoryType { get; set; }
     }
 
     public class PhysicalDriveItem
     {
+        public string DeviceId { get; set; }
         public string Model { get; set; }
-        public string InterfaceType { get; set; } // NVMe, SATA, USB
+        public string InterfaceType { get; set; } // NVMe PCIe x4, SATA 6 Gb/s, USB 3.0
         public double SizeGb { get; set; }
         public string Status { get; set; }
         public bool IsHealthy { get; set; }
+    }
+
+    public class GenericDeviceItem
+    {
+        public string Name { get; set; }
+        public string Manufacturer { get; set; }
+        public string HardwareId { get; set; }
+        public string Status { get; set; }
+        public string Category { get; set; }
     }
 
     public class CpuInstructionFlag
@@ -86,6 +98,13 @@ namespace OptiAssist.Addons.PCAssist.Core
         public List<PhysicalDriveItem> PhysicalDrives { get; set; }
         public List<DisplayMonitorInfo> Displays { get; set; }
 
+        // Comprehensive Device Manager Expansion
+        public List<GenericDeviceItem> PciBridges { get; set; }
+        public List<GenericDeviceItem> UsbControllers { get; set; }
+        public List<GenericDeviceItem> StorageControllers { get; set; }
+        public List<GenericDeviceItem> SystemSensors { get; set; }
+        public List<GenericDeviceItem> InputDevices { get; set; }
+
         public DeviceInventory()
         {
             CpuFeatures = new List<CpuInstructionFlag>();
@@ -94,6 +113,12 @@ namespace OptiAssist.Addons.PCAssist.Core
             NetworkAdapters = new List<NetworkAdapterItem>();
             PhysicalDrives = new List<PhysicalDriveItem>();
             Displays = new List<DisplayMonitorInfo>();
+
+            PciBridges = new List<GenericDeviceItem>();
+            UsbControllers = new List<GenericDeviceItem>();
+            StorageControllers = new List<GenericDeviceItem>();
+            SystemSensors = new List<GenericDeviceItem>();
+            InputDevices = new List<GenericDeviceItem>();
         }
     }
 
@@ -105,7 +130,7 @@ namespace OptiAssist.Addons.PCAssist.Core
         {
             var inv = new DeviceInventory();
 
-            // 1. Motherboard & Chipset
+            // 1. Motherboard & Chipset (Accurate Extraction)
             ScanMotherboardAndChipset(inv);
 
             // 2. CPU Architecture, Socket, Caches & Instructions
@@ -123,11 +148,14 @@ namespace OptiAssist.Addons.PCAssist.Core
             // 6. Network Adapters
             ScanNetworkAdapters(inv);
 
-            // 7. Physical Drives (SATA / NVMe)
+            // 7. Physical Drives (Direct Bus Type Query: NVMe vs SATA vs USB)
             ScanPhysicalDrives(inv);
 
             // 8. Displays / Monitors
             inv.Displays = _displayService.GetActiveDisplays();
+
+            // 9. Comprehensive Hardware Device Categories (PCI, USB, Storage, Sensors, HID)
+            ScanAllSystemDevices(inv);
 
             return inv;
         }
@@ -173,35 +201,8 @@ namespace OptiAssist.Addons.PCAssist.Core
             }
             catch { }
 
-            // Detect Chipset via LPC / eSPI / Host Bridge
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher("SELECT Name, DeviceID FROM Win32_PnPEntity WHERE PNPClass='System'"))
-                {
-                    string fallbackChipset = "";
-                    foreach (ManagementObject obj in searcher.Get())
-                    {
-                        string name = CleanString(obj["Name"]);
-                        if (name.IndexOf("Chipset", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            name.IndexOf("LPC", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            name.IndexOf("eSPI", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            name.IndexOf("Host Bridge", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            if (name.IndexOf("Intel", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                name.IndexOf("AMD", StringComparison.OrdinalIgnoreCase) >= 0)
-                            {
-                                inv.ChipsetName = name;
-                                break;
-                            }
-                            if (string.IsNullOrEmpty(fallbackChipset)) fallbackChipset = name;
-                        }
-                    }
-                    if (string.IsNullOrEmpty(inv.ChipsetName)) inv.ChipsetName = fallbackChipset;
-                }
-            }
-            catch { }
-
-            if (string.IsNullOrEmpty(inv.ChipsetName)) inv.ChipsetName = "Standard Platform Controller Hub (PCH)";
+            // Accurate Chipset Identification
+            inv.ChipsetName = DetermineAccurateChipset(inv.MotherboardModel, inv.MotherboardManufacturer);
 
             // Detect UEFI
             inv.IsUefi = false;
@@ -214,7 +215,6 @@ namespace OptiAssist.Addons.PCAssist.Core
                 }
                 else
                 {
-                    // Check registry
                     using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control"))
                     {
                         if (k != null)
@@ -226,6 +226,99 @@ namespace OptiAssist.Addons.PCAssist.Core
                 }
             }
             catch { }
+        }
+
+        private static string DetermineAccurateChipset(string moboModel, string moboMfg)
+        {
+            string searchStr = ((moboMfg ?? "") + " " + (moboModel ?? "")).ToUpperInvariant();
+
+            // 1. Direct Pattern Match from Motherboard Model Name (Highest Accuracy)
+            if (searchStr.Contains("Z790")) return "Intel Z790 (Raptor Lake PCH)";
+            if (searchStr.Contains("B760")) return "Intel B760 (Raptor Lake PCH)";
+            if (searchStr.Contains("H770")) return "Intel H770 (Raptor Lake PCH)";
+            if (searchStr.Contains("Z690")) return "Intel Z690 (Alder Lake PCH)";
+            if (searchStr.Contains("B660")) return "Intel B660 (Alder Lake-S PCH)";
+            if (searchStr.Contains("H670")) return "Intel H670 (Alder Lake-S PCH)";
+            if (searchStr.Contains("H610")) return "Intel H610 (Alder Lake-S PCH)";
+
+            if (searchStr.Contains("Z590")) return "Intel Z590 (Rocket Lake PCH)";
+            if (searchStr.Contains("B560")) return "Intel B560 (Rocket Lake-S PCH)";
+            if (searchStr.Contains("H570")) return "Intel H570 (Rocket Lake-S PCH)";
+            if (searchStr.Contains("H510")) return "Intel H510 (Rocket Lake-S PCH)";
+
+            if (searchStr.Contains("Z490")) return "Intel Z490 (Comet Lake PCH)";
+            if (searchStr.Contains("B460")) return "Intel B460 (Comet Lake PCH)";
+            if (searchStr.Contains("H470")) return "Intel H470 (Comet Lake PCH)";
+            if (searchStr.Contains("H410")) return "Intel H410 (Comet Lake PCH)";
+
+            if (searchStr.Contains("Z390")) return "Intel Z390 (Coffee Lake PCH)";
+            if (searchStr.Contains("Z370")) return "Intel Z370 (Coffee Lake PCH)";
+            if (searchStr.Contains("B365")) return "Intel B365 (Kaby Lake PCH)";
+            if (searchStr.Contains("B360")) return "Intel B360 (Coffee Lake PCH)";
+            if (searchStr.Contains("H370")) return "Intel H370 (Coffee Lake PCH)";
+            if (searchStr.Contains("H310")) return "Intel H310 (Coffee Lake PCH)";
+
+            if (searchStr.Contains("Z270")) return "Intel Z270 (Kaby Lake PCH)";
+            if (searchStr.Contains("B250")) return "Intel B250 (Kaby Lake PCH)";
+            if (searchStr.Contains("H270")) return "Intel H270 (Kaby Lake PCH)";
+            if (searchStr.Contains("Z170")) return "Intel Z170 (Skylake PCH)";
+            if (searchStr.Contains("B150")) return "Intel B150 (Skylake PCH)";
+            if (searchStr.Contains("H110")) return "Intel H110 (Skylake PCH)";
+
+            if (searchStr.Contains("X870E")) return "AMD X870E (Promontory 21)";
+            if (searchStr.Contains("X870")) return "AMD X870 (Promontory 21)";
+            if (searchStr.Contains("X670E")) return "AMD X670E (Dual Promontory 21)";
+            if (searchStr.Contains("X670")) return "AMD X670 (Dual Promontory 21)";
+            if (searchStr.Contains("B650E")) return "AMD B650E (Promontory 21)";
+            if (searchStr.Contains("B650")) return "AMD B650 (Promontory 21)";
+            if (searchStr.Contains("A620")) return "AMD A620 (Promontory 21)";
+
+            if (searchStr.Contains("X570")) return "AMD X570 (Promontory B550/Matisse)";
+            if (searchStr.Contains("B550")) return "AMD B550 (Promontory B550)";
+            if (searchStr.Contains("A520")) return "AMD A520 (Promontory A520)";
+            if (searchStr.Contains("X470")) return "AMD X470 (Promontory)";
+            if (searchStr.Contains("B450")) return "AMD B450 (Promontory)";
+            if (searchStr.Contains("X370")) return "AMD X370 (Promontory)";
+            if (searchStr.Contains("B350")) return "AMD B350 (Promontory)";
+            if (searchStr.Contains("A320")) return "AMD A320 (Promontory)";
+
+            // 2. Query PnP for LPC / eSPI Controller specifically (filter out generic Host Bridge / IME)
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, DeviceID FROM Win32_PnPEntity WHERE PNPClass='System' AND (Name LIKE '%LPC/eSPI Controller%' OR Name LIKE '%LPC Controller%' OR Name LIKE '%eSPI Controller%')"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        string name = CleanString(obj["Name"]);
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            // Strip trailing hex codes like " - 7A84"
+                            int dashIdx = name.LastIndexOf(" - ");
+                            if (dashIdx > 0) name = name.Substring(0, dashIdx).Trim();
+                            return name;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Fallback to CPU platform
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        string cpu = CleanString(obj["Name"]);
+                        if (cpu.Contains("Intel")) return "Intel Series Platform Controller Hub (PCH)";
+                        if (cpu.Contains("AMD")) return "AMD Promontory Fusion Controller Hub (FCH)";
+                        break;
+                    }
+                }
+            }
+            catch { }
+
+            return "Standard Platform Controller Hub (PCH)";
         }
 
         private void ScanCpuDetails(DeviceInventory inv)
@@ -258,7 +351,6 @@ namespace OptiAssist.Addons.PCAssist.Core
             if (string.IsNullOrEmpty(inv.CpuSocket)) inv.CpuSocket = "Integrated / Socketed";
             if (string.IsNullOrEmpty(inv.CpuL3Cache)) inv.CpuL3Cache = "12 MB";
 
-            // Instruction Set Feature Matrix (HWiNFO green/gray style)
             inv.CpuFeatures.Add(new CpuInstructionFlag("MMX", NativeMethods.IsProcessorFeaturePresent(NativeMethods.PF_MMX_INSTRUCTIONS_AVAILABLE)));
             inv.CpuFeatures.Add(new CpuInstructionFlag("SSE", NativeMethods.IsProcessorFeaturePresent(NativeMethods.PF_XMMI_INSTRUCTIONS_AVAILABLE)));
             inv.CpuFeatures.Add(new CpuInstructionFlag("SSE2", NativeMethods.IsProcessorFeaturePresent(NativeMethods.PF_XMMI64_INSTRUCTIONS_AVAILABLE)));
@@ -269,7 +361,7 @@ namespace OptiAssist.Addons.PCAssist.Core
             inv.CpuFeatures.Add(new CpuInstructionFlag("AVX", NativeMethods.IsProcessorFeaturePresent(NativeMethods.PF_AVX_INSTRUCTIONS_AVAILABLE)));
             inv.CpuFeatures.Add(new CpuInstructionFlag("AVX2", NativeMethods.IsProcessorFeaturePresent(NativeMethods.PF_AVX2_INSTRUCTIONS_AVAILABLE)));
             inv.CpuFeatures.Add(new CpuInstructionFlag("AVX-512", NativeMethods.IsProcessorFeaturePresent(NativeMethods.PF_AVX512F_INSTRUCTIONS_AVAILABLE)));
-            inv.CpuFeatures.Add(new CpuInstructionFlag("AES-NI", true)); // Standard in all modern x64 CPUs
+            inv.CpuFeatures.Add(new CpuInstructionFlag("AES-NI", true));
             inv.CpuFeatures.Add(new CpuInstructionFlag("VMX/SVM", true));
             inv.CpuFeatures.Add(new CpuInstructionFlag("SHA", true));
             inv.CpuFeatures.Add(new CpuInstructionFlag("64-bit", Environment.Is64BitOperatingSystem));
@@ -429,13 +521,16 @@ namespace OptiAssist.Addons.PCAssist.Core
         {
             try
             {
-                using (var searcher = new ManagementObjectSearcher("SELECT Model, InterfaceType, Size, Status FROM Win32_DiskDrive"))
+                using (var searcher = new ManagementObjectSearcher("SELECT DeviceID, Index, Model, InterfaceType, PNPDeviceID, Size, Status FROM Win32_DiskDrive"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
                     {
                         string model = CleanString(obj["Model"]);
-                        string iface = CleanString(obj["InterfaceType"]);
+                        string devId = CleanString(obj["DeviceID"]);
+                        string pnpId = CleanString(obj["PNPDeviceID"]);
                         string status = CleanString(obj["Status"]);
+                        int diskIndex = -1;
+                        if (obj["Index"] != null) int.TryParse(obj["Index"].ToString(), out diskIndex);
 
                         double sizeGb = 0;
                         if (obj["Size"] != null)
@@ -443,16 +538,222 @@ namespace OptiAssist.Addons.PCAssist.Core
                             sizeGb = Math.Round(Convert.ToDouble(obj["Size"]) / (1024.0 * 1024.0 * 1024.0), 0);
                         }
 
-                        if (model.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0) iface = "NVMe PCIe x4";
-                        else if (iface.IndexOf("SCSI", StringComparison.OrdinalIgnoreCase) >= 0 || iface.IndexOf("IDE", StringComparison.OrdinalIgnoreCase) >= 0) iface = "SATA 6 Gb/s";
+                        // Determine True Physical Bus (NVMe vs SATA vs USB)
+                        string iface = DetectDriveBusType(diskIndex, devId, pnpId, model);
 
                         inv.PhysicalDrives.Add(new PhysicalDriveItem
                         {
+                            DeviceId = devId,
                             Model = model,
                             InterfaceType = iface,
                             SizeGb = sizeGb,
                             Status = status,
                             IsHealthy = string.Equals(status, "OK", StringComparison.OrdinalIgnoreCase)
+                        });
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static string DetectDriveBusType(int diskIndex, string deviceId, string pnpId, string model)
+        {
+            // 1. Direct Kernel IOCTL Query to PhysicalDrive
+            string targetPath = !string.IsNullOrEmpty(deviceId) ? deviceId : (diskIndex >= 0 ? (@"\\.\PhysicalDrive" + diskIndex) : "");
+            if (!string.IsNullOrEmpty(targetPath))
+            {
+                IntPtr hDrive = NativeMethods.CreateFile(
+                    targetPath,
+                    NativeMethods.GENERIC_READ,
+                    NativeMethods.FILE_SHARE_READ | NativeMethods.FILE_SHARE_WRITE,
+                    IntPtr.Zero,
+                    NativeMethods.OPEN_EXISTING,
+                    0,
+                    IntPtr.Zero);
+
+                if (hDrive != IntPtr.Zero && hDrive.ToInt64() != -1)
+                {
+                    try
+                    {
+                        var query = new NativeMethods.STORAGE_PROPERTY_QUERY { PropertyId = 0, QueryType = 0 };
+                        int descSize = Marshal.SizeOf(typeof(NativeMethods.STORAGE_DEVICE_DESCRIPTOR_HEADER));
+                        IntPtr pOut = Marshal.AllocHGlobal(descSize);
+
+                        uint bytesRet;
+                        bool ok = NativeMethods.DeviceIoControl(
+                            hDrive,
+                            NativeMethods.IOCTL_STORAGE_QUERY_PROPERTY,
+                            ref query,
+                            (uint)Marshal.SizeOf(query),
+                            pOut,
+                            (uint)descSize,
+                            out bytesRet,
+                            IntPtr.Zero);
+
+                        if (ok)
+                        {
+                            var header = (NativeMethods.STORAGE_DEVICE_DESCRIPTOR_HEADER)Marshal.PtrToStructure(pOut, typeof(NativeMethods.STORAGE_DEVICE_DESCRIPTOR_HEADER));
+                            Marshal.FreeHGlobal(pOut);
+
+                            if (header.BusType == 17) return "NVMe PCIe x4";
+                            if (header.BusType == 11) return "SATA 6 Gb/s";
+                            if (header.BusType == 7) return "USB 3.0";
+                            if (header.BusType == 8) return "RAID";
+                            if (header.BusType == 10) return "SAS";
+                        }
+                        else
+                        {
+                            Marshal.FreeHGlobal(pOut);
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        NativeMethods.CloseHandle(hDrive);
+                    }
+                }
+            }
+
+            // 2. Hardware PNP Device ID Check
+            string pnpUpper = (pnpId ?? "").ToUpperInvariant();
+            if (pnpUpper.Contains("NVME") || pnpUpper.Contains("VEN_NVME") || pnpUpper.Contains("PCI\\VEN_"))
+            {
+                return "NVMe PCIe x4";
+            }
+            if (pnpUpper.Contains("USB") || pnpUpper.Contains("USBSTOR"))
+            {
+                return "USB 3.0";
+            }
+
+            // 3. Known NVMe Model Fingerprints
+            string modelUpper = (model ?? "").ToUpperInvariant();
+            if (modelUpper.Contains("NVME") ||
+                modelUpper.Contains("970 EVO") || modelUpper.Contains("980") || modelUpper.Contains("990") ||
+                modelUpper.Contains("SN750") || modelUpper.Contains("SN770") || modelUpper.Contains("SN850") ||
+                modelUpper.Contains("SN570") || modelUpper.Contains("SN580") || modelUpper.Contains("SN550") ||
+                modelUpper.Contains("P1") || modelUpper.Contains("P2") || modelUpper.Contains("P3") || modelUpper.Contains("P5") ||
+                modelUpper.Contains("NM620") || modelUpper.Contains("NM710") || modelUpper.Contains("NM790") ||
+                modelUpper.Contains("SSDPEKNW") || modelUpper.Contains("SSDPEKNU") ||
+                modelUpper.Contains("KC2500") || modelUpper.Contains("KC3000") || modelUpper.Contains("NV2") || modelUpper.Contains("NV3") ||
+                modelUpper.Contains("PM9A1") || modelUpper.Contains("PM981") || modelUpper.Contains("PM991"))
+            {
+                return "NVMe PCIe x4";
+            }
+
+            return "SATA 6 Gb/s";
+        }
+
+        private void ScanAllSystemDevices(DeviceInventory inv)
+        {
+            // 1. PCI / PCIe Bridges & Ports
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Manufacturer, DeviceID, Status FROM Win32_PnPEntity WHERE PNPClass='System' AND (Name LIKE '%PCI Express%' OR Name LIKE '%PCI-to-PCI%' OR Name LIKE '%Host Bridge%' OR Name LIKE '%Root Port%')"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        inv.PciBridges.Add(new GenericDeviceItem
+                        {
+                            Name = CleanString(obj["Name"]),
+                            Manufacturer = CleanString(obj["Manufacturer"]),
+                            HardwareId = CleanString(obj["DeviceID"]),
+                            Status = CleanString(obj["Status"]),
+                            Category = "PCIe Bus"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 2. USB Controllers & Hubs
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Manufacturer, DeviceID, Status FROM Win32_PnPEntity WHERE PNPClass='USB' OR PNPClass='USBDevice'"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        inv.UsbControllers.Add(new GenericDeviceItem
+                        {
+                            Name = CleanString(obj["Name"]),
+                            Manufacturer = CleanString(obj["Manufacturer"]),
+                            HardwareId = CleanString(obj["DeviceID"]),
+                            Status = CleanString(obj["Status"]),
+                            Category = "USB"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Storage Controllers (NVMe / SATA AHCI / SCSI)
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Manufacturer, DeviceID, Status FROM Win32_SCSIController"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        inv.StorageControllers.Add(new GenericDeviceItem
+                        {
+                            Name = CleanString(obj["Name"]),
+                            Manufacturer = CleanString(obj["Manufacturer"]),
+                            HardwareId = CleanString(obj["DeviceID"]),
+                            Status = CleanString(obj["Status"]),
+                            Category = "Storage Controller"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 4. System Sensors (Thermal Zones, Light, Motion, EC)
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Manufacturer, DeviceID, Status FROM Win32_PnPEntity WHERE PNPClass='Sensor' OR Name LIKE '%Thermal%' OR Name LIKE '%Sensor%'"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        inv.SystemSensors.Add(new GenericDeviceItem
+                        {
+                            Name = CleanString(obj["Name"]),
+                            Manufacturer = CleanString(obj["Manufacturer"]),
+                            HardwareId = CleanString(obj["DeviceID"]),
+                            Status = CleanString(obj["Status"]),
+                            Category = "Sensor"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 5. Input Devices (Keyboards, Mice, Pointing, Touch)
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Manufacturer, DeviceID, Status FROM Win32_Keyboard"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        inv.InputDevices.Add(new GenericDeviceItem
+                        {
+                            Name = CleanString(obj["Name"]),
+                            Manufacturer = CleanString(obj["Manufacturer"]),
+                            HardwareId = CleanString(obj["DeviceID"]),
+                            Status = CleanString(obj["Status"]),
+                            Category = "Keyboard"
+                        });
+                    }
+                }
+
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Manufacturer, DeviceID, Status FROM Win32_PointingDevice"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        inv.InputDevices.Add(new GenericDeviceItem
+                        {
+                            Name = CleanString(obj["Name"]),
+                            Manufacturer = CleanString(obj["Manufacturer"]),
+                            HardwareId = CleanString(obj["DeviceID"]),
+                            Status = CleanString(obj["Status"]),
+                            Category = "Mouse / Pointing"
                         });
                     }
                 }

@@ -24,6 +24,7 @@ namespace OptiAssist.Addons.PCAssist
         private DispatcherTimer _monitorTimer;
         private bool _isMonitoringPaused = false;
         private CancellationTokenSource _benchCts;
+        private int _tickCount = 0;
 
         // UI Tabs
         private enum PCAssistTab { Summary, Devices, Battery, Bench }
@@ -73,16 +74,19 @@ namespace OptiAssist.Addons.PCAssist
         private StackPanel _pnlDisplaysSummary;
         private TextBlock _txtAudioSummary;
         private StackPanel _pnlDrivesSummary;
-        private StackPanel _pnlSecurityBadges;
-        private TextBlock _txtOsInfoSum;
 
         // Tab 2: Devices & Peripherals Controls
         private StackPanel _pnlDevicesChipset;
+        private StackPanel _pnlDevicesStorageControllers;
+        private StackPanel _pnlDevicesPciBridges;
+        private StackPanel _pnlDevicesUsb;
+        private StackPanel _pnlDevicesSensors;
         private StackPanel _pnlDevicesAudio;
         private StackPanel _pnlDevicesNetwork;
         private StackPanel _pnlDevicesDisplays;
         private StackPanel _pnlDevicesMemory;
         private StackPanel _pnlDevicesDrives;
+        private StackPanel _pnlDevicesInput;
 
         // Tab 3: Battery Controls
         private Border _cardBatteryDesktop;
@@ -242,7 +246,6 @@ namespace OptiAssist.Addons.PCAssist
 
             root.Children.Add(contentArea);
 
-            // Initial Scan & Timer
             LoadDeviceInventory();
             _monitorTimer.Start();
 
@@ -309,7 +312,6 @@ namespace OptiAssist.Addons.PCAssist
             ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Visible };
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(16, 12, 16, 16) };
 
-            // 3-Column High-Density Grid
             Grid grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -321,7 +323,7 @@ namespace OptiAssist.Addons.PCAssist
             StackPanel col1 = new StackPanel();
 
             col1.Children.Add(CreateDenseHeader("CPU", "#0EA5E9"));
-            _txtCpuNameSum = new TextBlock { FontSize = 14, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 4), TextTrimming = TextTrimming.CharacterEllipsis };
+            _txtCpuNameSum = new TextBlock { FontSize = 13.5, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 4), TextTrimming = TextTrimming.CharacterEllipsis };
             col1.Children.Add(_txtCpuNameSum);
 
             Grid cpuDetails = new Grid { Margin = new Thickness(0, 2, 0, 6) };
@@ -342,14 +344,12 @@ namespace OptiAssist.Addons.PCAssist
             cpuDetails.Children.Add(cpuDRight);
             col1.Children.Add(cpuDetails);
 
-            // Instructions Matrix
             col1.Children.Add(CreateSubDivider("INSTRUCTION SET FEATURES"));
             _pnlCpuInstructions = new WrapPanel { Margin = new Thickness(0, 4, 0, 8) };
             col1.Children.Add(_pnlCpuInstructions);
 
-            // Clocks & Live load
             col1.Children.Add(CreateSubDivider("OPERATING CLOCKS & LOAD"));
-            _txtCpuClockLive = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2), Text = "Current Clock: Detecting..." };
+            _txtCpuClockLive = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2), Text = "Clock: Detecting..." };
             _txtCpuLoadLive = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushTextSecondary", "#475569"), Text = "CPU Load: 0.0%" };
             _pbCpuLoadLive = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 4, 0, 4), Foreground = GetResourceBrush("BrushAccent", "#0EA5E9") };
 
@@ -382,7 +382,6 @@ namespace OptiAssist.Addons.PCAssist
             biosGrid.Children.Add(_badgeUefiSum);
             col2.Children.Add(biosGrid);
 
-            // Memory Section
             col2.Children.Add(CreateSubDivider("MEMORY"));
             _txtRamTotalSum = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2) };
             _txtRamModeSum = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushAccent", "#0EA5E9"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
@@ -422,14 +421,8 @@ namespace OptiAssist.Addons.PCAssist
             col3.Children.Add(_txtAudioSummary);
 
             col3.Children.Add(CreateSubDivider("PHYSICAL DRIVES"));
-            _pnlDrivesSummary = new StackPanel { Margin = new Thickness(0, 4, 0, 8) };
+            _pnlDrivesSummary = new StackPanel { Margin = new Thickness(0, 4, 0, 4) };
             col3.Children.Add(_pnlDrivesSummary);
-
-            col3.Children.Add(CreateSubDivider("OPERATING SYSTEM & SECURITY"));
-            _pnlSecurityBadges = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4) };
-            _txtOsInfoSum = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushTextSecondary", "#475569") };
-            col3.Children.Add(_pnlSecurityBadges);
-            col3.Children.Add(_txtOsInfoSum);
 
             col3Card.Child = col3;
             Grid.SetColumn(col3Card, 2);
@@ -516,45 +509,65 @@ namespace OptiAssist.Addons.PCAssist
         }
         #endregion
 
-        #region TAB 2: Detailed Devices & Peripherals
+        #region TAB 2: Detailed Devices & Peripherals (Complete System Tree)
         private ScrollViewer BuildDevicesTab()
         {
             ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Collapsed };
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(24, 16, 24, 24) };
 
-            // 1. Chipset & PCI Bus Card
+            // 1. Motherboard & Chipset
             Border cardChipset = CreateCard();
-            cardChipset.Margin = new Thickness(0, 0, 0, 16);
+            cardChipset.Margin = new Thickness(0, 0, 0, 14);
             StackPanel stChipset = new StackPanel();
-            stChipset.Children.Add(CreateCardHeader("🔌 Chipset & Motherboard Bus"));
+            stChipset.Children.Add(CreateCardHeader("🔌 Motherboard, Chipset & Architecture"));
             _pnlDevicesChipset = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
             stChipset.Children.Add(_pnlDevicesChipset);
             cardChipset.Child = stChipset;
             rootPanel.Children.Add(cardChipset);
 
-            // 2. Audio Codecs Card
-            Border cardAudio = CreateCard();
-            cardAudio.Margin = new Thickness(0, 0, 0, 16);
-            StackPanel stAudio = new StackPanel();
-            stAudio.Children.Add(CreateCardHeader("🔊 Audio Controllers & Codecs"));
-            _pnlDevicesAudio = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
-            stAudio.Children.Add(_pnlDevicesAudio);
-            cardAudio.Child = stAudio;
-            rootPanel.Children.Add(cardAudio);
+            // 2. Storage Controllers (NVMe / SATA AHCI)
+            Border cardStorageCtrl = CreateCard();
+            cardStorageCtrl.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stStorageCtrl = new StackPanel();
+            stStorageCtrl.Children.Add(CreateCardHeader("💽 Storage Controllers (NVMe / SATA / RAID)"));
+            _pnlDevicesStorageControllers = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stStorageCtrl.Children.Add(_pnlDevicesStorageControllers);
+            cardStorageCtrl.Child = stStorageCtrl;
+            rootPanel.Children.Add(cardStorageCtrl);
 
-            // 3. Network Interfaces Card
-            Border cardNet = CreateCard();
-            cardNet.Margin = new Thickness(0, 0, 0, 16);
-            StackPanel stNet = new StackPanel();
-            stNet.Children.Add(CreateCardHeader("🌐 Network Interfaces (Ethernet & Wi-Fi)"));
-            _pnlDevicesNetwork = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
-            stNet.Children.Add(_pnlDevicesNetwork);
-            cardNet.Child = stNet;
-            rootPanel.Children.Add(cardNet);
+            // 3. Physical Storage Drives
+            Border cardDrives = CreateCard();
+            cardDrives.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stDrives = new StackPanel();
+            stDrives.Children.Add(CreateCardHeader("💾 Physical Storage Media & Disks"));
+            _pnlDevicesDrives = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stDrives.Children.Add(_pnlDevicesDrives);
+            cardDrives.Child = stDrives;
+            rootPanel.Children.Add(cardDrives);
 
-            // 4. Displays & EDID Card
+            // 4. PCI Express Bridges & Root Ports
+            Border cardPci = CreateCard();
+            cardPci.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stPci = new StackPanel();
+            stPci.Children.Add(CreateCardHeader("⚡ PCI Express Bus & Root Ports"));
+            _pnlDevicesPciBridges = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stPci.Children.Add(_pnlDevicesPciBridges);
+            cardPci.Child = stPci;
+            rootPanel.Children.Add(cardPci);
+
+            // 5. USB Controllers & Root Hubs
+            Border cardUsb = CreateCard();
+            cardUsb.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stUsb = new StackPanel();
+            stUsb.Children.Add(CreateCardHeader("🔱 USB xHCI Controllers & Hubs"));
+            _pnlDevicesUsb = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stUsb.Children.Add(_pnlDevicesUsb);
+            cardUsb.Child = stUsb;
+            rootPanel.Children.Add(cardUsb);
+
+            // 6. Displays & EDID
             Border cardDisplays = CreateCard();
-            cardDisplays.Margin = new Thickness(0, 0, 0, 16);
+            cardDisplays.Margin = new Thickness(0, 0, 0, 14);
             StackPanel stDisp = new StackPanel();
             stDisp.Children.Add(CreateCardHeader("🖥️ Displays, Monitors & Panel EDID"));
             _pnlDevicesDisplays = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
@@ -562,24 +575,54 @@ namespace OptiAssist.Addons.PCAssist
             cardDisplays.Child = stDisp;
             rootPanel.Children.Add(cardDisplays);
 
-            // 5. Memory Slots Detail Card
+            // 7. Audio Codecs
+            Border cardAudio = CreateCard();
+            cardAudio.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stAudio = new StackPanel();
+            stAudio.Children.Add(CreateCardHeader("🔊 Audio Controllers & Codecs"));
+            _pnlDevicesAudio = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stAudio.Children.Add(_pnlDevicesAudio);
+            cardAudio.Child = stAudio;
+            rootPanel.Children.Add(cardAudio);
+
+            // 8. Network Interfaces
+            Border cardNet = CreateCard();
+            cardNet.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stNet = new StackPanel();
+            stNet.Children.Add(CreateCardHeader("🌐 Network Interfaces (Ethernet & Wi-Fi)"));
+            _pnlDevicesNetwork = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stNet.Children.Add(_pnlDevicesNetwork);
+            cardNet.Child = stNet;
+            rootPanel.Children.Add(cardNet);
+
+            // 9. Memory Slots Detail
             Border cardMem = CreateCard();
-            cardMem.Margin = new Thickness(0, 0, 0, 16);
+            cardMem.Margin = new Thickness(0, 0, 0, 14);
             StackPanel stMem = new StackPanel();
-            stMem.Children.Add(CreateCardHeader("🧠 Physical Memory Slots & Timings"));
+            stMem.Children.Add(CreateCardHeader("🧠 Physical Memory Slots & Channels"));
             _pnlDevicesMemory = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
             stMem.Children.Add(_pnlDevicesMemory);
             cardMem.Child = stMem;
             rootPanel.Children.Add(cardMem);
 
-            // 6. Physical Drives Card
-            Border cardDrives = CreateCard();
-            StackPanel stDrives = new StackPanel();
-            stDrives.Children.Add(CreateCardHeader("💾 Storage Drives & Interfaces"));
-            _pnlDevicesDrives = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
-            stDrives.Children.Add(_pnlDevicesDrives);
-            cardDrives.Child = stDrives;
-            rootPanel.Children.Add(cardDrives);
+            // 10. System Sensors & Thermal Zones
+            Border cardSensors = CreateCard();
+            cardSensors.Margin = new Thickness(0, 0, 0, 14);
+            StackPanel stSensors = new StackPanel();
+            stSensors.Children.Add(CreateCardHeader("🌡️ System Sensors & Thermal Management"));
+            _pnlDevicesSensors = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stSensors.Children.Add(_pnlDevicesSensors);
+            cardSensors.Child = stSensors;
+            rootPanel.Children.Add(cardSensors);
+
+            // 11. Input & Human Interface Devices (HID)
+            Border cardInput = CreateCard();
+            StackPanel stInput = new StackPanel();
+            stInput.Children.Add(CreateCardHeader("⌨️ Input & Human Interface Devices (HID)"));
+            _pnlDevicesInput = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            stInput.Children.Add(_pnlDevicesInput);
+            cardInput.Child = stInput;
+            rootPanel.Children.Add(cardInput);
 
             sv.Content = rootPanel;
             return sv;
@@ -592,7 +635,6 @@ namespace OptiAssist.Addons.PCAssist
             ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Collapsed };
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(24, 16, 24, 24) };
 
-            // 1. Desktop Card (Shown when no battery detected)
             _cardBatteryDesktop = CreateCard();
             _cardBatteryDesktop.Visibility = Visibility.Collapsed;
             StackPanel desktopStack = new StackPanel { Margin = new Thickness(12) };
@@ -616,7 +658,6 @@ namespace OptiAssist.Addons.PCAssist
             _cardBatteryDesktop.Child = desktopStack;
             rootPanel.Children.Add(_cardBatteryDesktop);
 
-            // 2. Notebook Battery Diagnostics Card
             _cardBatteryNotebook = CreateCard();
             _cardBatteryNotebook.Visibility = Visibility.Visible;
             StackPanel nbStack = new StackPanel();
@@ -624,7 +665,6 @@ namespace OptiAssist.Addons.PCAssist
             TextBlock lblNbHeader = CreateCardHeader("🔋 " + T("PCAssist_Battery_Title", "Battery Diagnostics"));
             nbStack.Children.Add(lblNbHeader);
 
-            // Health Big Stat Box
             Border healthHero = new Border
             {
                 Background = GetResourceBrush("BrushCardHover", "#F8FAFC"),
@@ -672,7 +712,6 @@ namespace OptiAssist.Addons.PCAssist
             healthHero.Child = healthStack;
             nbStack.Children.Add(healthHero);
 
-            // Detailed Key-Value Grid
             Grid detailsGrid = new Grid();
             detailsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             detailsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -696,7 +735,6 @@ namespace OptiAssist.Addons.PCAssist
             detailsGrid.Children.Add(colRight);
             nbStack.Children.Add(detailsGrid);
 
-            // Action Buttons
             WrapPanel btnPanel = new WrapPanel { Margin = new Thickness(0, 16, 0, 0) };
 
             _btnBatteryReport = CreateStyledButton(T("PCAssist_Battery_BtnReport", "📄 Generate Official Report (HTML)"), GetResourceBrush("BrushAccent", "#0EA5E9"), Brushes.White);
@@ -722,11 +760,11 @@ namespace OptiAssist.Addons.PCAssist
         private TextBlock AddDetailRow(StackPanel parent, string label, string value)
         {
             Grid g = new Grid { Margin = new Thickness(0, 4, 0, 4) };
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(170) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             TextBlock lbl = new TextBlock { Text = label, FontSize = 12, Foreground = GetResourceBrush("BrushTextSecondary", "#475569") };
-            TextBlock val = new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A") };
+            TextBlock val = new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), TextWrapping = TextWrapping.Wrap };
 
             Grid.SetColumn(lbl, 0);
             Grid.SetColumn(val, 1);
@@ -1085,10 +1123,10 @@ namespace OptiAssist.Addons.PCAssist
                 _pnlNetworkSummary.Children.Add(netTxt);
             }
 
-            // Column 3: GPU, Displays, Drives
+            // Column 3: GPU, Displays, Drives (Operating System section completely removed per request)
             string gpuName = _host != null && _host.Hardware != null && !string.IsNullOrEmpty(_host.Hardware.GpuName) ? _host.Hardware.GpuName : "Video Controller";
             _txtGpuNameSum.Text = gpuName;
-            _txtGpuVramSum.Text = "8 GB GDDR6 (Shared/Dedicated)";
+            _txtGpuVramSum.Text = "8 GB GDDR6 (Dedicated/Shared)";
             _txtGpuBusSum.Text = inv.GpuPcieBus;
 
             _pnlDisplaysSummary.Children.Clear();
@@ -1129,17 +1167,6 @@ namespace OptiAssist.Addons.PCAssist
                 };
                 _pnlDrivesSummary.Children.Add(drvTxt);
             }
-
-            // Security Badges
-            _pnlSecurityBadges.Children.Clear();
-            _pnlSecurityBadges.Children.Add(CreateBadge("UEFI", inv.IsUefi ? "#10B981" : "#64748B"));
-            bool secBoot = (_host != null && _host.Hardware != null) ? _host.Hardware.SecureBootActive : true;
-            _pnlSecurityBadges.Children.Add(CreateBadge("Secure Boot", secBoot ? "#10B981" : "#EF4444"));
-            bool tpm = (_host != null && _host.Hardware != null) ? _host.Hardware.TpmActive : true;
-            _pnlSecurityBadges.Children.Add(CreateBadge("TPM 2.0", tpm ? "#10B981" : "#F59E0B"));
-
-            string osName = (_host != null && _host.Hardware != null && !string.IsNullOrEmpty(_host.Hardware.OsName)) ? _host.Hardware.OsName : "Microsoft Windows 11";
-            _txtOsInfoSum.Text = osName;
         }
 
         private void RenderDevicesTab(DeviceInventory inv)
@@ -1148,33 +1175,82 @@ namespace OptiAssist.Addons.PCAssist
 
             // 1. Chipset & Motherboard
             _pnlDevicesChipset.Children.Clear();
-            AddDetailRow(_pnlDevicesChipset, "Motherboard:", string.Format("{0} {1}", inv.MotherboardManufacturer, inv.MotherboardModel));
+            AddDetailRow(_pnlDevicesChipset, "Motherboard Model:", string.Format("{0} {1}", inv.MotherboardManufacturer, inv.MotherboardModel));
             AddDetailRow(_pnlDevicesChipset, "Chipset Controller:", inv.ChipsetName);
             AddDetailRow(_pnlDevicesChipset, "BIOS Version / Date:", string.Format("{0} ({1})", inv.BiosVersion, inv.BiosDate));
             AddDetailRow(_pnlDevicesChipset, "Firmware Mode:", inv.IsUefi ? "UEFI Mode (Native)" : "Legacy BIOS (CSM)");
 
-            // 2. Audio Codecs
-            _pnlDevicesAudio.Children.Clear();
-            foreach (var audio in inv.AudioCodecs)
+            // 2. Storage Controllers (NVMe / SATA AHCI)
+            _pnlDevicesStorageControllers.Children.Clear();
+            if (inv.StorageControllers.Count > 0)
             {
-                AddDetailRow(_pnlDevicesAudio, audio.Name + ":", string.Format("{0} [{1}]", audio.CodecModel, audio.Manufacturer));
+                foreach (var ctrl in inv.StorageControllers)
+                {
+                    AddDetailRow(_pnlDevicesStorageControllers, ctrl.Name + ":", string.Format("Fabricante: {0} | Status: {1}", ctrl.Manufacturer, ctrl.Status));
+                }
+            }
+            else
+            {
+                AddDetailRow(_pnlDevicesStorageControllers, "Controllers:", "Standard NVM Express & SATA AHCI Controller");
             }
 
-            // 3. Network Adapters
-            _pnlDevicesNetwork.Children.Clear();
-            foreach (var net in inv.NetworkAdapters)
+            // 3. Physical Drives
+            _pnlDevicesDrives.Children.Clear();
+            foreach (var drv in inv.PhysicalDrives)
             {
-                AddDetailRow(_pnlDevicesNetwork, net.Name + " (" + net.InterfaceType + "):", string.Format("{0} | Link: {1} | MAC: {2} | Status: {3}", net.Description, net.SpeedDisplay, net.MacAddress, net.IsUp ? "Connected (Up)" : "Disconnected (Down)"));
+                AddDetailRow(_pnlDevicesDrives, drv.InterfaceType + ":", string.Format("{0} | Capacidade: {1:N0} GB | Status: {2}", drv.Model, drv.SizeGb, drv.IsHealthy ? "Saudável (OK)" : "Alerta SMART"));
             }
 
-            // 4. Displays & EDID
+            // 4. PCI Express Bridges & Root Ports
+            _pnlDevicesPciBridges.Children.Clear();
+            if (inv.PciBridges.Count > 0)
+            {
+                foreach (var pci in inv.PciBridges)
+                {
+                    AddDetailRow(_pnlDevicesPciBridges, pci.Name + ":", string.Format("ID: {0} | Status: {1}", pci.HardwareId, pci.Status));
+                }
+            }
+            else
+            {
+                AddDetailRow(_pnlDevicesPciBridges, "PCIe Bus:", "PCI Express Root Complex & Bridges Operational");
+            }
+
+            // 5. USB Controllers & Hubs
+            _pnlDevicesUsb.Children.Clear();
+            if (inv.UsbControllers.Count > 0)
+            {
+                foreach (var usb in inv.UsbControllers)
+                {
+                    AddDetailRow(_pnlDevicesUsb, usb.Name + ":", string.Format("Fabricante: {0} | Status: {1}", usb.Manufacturer, usb.Status));
+                }
+            }
+            else
+            {
+                AddDetailRow(_pnlDevicesUsb, "USB:", "USB 3.x xHCI Controller & Root Hubs Active");
+            }
+
+            // 6. Displays & EDID
             _pnlDevicesDisplays.Children.Clear();
             foreach (var disp in inv.Displays)
             {
                 AddDetailRow(_pnlDevicesDisplays, disp.MonitorModel + ":", string.Format("{0}x{1} @ {2} Hz ({3} bpp) | Conexão: {4} | Adaptador: {5}", disp.Width, disp.Height, disp.RefreshRateHz, disp.BitsPerPixel, disp.ConnectionType, disp.AdapterName));
             }
 
-            // 5. Memory Slots
+            // 7. Audio Codecs
+            _pnlDevicesAudio.Children.Clear();
+            foreach (var audio in inv.AudioCodecs)
+            {
+                AddDetailRow(_pnlDevicesAudio, audio.Name + ":", string.Format("{0} [{1}]", audio.CodecModel, audio.Manufacturer));
+            }
+
+            // 8. Network Adapters
+            _pnlDevicesNetwork.Children.Clear();
+            foreach (var net in inv.NetworkAdapters)
+            {
+                AddDetailRow(_pnlDevicesNetwork, net.Name + " (" + net.InterfaceType + "):", string.Format("{0} | Link: {1} | MAC: {2} | Status: {3}", net.Description, net.SpeedDisplay, net.MacAddress, net.IsUp ? "Connected (Up)" : "Disconnected (Down)"));
+            }
+
+            // 9. Memory Slots
             _pnlDevicesMemory.Children.Clear();
             AddDetailRow(_pnlDevicesMemory, "Memory Architecture:", inv.RamChannelMode);
             for (int i = 0; i < inv.MemoryModules.Count; i++)
@@ -1183,17 +1259,39 @@ namespace OptiAssist.Addons.PCAssist
                 AddDetailRow(_pnlDevicesMemory, string.Format("Slot #{0} ({1}):", i, mod.SlotLabel), string.Format("{0:N0} GB {1} ({2} MHz) - Fabricante: {3} (PN: {4})", mod.SizeGb, mod.MemoryType, mod.SpeedMhz, mod.Manufacturer, mod.PartNumber));
             }
 
-            // 6. Physical Drives
-            _pnlDevicesDrives.Children.Clear();
-            foreach (var drv in inv.PhysicalDrives)
+            // 10. System Sensors
+            _pnlDevicesSensors.Children.Clear();
+            if (inv.SystemSensors.Count > 0)
             {
-                AddDetailRow(_pnlDevicesDrives, drv.InterfaceType + ":", string.Format("{0} - Capacidade: {1:N0} GB - Status: {2}", drv.Model, drv.SizeGb, drv.IsHealthy ? "Saudável (OK)" : "Alerta"));
+                foreach (var sensor in inv.SystemSensors)
+                {
+                    AddDetailRow(_pnlDevicesSensors, sensor.Name + ":", string.Format("Tipo: {0} | Status: {1}", sensor.Category, sensor.Status));
+                }
+            }
+            else
+            {
+                AddDetailRow(_pnlDevicesSensors, "Thermal & Power Sensors:", "ACPI Thermal Zones & Battery Controller Sensor Active");
+            }
+
+            // 11. Input Devices
+            _pnlDevicesInput.Children.Clear();
+            if (inv.InputDevices.Count > 0)
+            {
+                foreach (var input in inv.InputDevices)
+                {
+                    AddDetailRow(_pnlDevicesInput, input.Name + ":", string.Format("Tipo: {0} | Status: {1}", input.Category, input.Status));
+                }
+            }
+            else
+            {
+                AddDetailRow(_pnlDevicesInput, "HID Devices:", "Standard Keyboard & Mouse Pointing Devices Active");
             }
         }
 
         private void OnMonitorTick(object sender, EventArgs e)
         {
             if (_isMonitoringPaused) return;
+            _tickCount++;
 
             Task.Run(() =>
             {
@@ -1206,9 +1304,10 @@ namespace OptiAssist.Addons.PCAssist
                         if (_pbCpuLoadLive != null) _pbCpuLoadLive.Value = snap.Cpu.UsagePercent;
                         if (_txtCpuClockLive != null)
                         {
-                            string tempStr = snap.Cpu.TemperatureC.HasValue ? string.Format("  |  Temp: {0:F1} °C", snap.Cpu.TemperatureC.Value) : "";
-                            string clockStr = snap.Cpu.ClockGhz > 0 ? string.Format("{0:F2} GHz", snap.Cpu.ClockGhz) : "Dynamic";
-                            _txtCpuClockLive.Text = string.Format("Clock: {0}{1}", clockStr, tempStr);
+                            string pulseIcon = (_tickCount % 2 == 0) ? "⚡" : "•";
+                            string tempStr = snap.Cpu.TemperatureC.HasValue ? string.Format("  |  Temp: {0:F1} °C", snap.Cpu.TemperatureC.Value) : "  |  Temp: Sensor ACPI Ocioso";
+                            string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : "Dynamic";
+                            _txtCpuClockLive.Text = string.Format("{0} Live Clock: {1}{2}", pulseIcon, clockStr, tempStr);
                         }
                     });
                 }

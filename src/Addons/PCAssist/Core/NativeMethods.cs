@@ -128,5 +128,64 @@ namespace OptiAssist.Addons.PCAssist.Core
         public const uint PF_AVX512F_INSTRUCTIONS_AVAILABLE = 49;
         public const uint PF_FASTFAIL_AVAILABLE = 23;
         public const uint PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE = 34;
+
+        // 5. Storage Property Query (Direct NVMe / SATA / USB bus detection)
+        public const uint IOCTL_STORAGE_QUERY_PROPERTY = 0x002D1400;
+        public const uint GENERIC_READ = 0x80000000;
+        public const uint FILE_SHARE_READ = 0x00000001;
+        public const uint FILE_SHARE_WRITE = 0x00000002;
+        public const uint OPEN_EXISTING = 3;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STORAGE_PROPERTY_QUERY
+        {
+            public int PropertyId;
+            public int QueryType;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
+            public byte[] AdditionalParameters;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STORAGE_DEVICE_DESCRIPTOR_HEADER
+        {
+            public int Version;
+            public int Size;
+            public byte DeviceType;
+            public byte DeviceTypeModifier;
+            [MarshalAs(UnmanagedType.I1)]
+            public bool RemovableMedia;
+            [MarshalAs(UnmanagedType.I1)]
+            public bool CommandQueueing;
+            public int VendorIdOffset;
+            public int ProductIdOffset;
+            public int ProductRevisionOffset;
+            public int SerialNumberOffset;
+            public int BusType; // 17 = NVMe, 11 = SATA, 7 = USB, 8 = RAID, 1 = SCSI
+            public int RawPropertiesLength;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern IntPtr CreateFile(
+            string lpFileName,
+            uint dwDesiredAccess,
+            uint dwShareMode,
+            IntPtr lpSecurityAttributes,
+            uint dwCreationDisposition,
+            uint dwFlagsAndAttributes,
+            IntPtr hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool DeviceIoControl(
+            IntPtr hDevice,
+            uint dwIoControlCode,
+            ref STORAGE_PROPERTY_QUERY lpInBuffer,
+            uint nInBufferSize,
+            IntPtr lpOutBuffer,
+            uint nOutBufferSize,
+            out uint lpBytesReturned,
+            IntPtr lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool CloseHandle(IntPtr hObject);
     }
 }
