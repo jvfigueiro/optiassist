@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Xml;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,10 +21,10 @@ using Microsoft.Win32;
 
 namespace OptiAssist.Addons.SystemCleaner
 {
-    #region RESULTS, CONTEXT & PATH SANITIZER
+    #region 1. RESULTS, CONTEXT & PATH SANITIZER (WITH VISUAL C++ & WEBVIEW2 PROTECTION)
 
     /// <summary>
-    /// Represents an individual scanned file marked for cleaning with its size.
+    /// Represents an individual scanned file or item marked for cleaning with its size.
     /// </summary>
     public class ScannedFileEntry
     {
@@ -50,6 +52,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public long EstimatedBytes { get; set; }
         public int SkippedOrLockedCount { get; set; }
         public List<string> Warnings { get; set; }
+        private readonly HashSet<string> _seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public ScanResult()
         {
@@ -61,6 +64,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public void AddFile(string path, long size)
         {
             if (string.IsNullOrEmpty(path)) return;
+            if (!_seenPaths.Add(path)) return;
             FoundItems.Add(path);
             ScannedFiles.Add(new ScannedFileEntry { Path = path, SizeBytes = size });
             EstimatedBytes += size;
@@ -128,27 +132,32 @@ namespace OptiAssist.Addons.SystemCleaner
 
     /// <summary>
     /// Strict path sanitizer that prevents accidental deletion outside allowed scopes
-    /// and protects critical operating system and application directories.
+    /// and explicitly protects Microsoft Visual C++ Redistributable caches, Windows Installer
+    /// registration stores, and Microsoft Edge WebView2 runtime components.
     /// </summary>
     public static class PathSanitizer
     {
-        private static readonly string[]ExplicitAllowedWindowsSubpaths = new string[]
+        private static readonly string[] ProtectedPathFragments = new string[]
         {
-            @"Windows\Temp",
-            @"Windows\Prefetch",
-            @"Windows\Minidump",
-            @"Windows\LiveKernelReports",
-            @"Windows\SoftwareDistribution\Download",
-            @"Windows\SoftwareDistribution\DeliveryOptimization",
-            @"Windows\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache",
-            @"Windows\Logs\CBS",
-            @"Windows\Panther",
-            @"Windows\MEMORY.DMP"
+            @"\Microsoft\EdgeWebView",
+            @"\EdgeWebView\",
+            @"\EBWebView",
+            @"\WebView2",
+            @"msedgewebview2",
+            @"\Package Cache",
+            @"\Windows\Installer",
+            @"\Windows\WinSxS",
+            @"\Windows\System32",
+            @"\Windows\SysWOW64",
+            @"Microsoft Visual C++",
+            @"vcredist",
+            @"vc_runtime",
+            @"vc_redist"
         };
 
         /// <summary>
         /// Validates whether a target file or directory path is safe for deletion.
-        /// Rejects root drives, critical OS directories, Program Files, and the OptiAssist directory.
+        /// Rejects root drives, critical OS directories, Visual C++ / WebView2 components, and the OptiAssist directory.
         /// </summary>
         public static bool IsSafeToDelete(string candidatePath)
         {
@@ -165,6 +174,15 @@ namespace OptiAssist.Addons.SystemCleaner
                     return false;
                 }
 
+                // Explicitly protect Visual C++ Redistributable, Windows Installer, and WebView2 runtime paths
+                foreach (string frag in ProtectedPathFragments)
+                {
+                    if (full.IndexOf(frag, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return false;
+                    }
+                }
+
                 // Never allow deleting inside the running OptiAssist application directory
                 string appBase = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
                 if (full.StartsWith(appBase, StringComparison.OrdinalIgnoreCase))
@@ -178,6 +196,10 @@ namespace OptiAssist.Addons.SystemCleaner
                 string sysDir = Environment.SystemDirectory.TrimEnd('\\', '/');
                 string usersRoot = Path.GetDirectoryName(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('\\', '/'));
                 string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('\\', '/');
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).TrimEnd('\\', '/');
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData).TrimEnd('\\', '/');
+                string progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData).TrimEnd('\\', '/');
+                string docsDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments).TrimEnd('\\', '/');
 
                 // Never allow deleting top-level system or user profile roots directly
                 if (string.Equals(full, winDir, StringComparison.OrdinalIgnoreCase) ||
@@ -185,32 +207,19 @@ namespace OptiAssist.Addons.SystemCleaner
                     string.Equals(full, progFiles, StringComparison.OrdinalIgnoreCase) ||
                     (!string.IsNullOrEmpty(progFilesX86) && string.Equals(full, progFilesX86, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(usersRoot) && string.Equals(full, usersRoot, StringComparison.OrdinalIgnoreCase)) ||
-                    string.Equals(full, userProfile, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(full, userProfile, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(full, appData, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(full, localAppData, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(full, progData, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(full, docsDir, StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }
 
-                // Never allow deleting anything inside Program Files or System32
-                if (full.StartsWith(progFiles + "\\", StringComparison.OrdinalIgnoreCase) ||
-                    (!string.IsNullOrEmpty(progFilesX86) && full.StartsWith(progFilesX86 + "\\", StringComparison.OrdinalIgnoreCase)) ||
-                    full.StartsWith(sysDir + "\\", StringComparison.OrdinalIgnoreCase))
+                // Never allow deleting inside System32 or SysWOW64 (except systemprofile IE cache/logs if specified by XML)
+                if (full.StartsWith(sysDir + "\\", StringComparison.OrdinalIgnoreCase) &&
+                    full.IndexOf(@"\config\systemprofile\", StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    return false;
-                }
-
-                // If path is inside C:\Windows, it must match one of the explicitly whitelisted temp/cache subpaths
-                if (full.StartsWith(winDir + "\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    string sysRoot = Path.GetPathRoot(winDir);
-                    foreach (string allowedSub in ExplicitAllowedWindowsSubpaths)
-                    {
-                        string allowedFull = Path.Combine(sysRoot, allowedSub).TrimEnd('\\', '/');
-                        if (string.Equals(full, allowedFull, StringComparison.OrdinalIgnoreCase) ||
-                            full.StartsWith(allowedFull + "\\", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
                     return false;
                 }
 
@@ -240,13 +249,15 @@ namespace OptiAssist.Addons.SystemCleaner
                     string.Equals(name, "Program Files (x86)", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(name, "ProgramData", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(name, ".git", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(name, "AppData", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(name, "AppData", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "EdgeWebView", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "EBWebView", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "Package Cache", StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
 
-                string appBase = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
-                if (full.StartsWith(appBase, StringComparison.OrdinalIgnoreCase))
+                if (!IsSafeToDelete(full))
                 {
                     return true;
                 }
@@ -268,11 +279,11 @@ namespace OptiAssist.Addons.SystemCleaner
 
     #endregion
 
-    #region BASE CLEANER ABSTRACT ARCHITECTURE
+    #region 2. BASE CLEANER ABSTRACT ARCHITECTURE
 
     /// <summary>
-    /// Abstract base class modeled after BleachBit's modular cleaner architecture.
-    /// Every cleaner exposes metadata, dry-run Scan(), and safe Clean() operations.
+    /// Abstract base class modeled after BleachBit's modular cleaner option architecture.
+    /// Every cleaner option exposes metadata, dry-run Scan(), and safe Clean() operations.
     /// </summary>
     public abstract class BaseCleaner : INotifyPropertyChanged
     {
@@ -298,6 +309,8 @@ namespace OptiAssist.Addons.SystemCleaner
         public string SectionId { get; set; }
         public string SectionTitle { get; set; }
         public string SectionIcon { get; set; }
+        public bool IsInstalledOnSystem { get; set; }
+        public List<string> RunningExecutables { get; set; }
         public ScanResult LastScanResult { get; set; }
 
         public string Name
@@ -374,20 +387,15 @@ namespace OptiAssist.Addons.SystemCleaner
             SectionId = categoryId;
             SectionTitle = category;
             SectionIcon = icon;
+            IsInstalledOnSystem = true;
+            RunningExecutables = new List<string>();
             _isSelected = isRecommended && !isDangerous;
             _sizeBytes = 0;
             _sizeDisplay = "—";
             _statusDisplay = "Ready";
         }
 
-        /// <summary>
-        /// Dry-run scan: discovers target files/keys and calculates estimated reclaimable bytes without deleting anything.
-        /// </summary>
         public abstract ScanResult Scan(CleanerContext context);
-
-        /// <summary>
-        /// Safe cleanup execution: deletes discovered items or runs maintenance, gracefully skipping locked/in-use files.
-        /// </summary>
         public abstract CleanResult Clean(CleanerContext context);
 
         protected void OnPropertyChanged(string propName)
@@ -413,129 +421,12 @@ namespace OptiAssist.Addons.SystemCleaner
             return string.Format("{0:0.##} {1}", d, suffixes[idx]);
         }
 
-        #region SHARED SAFE FILE & DIRECTORY HELPERS
-
-        protected static void ScanDirectoryFiles(string dirPath, string pattern, bool recursive, ScanResult result)
-        {
-            if (string.IsNullOrWhiteSpace(dirPath) || !Directory.Exists(dirPath)) return;
-
-            try
-            {
-                string[] files = Directory.GetFiles(dirPath, pattern, SearchOption.TopDirectoryOnly);
-                foreach (string f in files)
-                {
-                    try
-                    {
-                        FileInfo fi = new FileInfo(f);
-                        result.AddFile(f, fi.Length);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        result.SkippedOrLockedCount++;
-                    }
-                    catch (IOException)
-                    {
-                        result.SkippedOrLockedCount++;
-                    }
-                    catch { }
-                }
-
-                if (recursive)
-                {
-                    string[] subDirs = Directory.GetDirectories(dirPath, "*", SearchOption.TopDirectoryOnly);
-                    foreach (string sub in subDirs)
-                    {
-                        try
-                        {
-                            FileAttributes attr = File.GetAttributes(sub);
-                            if ((attr & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-                                continue;
-                            ScanDirectoryFiles(sub, pattern, true, result);
-                        }
-                        catch
-                        {
-                            result.SkippedOrLockedCount++;
-                        }
-                    }
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                result.SkippedOrLockedCount++;
-            }
-            catch (IOException)
-            {
-                result.SkippedOrLockedCount++;
-            }
-            catch { }
-        }
-
-        protected static void CleanDirectoryContents(string dirPath, string pattern, bool recursive, CleanResult result, CleanerContext context)
-        {
-            if (string.IsNullOrWhiteSpace(dirPath) || !Directory.Exists(dirPath)) return;
-            if (!PathSanitizer.IsSafeToDelete(dirPath))
-            {
-                result.Errors.Add("Blocked unsafe path: " + dirPath);
-                return;
-            }
-
-            try
-            {
-                string[] files = Directory.GetFiles(dirPath, pattern, SearchOption.TopDirectoryOnly);
-                foreach (string f in files)
-                {
-                    DeleteFileSafe(f, result);
-                }
-
-                if (recursive)
-                {
-                    string[] subDirs = Directory.GetDirectories(dirPath, "*", SearchOption.TopDirectoryOnly);
-                    foreach (string sub in subDirs)
-                    {
-                        try
-                        {
-                            FileAttributes attr = File.GetAttributes(sub);
-                            if ((attr & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-                                continue;
-
-                            CleanDirectoryContents(sub, pattern, true, result, context);
-
-                            if (pattern == "*" && PathSanitizer.IsSafeToDelete(sub))
-                            {
-                                try
-                                {
-                                    if (Directory.GetFiles(sub).Length == 0 && Directory.GetDirectories(sub).Length == 0)
-                                    {
-                                        Directory.Delete(sub, false);
-                                    }
-                                }
-                                catch { }
-                            }
-                        }
-                        catch
-                        {
-                            result.ErrorOrLockedCount++;
-                        }
-                    }
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                result.ErrorOrLockedCount++;
-            }
-            catch (IOException)
-            {
-                result.ErrorOrLockedCount++;
-            }
-            catch { }
-        }
-
-        protected static void DeleteFileSafe(string filePath, CleanResult result)
+        public static void DeleteFileSafe(string filePath, CleanResult result)
         {
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) return;
             if (!PathSanitizer.IsSafeToDelete(filePath))
             {
-                result.Errors.Add("Blocked unsafe file path: " + filePath);
+                result.ErrorOrLockedCount++;
                 return;
             }
 
@@ -550,12 +441,10 @@ namespace OptiAssist.Addons.SystemCleaner
             }
             catch (IOException)
             {
-                // EBUSY / File in use by another process
                 result.ErrorOrLockedCount++;
             }
             catch (UnauthorizedAccessException)
             {
-                // PermissionError
                 result.ErrorOrLockedCount++;
             }
             catch
@@ -564,635 +453,26 @@ namespace OptiAssist.Addons.SystemCleaner
             }
         }
 
-        protected static void DeleteEntireDirectorySafe(string dirPath, CleanResult result, CleanerContext context)
+        public static void TryRemoveEmptyDirectory(string dirPath)
         {
             if (string.IsNullOrWhiteSpace(dirPath) || !Directory.Exists(dirPath)) return;
-            if (!PathSanitizer.IsSafeToDelete(dirPath))
-            {
-                result.Errors.Add("Blocked unsafe directory deletion: " + dirPath);
-                return;
-            }
-
-            CleanDirectoryContents(dirPath, "*", true, result, context);
+            if (!PathSanitizer.IsSafeToDelete(dirPath)) return;
             try
             {
-                if (Directory.Exists(dirPath))
+                if (Directory.GetFiles(dirPath).Length == 0 && Directory.GetDirectories(dirPath).Length == 0)
                 {
-                    Directory.Delete(dirPath, true);
-                }
-            }
-            catch
-            {
-                result.ErrorOrLockedCount++;
-            }
-        }
-
-        protected static long GetDirectorySizeSafe(string dirPath)
-        {
-            ScanResult sr = new ScanResult();
-            ScanDirectoryFiles(dirPath, "*", true, sr);
-            return sr.EstimatedBytes;
-        }
-
-        #endregion
-    }
-
-    #endregion
-
-    #region 1. WINDOWS CORE CLEANERS
-
-    /// <summary>
-    /// Declarative path-based cleaner for standard OS directories and file patterns.
-    /// </summary>
-    public class DirectoryPatternCleaner : BaseCleaner
-    {
-        private readonly Func<List<string>> _targetDirsProvider;
-        private readonly string _filePattern;
-        private readonly bool _recursive;
-        private readonly List<string> _explicitFiles;
-
-        public DirectoryPatternCleaner(
-            string id,
-            string categoryId,
-            string category,
-            string name,
-            string description,
-            string icon,
-            bool requiresAdmin,
-            bool isDangerous,
-            string warningMessage,
-            bool isRecommended,
-            Func<List<string>> targetDirsProvider,
-            string filePattern = "*",
-            bool recursive = true,
-            List<string> explicitFiles = null)
-            : base(id, categoryId, category, name, description, icon, requiresAdmin, isDangerous, warningMessage, isRecommended)
-        {
-            _targetDirsProvider = targetDirsProvider;
-            _filePattern = filePattern;
-            _recursive = recursive;
-            _explicitFiles = explicitFiles;
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            if (_explicitFiles != null)
-            {
-                foreach (string file in _explicitFiles)
-                {
-                    try
-                    {
-                        if (File.Exists(file))
-                        {
-                            FileInfo fi = new FileInfo(file);
-                            res.AddFile(file, fi.Length);
-                        }
-                    }
-                    catch { res.SkippedOrLockedCount++; }
-                }
-            }
-
-            if (_targetDirsProvider != null)
-            {
-                foreach (string dir in _targetDirsProvider())
-                {
-                    ScanDirectoryFiles(dir, _filePattern, _recursive, res);
-                }
-            }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            if (_explicitFiles != null)
-            {
-                foreach (string file in _explicitFiles)
-                {
-                    DeleteFileSafe(file, res);
-                }
-            }
-
-            if (_targetDirsProvider != null)
-            {
-                foreach (string dir in _targetDirsProvider())
-                {
-                    CleanDirectoryContents(dir, _filePattern, _recursive, res, context);
-                }
-            }
-
-            context.Log(string.Format("[CLEANER] {0}: Freed {1} ({2} deleted, {3} locked/skipped).",
-                Name, FormatBytes(res.FreedBytes), res.DeletedCount, res.ErrorOrLockedCount));
-            return res;
-        }
-    }
-
-    public class RecycleBinCleaner : BaseCleaner
-    {
-        [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        private struct SHQUERYRBINFO
-        {
-            public int cbSize;
-            public long i64Size;
-            public long i64NumItems;
-        }
-
-        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        private static extern uint SHEmptyRecycleBin(IntPtr hwnd, string pszRootPath, uint dwFlags);
-
-        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        private static extern int SHQueryRecycleBin(string pszRootPath, ref SHQUERYRBINFO pSHQueryRBInfo);
-
-        private const uint SHERB_NOCONFIRMATION = 0x00000001;
-        private const uint SHERB_NOPROGRESSUI = 0x00000002;
-        private const uint SHERB_NOSOUND = 0x00000004;
-
-        public RecycleBinCleaner()
-            : base("recycle_bin", "win_core", "Windows Core",
-                   "Empty Recycle Bin",
-                   "Permanently deletes all files from recycle bins on all connected drives via SHEmptyRecycleBin",
-                   "🗑️", false, false, "", true)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            try
-            {
-                SHQUERYRBINFO info = new SHQUERYRBINFO();
-                info.cbSize = Marshal.SizeOf(typeof(SHQUERYRBINFO));
-                int hr = SHQueryRecycleBin(null, ref info);
-                if (hr == 0 && info.i64Size > 0)
-                {
-                    res.AddFile(string.Format("Lixeira / Recycle Bin ({0} itens)", info.i64NumItems), info.i64Size);
-                    for (int i = 1; i < (int)Math.Min(info.i64NumItems, 100); i++)
-                    {
-                        res.FoundItems.Add("RecycleBinItem#" + i);
-                    }
+                    Directory.Delete(dirPath, false);
                 }
             }
             catch { }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            ScanResult before = Scan(context);
-            try
-            {
-                uint hr = SHEmptyRecycleBin(IntPtr.Zero, null, SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND);
-                if (hr == 0 || before.EstimatedBytes > 0)
-                {
-                    res.FreedBytes = before.EstimatedBytes;
-                    res.DeletedCount = Math.Max(1, before.FoundItems.Count);
-                    context.Log(string.Format("[CLEANER] Recycle Bin emptied: {0} freed.", FormatBytes(res.FreedBytes)));
-                }
-            }
-            catch (Exception ex)
-            {
-                res.ErrorOrLockedCount++;
-                res.Errors.Add(ex.Message);
-            }
-            return res;
-        }
-    }
-
-    public class ClipboardCleaner : BaseCleaner
-    {
-        public ClipboardCleaner()
-            : base("clipboard", "win_core", "Windows Core",
-                   "Windows Clipboard",
-                   "Clears all currently copied text, images, and data from system memory clipboard",
-                   "📋", false, false, "", false)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            try
-            {
-                if (Application.Current != null)
-                {
-                    Application.Current.Dispatcher.Invoke(new Action(() =>
-                    {
-                        if (Clipboard.ContainsText() || Clipboard.ContainsImage() || Clipboard.ContainsFileDropList())
-                        {
-                            res.AddFile("Área de Transferência do Windows (Clipboard)", 4096);
-                        }
-                    }));
-                }
-            }
-            catch { }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            try
-            {
-                if (Application.Current != null)
-                {
-                    Application.Current.Dispatcher.Invoke(new Action(() =>
-                    {
-                        Clipboard.Clear();
-                    }));
-                }
-                res.FreedBytes = 4096;
-                res.DeletedCount = 1;
-                context.Log("[CLEANER] Windows Clipboard memory cleared.");
-            }
-            catch
-            {
-                res.ErrorOrLockedCount++;
-            }
-            return res;
-        }
-    }
-
-    public class DnsCacheCleaner : BaseCleaner
-    {
-        [DllImport("dnsapi.dll", EntryPoint = "DnsFlushResolverCache")]
-        private static extern uint DnsFlushResolverCache();
-
-        public DnsCacheCleaner()
-            : base("dns_cache", "win_core", "Windows Core",
-                   "DNS Resolver Cache",
-                   "Flushes the local DNS resolver cache via DnsFlushResolverCache API and ipconfig /flushdns",
-                   "🌐", false, false, "", true)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            res.AddFile("Cache DNS do Windows (DnsResolverCache)", 0);
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            try
-            {
-                DnsFlushResolverCache();
-                ProcessStartInfo psi = new ProcessStartInfo("ipconfig", "/flushdns")
-                {
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                };
-                using (Process p = Process.Start(psi))
-                {
-                    if (p != null) p.WaitForExit(3000);
-                }
-                res.DeletedCount = 1;
-                context.Log("[CLEANER] DNS Resolver Cache flushed successfully.");
-            }
-            catch (Exception ex)
-            {
-                res.ErrorOrLockedCount++;
-                res.Errors.Add(ex.Message);
-            }
-            return res;
-        }
-    }
-
-    public class EventLogsCleaner : BaseCleaner
-    {
-        public EventLogsCleaner()
-            : base("system_logs", "win_core", "Windows Core",
-                   "System Event & Setup Logs",
-                   "Clears Windows Event Logs (Application, System, Security, Setup) and CBS/Panther logs",
-                   "📑", true, true,
-                   "Clearing Windows Event Logs permanently erases system diagnostic history.",
-                   false)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            ScanDirectoryFiles(Path.Combine(winDir, "System32", "winevt", "Logs"), "*.evtx", false, res);
-            ScanDirectoryFiles(Path.Combine(winDir, "Logs", "CBS"), "*.log", true, res);
-            ScanDirectoryFiles(Path.Combine(winDir, "Panther"), "*.log", true, res);
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            ScanResult before = Scan(context);
-
-            try
-            {
-                string[] standardLogs = new string[] { "Application", "System", "Security", "Setup" };
-                foreach (string logName in standardLogs)
-                {
-                    try
-                    {
-                        using (EventLog el = new EventLog(logName))
-                        {
-                            el.Clear();
-                            res.DeletedCount++;
-                        }
-                    }
-                    catch
-                    {
-                        res.ErrorOrLockedCount++;
-                    }
-
-                    try
-                    {
-                        ProcessStartInfo psi = new ProcessStartInfo("wevtutil", "cl " + logName)
-                        {
-                            CreateNoWindow = true,
-                            UseShellExecute = false
-                        };
-                        using (Process p = Process.Start(psi))
-                        {
-                            if (p != null) p.WaitForExit(3000);
-                        }
-                    }
-                    catch { }
-                }
-
-                string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-                CleanDirectoryContents(Path.Combine(winDir, "Logs", "CBS"), "*.log", true, res, context);
-                CleanDirectoryContents(Path.Combine(winDir, "Panther"), "*.log", true, res, context);
-
-                if (res.DeletedCount > 0 && res.FreedBytes == 0)
-                {
-                    res.FreedBytes = before.EstimatedBytes;
-                }
-                context.Log("[CLEANER] Windows Event Logs and CBS/Panther setup logs cleared.");
-            }
-            catch (Exception ex)
-            {
-                res.ErrorOrLockedCount++;
-                res.Errors.Add(ex.Message);
-            }
-            return res;
-        }
-    }
-
-    public class MuiCacheCleaner : BaseCleaner
-    {
-        private const string MuiRegistryPath = @"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache";
-
-        public MuiCacheCleaner()
-            : base("mui_cache", "win_core", "Windows Core",
-                   "Registry MUICache",
-                   "Clears cached application names and executable strings in HKCU\\...\\Shell\\MuiCache",
-                   "🗂️", false, false, "", false)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(MuiRegistryPath, false))
-                {
-                    if (key != null)
-                    {
-                        string[] names = key.GetValueNames();
-                        foreach (string n in names)
-                        {
-                            res.AddFile("HKCU\\" + MuiRegistryPath + "\\" + n, 256);
-                        }
-                    }
-                }
-            }
-            catch { res.SkippedOrLockedCount++; }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(MuiRegistryPath, true))
-                {
-                    if (key != null)
-                    {
-                        foreach (string valName in key.GetValueNames())
-                        {
-                            try
-                            {
-                                key.DeleteValue(valName, false);
-                                res.DeletedCount++;
-                                res.FreedBytes += 256;
-                            }
-                            catch { res.ErrorOrLockedCount++; }
-                        }
-                    }
-                }
-                context.Log(string.Format("[CLEANER] Registry MUICache cleared ({0} entries removed).", res.DeletedCount));
-            }
-            catch (Exception ex)
-            {
-                res.ErrorOrLockedCount++;
-                res.Errors.Add(ex.Message);
-            }
-            return res;
         }
     }
 
     #endregion
 
-    #region 2. WINDOWS EXPLORER & SHELL CLEANERS
+    #region 3. NATIVE SQLITE & SHELL HELPER FOR CLEANERML ACTIONS
 
-    public class ExplorerRunMruCleaner : BaseCleaner
-    {
-        private const string RunMruPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU";
-
-        public ExplorerRunMruCleaner()
-            : base("explorer_run_mru", "explorer_shell", "Windows Explorer & Shell",
-                   "Run Dialog MRU History",
-                   "Clears command history in the Windows Run (Win+R) dialog (HKCU\\...\\Explorer\\RunMRU)",
-                   "⌨️", false, false, "", true)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RunMruPath, false))
-                {
-                    if (key != null)
-                    {
-                        foreach (string valName in key.GetValueNames())
-                        {
-                            res.AddFile("HKCU\\" + RunMruPath + "\\" + valName, 256);
-                        }
-                    }
-                }
-            }
-            catch { res.SkippedOrLockedCount++; }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RunMruPath, true))
-                {
-                    if (key != null)
-                    {
-                        foreach (string valName in key.GetValueNames())
-                        {
-                            try
-                            {
-                                key.DeleteValue(valName, false);
-                                res.DeletedCount++;
-                                res.FreedBytes += 256;
-                            }
-                            catch { res.ErrorOrLockedCount++; }
-                        }
-                    }
-                }
-                context.Log(string.Format("[CLEANER] Explorer RunMRU history cleared ({0} entries).", res.DeletedCount));
-            }
-            catch (Exception ex)
-            {
-                res.ErrorOrLockedCount++;
-                res.Errors.Add(ex.Message);
-            }
-            return res;
-        }
-    }
-
-    public class ExplorerRecentDocsCleaner : BaseCleaner
-    {
-        private const string RecentDocsRegPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs";
-
-        public ExplorerRecentDocsCleaner()
-            : base("explorer_recent", "explorer_shell", "Windows Explorer & Shell",
-                   "Recent Documents & Jump Lists",
-                   "Clears %APPDATA%\\Microsoft\\Windows\\Recent shortcuts, Jump Lists, and RecentDocs registry",
-                   "🕘", false, false, "", false)
-        {
-        }
-
-        private static List<string> GetRecentDirs()
-        {
-            List<string> dirs = new List<string>();
-            string recent = Environment.GetFolderPath(Environment.SpecialFolder.Recent);
-            if (string.IsNullOrEmpty(recent))
-            {
-                recent = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Recent");
-            }
-            dirs.Add(recent);
-            dirs.Add(Path.Combine(recent, "AutomaticDestinations"));
-            dirs.Add(Path.Combine(recent, "CustomDestinations"));
-            return dirs;
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            foreach (string d in GetRecentDirs())
-            {
-                ScanDirectoryFiles(d, "*", false, res);
-            }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            foreach (string d in GetRecentDirs())
-            {
-                CleanDirectoryContents(d, "*", false, res, context);
-            }
-            try
-            {
-                Registry.CurrentUser.DeleteSubKeyTree(RecentDocsRegPath, false);
-            }
-            catch { }
-            context.Log(string.Format("[CLEANER] Explorer Recent Documents cleared: {0} freed.", FormatBytes(res.FreedBytes)));
-            return res;
-        }
-    }
-
-    public class ExplorerShellbagsCleaner : BaseCleaner
-    {
-        private static readonly string[] ShellbagKeys = new string[]
-        {
-            @"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags",
-            @"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\BagMRU",
-            @"Software\Microsoft\Windows\Shell\Bags",
-            @"Software\Microsoft\Windows\Shell\BagMRU",
-            @"Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery"
-        };
-
-        public ExplorerShellbagsCleaner()
-            : base("shellbags", "explorer_shell", "Windows Explorer & Shell",
-                   "Explorer Shellbags & Search History",
-                   "Clears folder view preferences, window size/position history (BagMRU/Bags), and Explorer search history",
-                   "🗃️", false, false, "", false)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            foreach (string keyPath in ShellbagKeys)
-            {
-                try
-                {
-                    using (RegistryKey k = Registry.CurrentUser.OpenSubKey(keyPath, false))
-                    {
-                        if (k != null)
-                        {
-                            int count = k.SubKeyCount + k.ValueCount;
-                            if (count > 0)
-                            {
-                                res.AddFile("HKCU\\" + keyPath, count * 256L);
-                            }
-                        }
-                    }
-                }
-                catch { res.SkippedOrLockedCount++; }
-            }
-            return res;
-        }
-
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            ScanResult before = Scan(context);
-            foreach (string keyPath in ShellbagKeys)
-            {
-                try
-                {
-                    Registry.CurrentUser.DeleteSubKeyTree(keyPath, false);
-                    res.DeletedCount++;
-                }
-                catch { res.ErrorOrLockedCount++; }
-            }
-            res.FreedBytes = before.EstimatedBytes;
-            context.Log("[CLEANER] Explorer Shellbags and WordWheelQuery search history cleared.");
-            return res;
-        }
-    }
-
-    #endregion
-
-    #region 3. CHROMIUM BROWSERS (GOOGLE CHROME & MICROSOFT EDGE)
-
-    public static class ChromiumHelper
+    public static class NativeCleanerHelper
     {
         [DllImport("winsqlite3.dll", EntryPoint = "sqlite3_open", CallingConvention = CallingConvention.Cdecl)]
         private static extern int sqlite3_open(byte[] filenameUtf8, out IntPtr db);
@@ -1203,66 +483,24 @@ namespace OptiAssist.Addons.SystemCleaner
         [DllImport("winsqlite3.dll", EntryPoint = "sqlite3_close", CallingConvention = CallingConvention.Cdecl)]
         private static extern int sqlite3_close(IntPtr db);
 
-        public static List<string> GetRunningChromiumBrowsers(string browserFilter = "all")
+        [DllImport("shell32.dll")]
+        private static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
+
+        public static void NotifyShellChanged()
         {
-            List<string> running = new List<string>();
             try
             {
-                if ((browserFilter == "all" || browserFilter == "chrome") && Process.GetProcessesByName("chrome").Length > 0)
-                    running.Add("Google Chrome (chrome.exe)");
-                if ((browserFilter == "all" || browserFilter == "edge") && Process.GetProcessesByName("msedge").Length > 0)
-                    running.Add("Microsoft Edge (msedge.exe)");
+                // SHCNE_ASSOCCHANGED = 0x08000000, SHCNF_IDLIST = 0x0000
+                SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
             }
             catch { }
-            return running;
-        }
-
-        public static List<string> GetBrowserUserDataRoots(string browserFilter = "all")
-        {
-            List<string> roots = new List<string>();
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string chromeRoot = Path.Combine(localAppData, "Google", "Chrome", "User Data");
-            string edgeRoot = Path.Combine(localAppData, "Microsoft", "Edge", "User Data");
-
-            if ((browserFilter == "all" || browserFilter == "chrome") && Directory.Exists(chromeRoot)) roots.Add(chromeRoot);
-            if ((browserFilter == "all" || browserFilter == "edge") && Directory.Exists(edgeRoot)) roots.Add(edgeRoot);
-            return roots;
-        }
-
-        public static List<string> DiscoverAllProfiles(string browserFilter = "all")
-        {
-            List<string> profiles = new List<string>();
-            foreach (string userDataDir in GetBrowserUserDataRoots(browserFilter))
-            {
-                try
-                {
-                    string defaultProfile = Path.Combine(userDataDir, "Default");
-                    if (Directory.Exists(defaultProfile))
-                    {
-                        profiles.Add(defaultProfile);
-                    }
-
-                    foreach (string subDir in Directory.GetDirectories(userDataDir))
-                    {
-                        string folderName = Path.GetFileName(subDir);
-                        if (folderName.StartsWith("Profile ", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(folderName, "Guest Profile", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(folderName, "System Profile", StringComparison.OrdinalIgnoreCase))
-                        {
-                            profiles.Add(subDir);
-                        }
-                    }
-                }
-                catch { }
-            }
-            return profiles;
         }
 
         public static bool IsValidSqliteFile(string filePath)
         {
             try
             {
-                if (!File.Exists(filePath)) return false;
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) return false;
                 FileInfo fi = new FileInfo(filePath);
                 if (fi.Length < 100) return false;
 
@@ -1281,35 +519,29 @@ namespace OptiAssist.Addons.SystemCleaner
             }
         }
 
-        /// <summary>
-        /// Executes SQLite VACUUM on a database file using Windows native winsqlite3.dll (with sqlite3.exe fallback),
-        /// verifying the SQLite header first and ensuring no corruption occurs.
-        /// </summary>
-        public static bool VacuumSqliteDatabase(string dbPath, out long bytesSaved, out string error)
+        public static bool IsFileLocked(string filePath)
         {
-            bytesSaved = 0;
-            error = "";
-
-            if (!IsValidSqliteFile(dbPath))
-            {
-                error = "Not a valid or accessible SQLite database.";
-                return false;
-            }
-
-            long sizeBefore = 0;
             try
             {
-                sizeBefore = new FileInfo(dbPath).Length;
-                // Ensure file is not locked by browser before vacuuming
-                using (FileStream fs = new FileStream(dbPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                if (!File.Exists(filePath)) return false;
+                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                 {
+                    return false;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                error = "Database is locked by a running process: " + ex.Message;
-                return false;
+                return true;
             }
+        }
+
+        public static bool ExecuteSqliteStatements(string dbPath, string sqlStatements, out long bytesSaved)
+        {
+            bytesSaved = 0;
+            if (!IsValidSqliteFile(dbPath) || IsFileLocked(dbPath)) return false;
+
+            long sizeBefore = 0;
+            try { sizeBefore = new FileInfo(dbPath).Length; } catch { return false; }
 
             try
             {
@@ -1321,7 +553,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     try
                     {
                         IntPtr errMsg;
-                        byte[] sqlBytes = Encoding.UTF8.GetBytes("VACUUM;\0");
+                        byte[] sqlBytes = Encoding.UTF8.GetBytes(sqlStatements + "\0");
                         int rcExec = sqlite3_exec(db, sqlBytes, IntPtr.Zero, IntPtr.Zero, out errMsg);
                         sqlite3_close(db);
                         db = IntPtr.Zero;
@@ -1335,11 +567,6 @@ namespace OptiAssist.Addons.SystemCleaner
                             }
                             return true;
                         }
-                        else
-                        {
-                            error = "SQLite VACUUM returned code " + rcExec;
-                            return false;
-                        }
                     }
                     finally
                     {
@@ -1350,113 +577,173 @@ namespace OptiAssist.Addons.SystemCleaner
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-            }
+            catch { }
 
             return false;
         }
 
-        public static bool ExecuteSql(string dbPath, string sql)
+        public static bool VacuumSqliteDatabase(string dbPath, out long bytesSaved)
         {
-            try
-            {
-                IntPtr db = IntPtr.Zero;
-                byte[] pathBytes = Encoding.UTF8.GetBytes(dbPath + "\0");
-                int rcOpen = sqlite3_open(pathBytes, out db);
-                if (rcOpen == 0 && db != IntPtr.Zero)
-                {
-                    try
-                    {
-                        IntPtr errMsg;
-                        byte[] sqlBytes = Encoding.UTF8.GetBytes(sql + "\0");
-                        int rcExec = sqlite3_exec(db, sqlBytes, IntPtr.Zero, IntPtr.Zero, out errMsg);
-                        return rcExec == 0;
-                    }
-                    finally
-                    {
-                        sqlite3_close(db);
-                    }
-                }
-            }
-            catch { }
-            return false;
+            return ExecuteSqliteStatements(dbPath, "VACUUM;", out bytesSaved);
         }
     }
 
-    public class ChromiumSubpathCleaner : BaseCleaner
-    {
-        private readonly string[] _profileRelativeDirs;
-        private readonly string[] _profileRelativeFiles;
-        private readonly string[] _userDataRelativeDirs;
-        private readonly string _browserFilter;
+    #endregion
 
-        public ChromiumSubpathCleaner(
-            string id,
-            string name,
-            string description,
-            string icon,
-            bool isDangerous,
-            string warningMessage,
-            bool isRecommended,
-            string[] profileRelativeDirs,
-            string[] profileRelativeFiles,
-            string[] userDataRelativeDirs = null,
-            string browserFilter = "all")
-            : base(id, (browserFilter == "edge" ? "edge" : (browserFilter == "chrome" ? "chrome" : "chromium")),
-                   (browserFilter == "edge" ? "Microsoft Edge" : (browserFilter == "chrome" ? "Google Chrome" : "Chromium Browsers")),
-                   name, description, icon, false, isDangerous, warningMessage, isRecommended)
+    #region 4. BLEACHBIT CLEANERML XML ENGINE (WINDOWS-ONLY)
+
+    /// <summary>
+    /// Represents a single parsed <action> instruction from a BleachBit CleanerML XML file.
+    /// </summary>
+    public class CleanerMlAction
+    {
+        public string Command { get; set; }
+        public string Search { get; set; }
+        public List<string> ExpandedPaths { get; set; }
+        public string RawPath { get; set; }
+        public string RegistryValueName { get; set; }
+        public string JsonAddress { get; set; }
+        public string IniSection { get; set; }
+        public string IniParameter { get; set; }
+        public string RegexPattern { get; set; }
+        public string NRegexPattern { get; set; }
+        public string WholeRegexPattern { get; set; }
+        public string NWholeRegexPattern { get; set; }
+        public string FileTypeFilter { get; set; } // "f" or "d" or empty
+        public string ProcessCmd { get; set; }
+        public bool ProcessWait { get; set; }
+
+        public CleanerMlAction()
         {
-            _profileRelativeDirs = profileRelativeDirs;
-            _profileRelativeFiles = profileRelativeFiles;
-            _userDataRelativeDirs = userDataRelativeDirs;
-            _browserFilter = browserFilter;
-            TabId = browserFilter == "edge" ? "windows" : "apps";
-            SectionId = browserFilter == "edge" ? "edge" : "chrome";
-            SectionTitle = browserFilter == "edge" ? "Microsoft Edge" : "Google Chrome";
-            SectionIcon = "🌐";
+            ExpandedPaths = new List<string>();
+        }
+
+        public bool MatchesRegexFilters(string fullPath, bool isDirectory)
+        {
+            if (!string.IsNullOrEmpty(FileTypeFilter))
+            {
+                if (string.Equals(FileTypeFilter, "f", StringComparison.OrdinalIgnoreCase) && isDirectory) return false;
+                if (string.Equals(FileTypeFilter, "d", StringComparison.OrdinalIgnoreCase) && !isDirectory) return false;
+            }
+
+            string fileName = "";
+            try { fileName = Path.GetFileName(fullPath); } catch { fileName = fullPath; }
+
+            if (!string.IsNullOrEmpty(RegexPattern))
+            {
+                try
+                {
+                    if (!Regex.IsMatch(fileName, RegexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                        return false;
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrEmpty(NRegexPattern))
+            {
+                try
+                {
+                    if (Regex.IsMatch(fileName, NRegexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                        return false;
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrEmpty(WholeRegexPattern))
+            {
+                try
+                {
+                    string normalized = fullPath.Replace('/', '\\');
+                    if (!Regex.IsMatch(normalized, WholeRegexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                        return false;
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrEmpty(NWholeRegexPattern))
+            {
+                try
+                {
+                    string normalized = fullPath.Replace('/', '\\');
+                    if (Regex.IsMatch(normalized, NWholeRegexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                        return false;
+                }
+                catch { }
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Represents a <cleaner>'s <option> loaded from a CleanerML XML file.
+    /// Executes all Windows-compatible <action> rules defined for that option.
+    /// </summary>
+    public class CleanerMlOptionCleaner : BaseCleaner
+    {
+        public string CleanerXmlId { get; set; }
+        public string OptionXmlId { get; set; }
+        public string RawCleanerLabel { get; set; }
+        public string RawOptionLabel { get; set; }
+        public string RawOptionDescription { get; set; }
+        public string RawWarning { get; set; }
+        public List<CleanerMlAction> Actions { get; set; }
+
+        public CleanerMlOptionCleaner(
+            string cleanerXmlId,
+            string optionXmlId,
+            string cleanerLabel,
+            string optionLabel,
+            string optionDesc,
+            string warning,
+            string tabId,
+            string icon,
+            bool requiresAdmin,
+            bool isDangerous,
+            bool isRecommended,
+            bool isInstalledOnSystem,
+            List<string> runningExes,
+            List<CleanerMlAction> actions)
+            : base(
+                cleanerXmlId + "." + optionXmlId,
+                cleanerXmlId,
+                cleanerLabel,
+                optionLabel,
+                optionDesc,
+                icon,
+                requiresAdmin,
+                isDangerous,
+                warning,
+                isRecommended)
+        {
+            CleanerXmlId = cleanerXmlId;
+            OptionXmlId = optionXmlId;
+            RawCleanerLabel = cleanerLabel;
+            RawOptionLabel = optionLabel;
+            RawOptionDescription = optionDesc;
+            RawWarning = warning ?? "";
+            TabId = tabId;
+            SectionId = cleanerXmlId;
+            SectionTitle = cleanerLabel;
+            SectionIcon = icon;
+            IsInstalledOnSystem = isInstalledOnSystem;
+            RunningExecutables = runningExes ?? new List<string>();
+            Actions = actions ?? new List<CleanerMlAction>();
         }
 
         public override ScanResult Scan(CleanerContext context)
         {
             ScanResult res = new ScanResult() { CleanerId = Id };
-            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers(_browserFilter);
-            if (running.Count > 0)
-            {
-                res.Warnings.Add("Running browsers detected: " + string.Join(", ", running.ToArray()));
-            }
 
-            if (_userDataRelativeDirs != null)
+            foreach (CleanerMlAction act in Actions)
             {
-                foreach (string root in ChromiumHelper.GetBrowserUserDataRoots(_browserFilter))
+                try
                 {
-                    foreach (string relDir in _userDataRelativeDirs)
-                    {
-                        ScanDirectoryFiles(Path.Combine(root, relDir), "*", true, res);
-                    }
+                    ExecuteActionScan(act, context, res);
                 }
-            }
-
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
-            {
-                if (_profileRelativeDirs != null)
+                catch
                 {
-                    foreach (string relDir in _profileRelativeDirs)
-                    {
-                        ScanDirectoryFiles(Path.Combine(profileDir, relDir), "*", true, res);
-                    }
-                }
-
-                if (_profileRelativeFiles != null)
-                {
-                    foreach (string relFile in _profileRelativeFiles)
-                    {
-                        string dirPart = Path.GetDirectoryName(relFile);
-                        string filePattern = Path.GetFileName(relFile);
-                        string targetFolder = string.IsNullOrEmpty(dirPart) ? profileDir : Path.Combine(profileDir, dirPart);
-                        ScanDirectoryFiles(targetFolder, filePattern, false, res);
-                    }
+                    res.SkippedOrLockedCount++;
                 }
             }
 
@@ -1466,282 +753,534 @@ namespace OptiAssist.Addons.SystemCleaner
         public override CleanResult Clean(CleanerContext context)
         {
             CleanResult res = new CleanResult() { CleanerId = Id };
-            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers(_browserFilter);
-            if (running.Count > 0)
-            {
-                context.Log("[CLEANER WARNING] Browser process active (" + string.Join(", ", running.ToArray()) + "). Locked files will be skipped safely.");
-            }
 
-            if (_userDataRelativeDirs != null)
+            foreach (CleanerMlAction act in Actions)
             {
-                foreach (string root in ChromiumHelper.GetBrowserUserDataRoots(_browserFilter))
+                try
                 {
-                    foreach (string relDir in _userDataRelativeDirs)
-                    {
-                        CleanDirectoryContents(Path.Combine(root, relDir), "*", true, res, context);
-                    }
+                    ExecuteActionClean(act, context, res);
+                }
+                catch
+                {
+                    res.ErrorOrLockedCount++;
                 }
             }
 
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
-            {
-                if (_profileRelativeDirs != null)
-                {
-                    foreach (string relDir in _profileRelativeDirs)
-                    {
-                        CleanDirectoryContents(Path.Combine(profileDir, relDir), "*", true, res, context);
-                    }
-                }
-
-                if (_profileRelativeFiles != null)
-                {
-                    foreach (string relFile in _profileRelativeFiles)
-                    {
-                        string dirPart = Path.GetDirectoryName(relFile);
-                        string filePattern = Path.GetFileName(relFile);
-                        string targetFolder = string.IsNullOrEmpty(dirPart) ? profileDir : Path.Combine(profileDir, dirPart);
-                        CleanDirectoryContents(targetFolder, filePattern, false, res, context);
-                    }
-                }
-            }
-
-            context.Log(string.Format("[CLEANER] {0}: Freed {1} ({2} deleted, {3} locked/skipped).",
-                Name, FormatBytes(res.FreedBytes), res.DeletedCount, res.ErrorOrLockedCount));
+            context.Log(string.Format("[CLEANERML] {0} - {1}: Freed {2} ({3} cleaned, {4} locked/skipped).",
+                SectionTitle, Name, FormatBytes(res.FreedBytes), res.DeletedCount, res.ErrorOrLockedCount));
             return res;
         }
-    }
 
-    public class ChromiumSqliteVacuumCleaner : BaseCleaner
-    {
-        private static readonly string[] SqliteTargets = new string[]
-        {
-            "History",
-            "Web Data",
-            "Favicons",
-            "Top Sites",
-            @"Network\Cookies",
-            "Cookies"
-        };
-        private readonly string _browserFilter;
+        #region ACTION SCAN & CLEAN IMPLEMENTATIONS
 
-        public ChromiumSqliteVacuumCleaner(string id = "chromium_vacuum", string browserFilter = "all")
-            : base(id, (browserFilter == "edge" ? "edge" : (browserFilter == "chrome" ? "chrome" : "chromium")),
-                   (browserFilter == "edge" ? "Microsoft Edge" : (browserFilter == "chrome" ? "Google Chrome" : "Chromium Browsers")),
-                   "Browser SQLite Database Vacuum",
-                   "Executes SQLite 'VACUUM;' on browser databases to defragment and compact without data loss",
-                   "🗜️", false, false, "", true)
+        private void ExecuteActionScan(CleanerMlAction act, CleanerContext context, ScanResult res)
         {
-            _browserFilter = browserFilter;
-            TabId = browserFilter == "edge" ? "windows" : "apps";
-            SectionId = browserFilter == "edge" ? "edge" : "chrome";
-            SectionTitle = browserFilter == "edge" ? "Microsoft Edge" : "Google Chrome";
-            SectionIcon = "🌐";
-        }
+            string cmd = (act.Command ?? "delete").Trim().ToLowerInvariant();
+            string search = (act.Search ?? "").Trim().ToLowerInvariant();
 
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
+            if (cmd == "winreg")
             {
-                foreach (string relDb in SqliteTargets)
+                ScanWinReg(act.RawPath, act.RegistryValueName, res);
+                return;
+            }
+
+            if (cmd == "win.shell.change.notify" || cmd == "process" || cmd == "process.terminate")
+            {
+                return;
+            }
+
+            if (search == "deep")
+            {
+                string root = context != null ? context.DeepScanRootPath : null;
+                if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
                 {
-                    string dbPath = Path.Combine(profileDir, relDb);
-                    if (ChromiumHelper.IsValidSqliteFile(dbPath))
+                    int maxDepth = context != null ? context.DeepScanMaxDepth : 5;
+                    ScanDeepRecursive(root, 0, maxDepth, act, res);
+                }
+                return;
+            }
+
+            List<string> matchedFiles = new List<string>();
+            List<string> matchedDirs = new List<string>();
+            ResolveActionTargets(act, matchedFiles, matchedDirs, res);
+
+            if (cmd == "delete")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (!PathSanitizer.IsSafeToDelete(f)) continue;
+                    try
+                    {
+                        FileInfo fi = new FileInfo(f);
+                        if (fi.Exists) res.AddFile(f, fi.Length);
+                    }
+                    catch { res.SkippedOrLockedCount++; }
+                }
+
+                if (string.Equals(act.FileTypeFilter, "d", StringComparison.OrdinalIgnoreCase) && matchedFiles.Count == 0)
+                {
+                    foreach (string d in matchedDirs)
+                    {
+                        if (PathSanitizer.IsSafeToDelete(d) && Directory.Exists(d))
+                        {
+                            res.AddFile(d, 0);
+                        }
+                    }
+                }
+            }
+            else if (cmd == "sqlite.vacuum")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (NativeCleanerHelper.IsValidSqliteFile(f))
                     {
                         try
                         {
-                            FileInfo fi = new FileInfo(dbPath);
-                            // Estimate ~10% reclaimable fragmentation page space on non-vacuumed DBs
-                            res.AddFile(dbPath + " [SQLite Database]", Math.Max(4096L, fi.Length / 10L));
+                            FileInfo fi = new FileInfo(f);
+                            res.AddFile(f + " [SQLite Vacuum]", Math.Max(4096L, fi.Length / 15L));
                         }
                         catch { res.SkippedOrLockedCount++; }
                     }
                 }
             }
-            return res;
+            else if (cmd.StartsWith("chrome.") || cmd.StartsWith("mozilla.") || cmd == "cookie")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (File.Exists(f))
+                    {
+                        try
+                        {
+                            FileInfo fi = new FileInfo(f);
+                            long est = cmd == "cookie" ? fi.Length : Math.Max(4096L, fi.Length / 4L);
+                            res.AddFile(f, est);
+                        }
+                        catch { res.SkippedOrLockedCount++; }
+                    }
+                }
+            }
+            else if (cmd == "json")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (File.Exists(f) && JsonContainsAddressKey(f, act.JsonAddress))
+                    {
+                        res.AddFile(f + " [JSON: " + act.JsonAddress + "]", 512L);
+                    }
+                }
+            }
+            else if (cmd == "ini")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (File.Exists(f) && IniContainsTarget(f, act.IniSection, act.IniParameter))
+                    {
+                        res.AddFile(f + " [INI: " + act.IniSection + "]", 256L);
+                    }
+                }
+            }
+            else if (cmd == "office_registrymodifications")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (File.Exists(f) && OfficeXcuContainsHistory(f))
+                    {
+                        res.AddFile(f + " [History]", 1024L);
+                    }
+                }
+            }
         }
 
-        public override CleanResult Clean(CleanerContext context)
+        private void ExecuteActionClean(CleanerMlAction act, CleanerContext context, CleanResult res)
         {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            List<string> running = ChromiumHelper.GetRunningChromiumBrowsers(_browserFilter);
-            if (running.Count > 0)
+            string cmd = (act.Command ?? "delete").Trim().ToLowerInvariant();
+            string search = (act.Search ?? "").Trim().ToLowerInvariant();
+
+            if (cmd == "winreg")
             {
-                string warn = "Cannot vacuum locked SQLite databases while browser is open: " + string.Join(", ", running.ToArray());
-                context.Log("[CLEANER WARNING] " + warn);
-                res.Errors.Add(warn);
+                CleanWinReg(act.RawPath, act.RegistryValueName, res);
+                return;
             }
 
-            foreach (string profileDir in ChromiumHelper.DiscoverAllProfiles(_browserFilter))
+            if (cmd == "win.shell.change.notify")
             {
-                foreach (string relDb in SqliteTargets)
+                NativeCleanerHelper.NotifyShellChanged();
+                return;
+            }
+
+            if (cmd == "process.terminate" || cmd == "process")
+            {
+                // Avoid forcefully killing explorer.exe to prevent desktop shell disruption; notify shell instead
+                NativeCleanerHelper.NotifyShellChanged();
+                return;
+            }
+
+            if (search == "deep")
+            {
+                ScanResult sr = new ScanResult();
+                string root = context != null ? context.DeepScanRootPath : null;
+                if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
                 {
-                    string dbPath = Path.Combine(profileDir, relDb);
-                    if (File.Exists(dbPath))
+                    int maxDepth = context != null ? context.DeepScanMaxDepth : 5;
+                    ScanDeepRecursive(root, 0, maxDepth, act, sr);
+                    foreach (string f in sr.FoundItems)
                     {
-                        long saved;
-                        string err;
-                        if (ChromiumHelper.VacuumSqliteDatabase(dbPath, out saved, out err))
+                        DeleteFileSafe(f, res);
+                    }
+                }
+                return;
+            }
+
+            List<string> matchedFiles = new List<string>();
+            List<string> matchedDirs = new List<string>();
+            ScanResult dummyScan = new ScanResult();
+            ResolveActionTargets(act, matchedFiles, matchedDirs, dummyScan);
+
+            if (cmd == "delete")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    DeleteFileSafe(f, res);
+                }
+
+                // Remove subdirectories bottom-up when walk.all, walk.top, or glob directory deletion is specified
+                if (search == "walk.all" || search == "walk.top" || search == "glob" ||
+                    string.Equals(act.FileTypeFilter, "d", StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedDirs.Sort((a, b) => b.Length.CompareTo(a.Length));
+                    foreach (string d in matchedDirs)
+                    {
+                        TryRemoveEmptyDirectory(d);
+                    }
+                }
+            }
+            else if (cmd == "sqlite.vacuum")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.VacuumSqliteDatabase(f, out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "cookie")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (!File.Exists(f)) continue;
+                    long saved;
+                    if (NativeCleanerHelper.IsValidSqliteFile(f))
+                    {
+                        if (NativeCleanerHelper.ExecuteSqliteStatements(f, "DELETE FROM cookies; DELETE FROM moz_cookies; VACUUM;", out saved))
                         {
                             res.FreedBytes += saved;
                             res.DeletedCount++;
+                        }
+                        else if (!NativeCleanerHelper.IsFileLocked(f))
+                        {
+                            DeleteFileSafe(f, res);
                         }
                         else
                         {
                             res.ErrorOrLockedCount++;
                         }
                     }
+                    else
+                    {
+                        DeleteFileSafe(f, res);
+                    }
                 }
             }
-
-            context.Log(string.Format("[CLEANER] Browser SQLite Vacuum completed: {0} compacted across {1} databases ({2} locked/skipped).",
-                FormatBytes(res.FreedBytes), res.DeletedCount, res.ErrorOrLockedCount));
-            return res;
+            else if (cmd == "chrome.autofill")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f,
+                        "DELETE FROM autofill; DELETE FROM autofill_dates; DELETE FROM autofill_profiles; DELETE FROM autofill_profile_names; DELETE FROM autofill_profile_emails; DELETE FROM autofill_profile_phones; DELETE FROM local_addresses; DELETE FROM local_addresses_type_tokens; VACUUM;",
+                        out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "chrome.history")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f,
+                        "DELETE FROM urls; DELETE FROM visits; DELETE FROM visit_source; DELETE FROM downloads; DELETE FROM downloads_url_chains; DELETE FROM downloads_slices; DELETE FROM segments; DELETE FROM segment_usage; DELETE FROM keyword_search_terms; DELETE FROM content_annotations; DELETE FROM context_annotations; VACUUM;",
+                        out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "chrome.favicons")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f,
+                        "DELETE FROM favicons; DELETE FROM favicon_bitmaps; DELETE FROM icon_mapping; VACUUM;",
+                        out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "chrome.databases_db")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f, "DELETE FROM Databases; VACUUM;", out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "chrome.keywords")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f, "DELETE FROM keywords WHERE prepopulate_id = 0; VACUUM;", out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "mozilla.url.history")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f,
+                        "DELETE FROM moz_historyvisits; DELETE FROM moz_inputhistory; DELETE FROM moz_hosts; DELETE FROM moz_places WHERE id NOT IN (SELECT fk FROM moz_bookmarks WHERE fk IS NOT NULL); DELETE FROM moz_origins WHERE id NOT IN (SELECT origin_id FROM moz_places); VACUUM;",
+                        out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "mozilla.favicons")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    long saved;
+                    if (NativeCleanerHelper.ExecuteSqliteStatements(f,
+                        "DELETE FROM moz_icons_to_pages; DELETE FROM moz_pages_w_icons; DELETE FROM moz_icons; VACUUM;",
+                        out saved))
+                    {
+                        res.FreedBytes += saved;
+                        res.DeletedCount++;
+                    }
+                    else
+                    {
+                        res.ErrorOrLockedCount++;
+                    }
+                }
+            }
+            else if (cmd == "json")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (CleanJsonAddressKey(f, act.JsonAddress, ref res))
+                    {
+                        res.DeletedCount++;
+                    }
+                }
+            }
+            else if (cmd == "ini")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (CleanIniTarget(f, act.IniSection, act.IniParameter, ref res))
+                    {
+                        res.DeletedCount++;
+                    }
+                }
+            }
+            else if (cmd == "office_registrymodifications")
+            {
+                foreach (string f in matchedFiles)
+                {
+                    if (CleanOfficeXcuHistory(f, ref res))
+                    {
+                        res.DeletedCount++;
+                    }
+                }
+            }
         }
-    }
 
-    #endregion
-
-    #region 4. DEEP SCAN CLEANERS (DEVELOPER & ORPHANED JUNK)
-
-    public class DeepScanDirectoryCleaner : BaseCleaner
-    {
-        private readonly HashSet<string> _targetFolderNames;
-
-        public DeepScanDirectoryCleaner(
-            string id,
-            string name,
-            string description,
-            string icon,
-            string warningMessage,
-            string[] folderNames)
-            : base(id, "deep_scan", "Deep Scan", name, description, icon, false, true, warningMessage, false)
+        private static void ResolveActionTargets(CleanerMlAction act, List<string> matchedFiles, List<string> matchedDirs, ScanResult res)
         {
-            _targetFolderNames = new HashSet<string>(folderNames, StringComparer.OrdinalIgnoreCase);
+            string search = (act.Search ?? "file").Trim().ToLowerInvariant();
+
+            foreach (string expanded in act.ExpandedPaths)
+            {
+                if (string.IsNullOrWhiteSpace(expanded)) continue;
+
+                // Resolve any wildcards in intermediate or leaf segments
+                List<string> resolvedTargets = CleanerMlEngine.ResolvePathWithWildcards(expanded);
+
+                foreach (string target in resolvedTargets)
+                {
+                    if (!PathSanitizer.IsSafeToDelete(target)) continue;
+
+                    if (search == "file")
+                    {
+                        if (File.Exists(target) && act.MatchesRegexFilters(target, false))
+                        {
+                            matchedFiles.Add(target);
+                        }
+                        else if (Directory.Exists(target) && string.Equals(act.FileTypeFilter, "d", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (act.MatchesRegexFilters(target, true)) matchedDirs.Add(target);
+                        }
+                    }
+                    else if (search == "glob")
+                    {
+                        if (File.Exists(target))
+                        {
+                            if (act.MatchesRegexFilters(target, false)) matchedFiles.Add(target);
+                        }
+                        else if (Directory.Exists(target))
+                        {
+                            if (act.MatchesRegexFilters(target, true))
+                            {
+                                matchedDirs.Add(target);
+                                if (!string.Equals(act.FileTypeFilter, "d", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    WalkDirectory(target, act, true, matchedFiles, matchedDirs, res);
+                                }
+                            }
+                        }
+                    }
+                    else if (search == "walk.files")
+                    {
+                        if (Directory.Exists(target))
+                        {
+                            WalkDirectory(target, act, false, matchedFiles, matchedDirs, res);
+                        }
+                    }
+                    else if (search == "walk.all")
+                    {
+                        if (Directory.Exists(target))
+                        {
+                            WalkDirectory(target, act, true, matchedFiles, matchedDirs, res);
+                        }
+                    }
+                    else if (search == "walk.top")
+                    {
+                        if (Directory.Exists(target))
+                        {
+                            WalkDirectory(target, act, true, matchedFiles, matchedDirs, res);
+                            if (act.MatchesRegexFilters(target, true))
+                            {
+                                matchedDirs.Add(target);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        public override ScanResult Scan(CleanerContext context)
+        private static void WalkDirectory(string dirPath, CleanerMlAction act, bool collectSubDirs, List<string> matchedFiles, List<string> matchedDirs, ScanResult res)
         {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            string root = context.DeepScanRootPath;
-            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return res;
-
-            ScanRecursive(root, 0, context.DeepScanMaxDepth, res);
-            return res;
-        }
-
-        private void ScanRecursive(string currentDir, int depth, int maxDepth, ScanResult res)
-        {
-            if (depth > maxDepth) return;
+            if (string.IsNullOrWhiteSpace(dirPath) || !Directory.Exists(dirPath)) return;
+            if (!PathSanitizer.IsSafeToDelete(dirPath)) return;
 
             try
             {
-                string[] subDirs = Directory.GetDirectories(currentDir, "*", SearchOption.TopDirectoryOnly);
+                string[] files = Directory.GetFiles(dirPath, "*", SearchOption.TopDirectoryOnly);
+                foreach (string f in files)
+                {
+                    if (!PathSanitizer.IsSafeToDelete(f)) continue;
+                    if (act.MatchesRegexFilters(f, false))
+                    {
+                        matchedFiles.Add(f);
+                    }
+                }
+
+                string[] subDirs = Directory.GetDirectories(dirPath, "*", SearchOption.TopDirectoryOnly);
                 foreach (string sub in subDirs)
                 {
-                    string folderName = Path.GetFileName(sub);
-                    if (_targetFolderNames.Contains(folderName))
+                    try
                     {
-                        if (PathSanitizer.IsSafeToDelete(sub))
-                        {
-                            res.AddFile(sub + " [Pasta / Folder]", GetDirectorySizeSafe(sub));
-                        }
-                        // Do not recurse inside a matched node_modules / venv folder
-                        continue;
-                    }
+                        if (!PathSanitizer.IsSafeToDelete(sub)) continue;
+                        FileAttributes attr = File.GetAttributes(sub);
+                        if ((attr & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+                            continue;
 
-                    if (!PathSanitizer.IsExcludedDeepScanDirectory(sub))
+                        WalkDirectory(sub, act, collectSubDirs, matchedFiles, matchedDirs, res);
+                        if (collectSubDirs && act.MatchesRegexFilters(sub, true))
+                        {
+                            matchedDirs.Add(sub);
+                        }
+                    }
+                    catch
                     {
-                        ScanRecursive(sub, depth + 1, maxDepth, res);
+                        res.SkippedOrLockedCount++;
                     }
                 }
             }
-            catch (UnauthorizedAccessException)
+            catch
             {
                 res.SkippedOrLockedCount++;
             }
-            catch (IOException)
-            {
-                res.SkippedOrLockedCount++;
-            }
-            catch { }
         }
 
-        public override CleanResult Clean(CleanerContext context)
-        {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            ScanResult scanRes = Scan(context);
-
-            foreach (string matchedDir in scanRes.FoundItems)
-            {
-                DeleteEntireDirectorySafe(matchedDir, res, context);
-            }
-
-            context.Log(string.Format("[DEEP SCAN] {0}: Freed {1} across {2} directories ({3} errors/locked).",
-                Name, FormatBytes(res.FreedBytes), scanRes.FoundItems.Count, res.ErrorOrLockedCount));
-            return res;
-        }
-    }
-
-    public class DeepScanOrphanFilesCleaner : BaseCleaner
-    {
-        private static readonly HashSet<string> ExactFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".DS_Store",
-            "Thumbs.db"
-        };
-
-        private static readonly string[] Extensions = new string[]
-        {
-            ".swp",
-            ".swo",
-            ".tmp"
-        };
-
-        public DeepScanOrphanFilesCleaner()
-            : base("deep_junk_files", "deep_scan", "Deep Scan",
-                   "Orphaned Metadata & Editor Swap Files",
-                   "Deep scans for .DS_Store, Thumbs.db, and Vim swap/temp files (*.swp, *.swo, *.tmp) within the selected root folder",
-                   "🔎", false, false, "", false)
-        {
-        }
-
-        public override ScanResult Scan(CleanerContext context)
-        {
-            ScanResult res = new ScanResult() { CleanerId = Id };
-            string root = context.DeepScanRootPath;
-            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return res;
-
-            ScanFilesRecursive(root, 0, context.DeepScanMaxDepth, res);
-            return res;
-        }
-
-        private void ScanFilesRecursive(string currentDir, int depth, int maxDepth, ScanResult res)
+        private static void ScanDeepRecursive(string currentDir, int depth, int maxDepth, CleanerMlAction act, ScanResult res)
         {
             if (depth > maxDepth) return;
+            if (PathSanitizer.IsExcludedDeepScanDirectory(currentDir)) return;
 
             try
             {
                 string[] files = Directory.GetFiles(currentDir, "*", SearchOption.TopDirectoryOnly);
                 foreach (string f in files)
                 {
-                    string fileName = Path.GetFileName(f);
-                    string ext = Path.GetExtension(f);
-
-                    bool match = ExactFileNames.Contains(fileName);
-                    if (!match && !string.IsNullOrEmpty(ext))
-                    {
-                        foreach (string targetExt in Extensions)
-                        {
-                            if (string.Equals(ext, targetExt, StringComparison.OrdinalIgnoreCase))
-                            {
-                                match = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (match && PathSanitizer.IsSafeToDelete(f))
+                    if (act.MatchesRegexFilters(f, false) && PathSanitizer.IsSafeToDelete(f))
                     {
                         try
                         {
@@ -1757,576 +1296,1286 @@ namespace OptiAssist.Addons.SystemCleaner
                 {
                     if (!PathSanitizer.IsExcludedDeepScanDirectory(sub))
                     {
-                        ScanFilesRecursive(sub, depth + 1, maxDepth, res);
+                        ScanDeepRecursive(sub, depth + 1, maxDepth, act, res);
                     }
                 }
             }
-            catch (UnauthorizedAccessException)
+            catch
             {
                 res.SkippedOrLockedCount++;
             }
-            catch (IOException)
+        }
+
+        #region REGISTRY, JSON, INI & OFFICE XCU HELPERS
+
+        private static RegistryKey OpenHive(string fullRegPath, out string subKeyPath)
+        {
+            subKeyPath = "";
+            if (string.IsNullOrWhiteSpace(fullRegPath)) return null;
+            string p = fullRegPath.Trim().Replace('/', '\\');
+            int slash = p.IndexOf('\\');
+            if (slash <= 0 || slash >= p.Length - 1) return null;
+
+            string hiveName = p.Substring(0, slash).ToUpperInvariant();
+            subKeyPath = p.Substring(slash + 1);
+
+            switch (hiveName)
             {
-                res.SkippedOrLockedCount++;
+                case "HKCU":
+                case "HKEY_CURRENT_USER":
+                    return Registry.CurrentUser;
+                case "HKLM":
+                case "HKEY_LOCAL_MACHINE":
+                    return Registry.LocalMachine;
+                case "HKCR":
+                case "HKEY_CLASSES_ROOT":
+                    return Registry.ClassesRoot;
+                case "HKU":
+                case "HKEY_USERS":
+                    return Registry.Users;
+                default:
+                    return null;
+            }
+        }
+
+        private static void ScanWinReg(string regPath, string valueName, ScanResult res)
+        {
+            string subKey;
+            RegistryKey hive = OpenHive(regPath, out subKey);
+            if (hive == null || string.IsNullOrEmpty(subKey)) return;
+
+            try
+            {
+                using (RegistryKey k = hive.OpenSubKey(subKey, false))
+                {
+                    if (k == null) return;
+                    if (!string.IsNullOrEmpty(valueName))
+                    {
+                        object val = k.GetValue(valueName, null);
+                        if (val != null)
+                        {
+                            res.AddFile("[Registry] " + regPath + " -> " + valueName, 256L);
+                        }
+                    }
+                    else
+                    {
+                        int count = k.ValueCount + k.SubKeyCount;
+                        if (count > 0)
+                        {
+                            res.AddFile("[Registry] " + regPath, Math.Max(256L, count * 256L));
+                        }
+                    }
+                }
+            }
+            catch { res.SkippedOrLockedCount++; }
+        }
+
+        private static void CleanWinReg(string regPath, string valueName, CleanResult res)
+        {
+            string subKey;
+            RegistryKey hive = OpenHive(regPath, out subKey);
+            if (hive == null || string.IsNullOrEmpty(subKey)) return;
+
+            try
+            {
+                if (!string.IsNullOrEmpty(valueName))
+                {
+                    using (RegistryKey k = hive.OpenSubKey(subKey, true))
+                    {
+                        if (k != null && k.GetValue(valueName, null) != null)
+                        {
+                            k.DeleteValue(valueName, false);
+                            res.DeletedCount++;
+                            res.FreedBytes += 256L;
+                        }
+                    }
+                }
+                else
+                {
+                    using (RegistryKey check = hive.OpenSubKey(subKey, false))
+                    {
+                        if (check == null) return;
+                    }
+                    hive.DeleteSubKeyTree(subKey, false);
+                    res.DeletedCount++;
+                    res.FreedBytes += 512L;
+                }
+            }
+            catch
+            {
+                res.ErrorOrLockedCount++;
+            }
+        }
+
+        private static bool JsonContainsAddressKey(string filePath, string address)
+        {
+            if (string.IsNullOrWhiteSpace(address) || !File.Exists(filePath)) return false;
+            try
+            {
+                string[] parts = address.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) return false;
+                string leafKey = parts[parts.Length - 1];
+                string content = File.ReadAllText(filePath, Encoding.UTF8);
+                return content.IndexOf("\"" + leafKey + "\"", StringComparison.Ordinal) >= 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool CleanJsonAddressKey(string filePath, string address, ref CleanResult res)
+        {
+            if (string.IsNullOrWhiteSpace(address) || !File.Exists(filePath) || NativeCleanerHelper.IsFileLocked(filePath))
+                return false;
+
+            try
+            {
+                string[] parts = address.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) return false;
+                string leafKey = parts[parts.Length - 1];
+                string content = File.ReadAllText(filePath, Encoding.UTF8);
+                if (content.IndexOf("\"" + leafKey + "\"", StringComparison.Ordinal) < 0) return false;
+
+                // Safe regex removal of simple JSON property or object/array value for leafKey when unambiguous
+                string pattern = "\"" + Regex.Escape(leafKey) + "\"\\s*:\\s*(\\[[^\\[\\]]*\\]|\\{[^{}]*\\}|\"(?:\\\\.|[^\"\\\\])*\"|true|false|null|-?\\d+(?:\\.\\d+)?)\\s*,?";
+                string updated = Regex.Replace(content, pattern, "");
+                updated = Regex.Replace(updated, ",(\\s*[\\}\\]])", "$1");
+
+                if (!string.Equals(content, updated, StringComparison.Ordinal))
+                {
+                    long diff = Math.Max(128L, Encoding.UTF8.GetByteCount(content) - Encoding.UTF8.GetByteCount(updated));
+                    File.WriteAllText(filePath, updated, new UTF8Encoding(false));
+                    res.FreedBytes += diff;
+                    return true;
+                }
+            }
+            catch
+            {
+                res.ErrorOrLockedCount++;
+            }
+            return false;
+        }
+
+        private static bool IniContainsTarget(string filePath, string section, string parameter)
+        {
+            if (string.IsNullOrWhiteSpace(section) || !File.Exists(filePath)) return false;
+            try
+            {
+                string[] lines = File.ReadAllLines(filePath);
+                bool inSection = false;
+                string secHeader = "[" + section.Trim() + "]";
+                foreach (string rawLine in lines)
+                {
+                    string line = rawLine.Trim();
+                    if (line.StartsWith("[") && line.EndsWith("]"))
+                    {
+                        inSection = string.Equals(line, secHeader, StringComparison.OrdinalIgnoreCase);
+                        if (inSection && string.IsNullOrEmpty(parameter)) return true;
+                        continue;
+                    }
+                    if (inSection && !string.IsNullOrEmpty(parameter))
+                    {
+                        if (line.StartsWith(parameter + "=", StringComparison.OrdinalIgnoreCase) ||
+                            line.StartsWith(parameter + " =", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
             }
             catch { }
+            return false;
         }
 
-        public override CleanResult Clean(CleanerContext context)
+        private static bool CleanIniTarget(string filePath, string section, string parameter, ref CleanResult res)
         {
-            CleanResult res = new CleanResult() { CleanerId = Id };
-            ScanResult scanRes = Scan(context);
-            foreach (string file in scanRes.FoundItems)
+            if (string.IsNullOrWhiteSpace(section) || !File.Exists(filePath) || NativeCleanerHelper.IsFileLocked(filePath))
+                return false;
+
+            try
             {
-                DeleteFileSafe(file, res);
+                string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
+                List<string> kept = new List<string>();
+                bool inSection = false;
+                bool modified = false;
+                string secHeader = "[" + section.Trim() + "]";
+
+                foreach (string rawLine in lines)
+                {
+                    string line = rawLine.Trim();
+                    if (line.StartsWith("[") && line.EndsWith("]"))
+                    {
+                        inSection = string.Equals(line, secHeader, StringComparison.OrdinalIgnoreCase);
+                        if (inSection && string.IsNullOrEmpty(parameter))
+                        {
+                            modified = true;
+                            continue;
+                        }
+                        kept.Add(rawLine);
+                        continue;
+                    }
+
+                    if (inSection)
+                    {
+                        if (string.IsNullOrEmpty(parameter))
+                        {
+                            modified = true;
+                            continue;
+                        }
+                        if (line.StartsWith(parameter + "=", StringComparison.OrdinalIgnoreCase) ||
+                            line.StartsWith(parameter + " =", StringComparison.OrdinalIgnoreCase))
+                        {
+                            modified = true;
+                            continue;
+                        }
+                    }
+                    kept.Add(rawLine);
+                }
+
+                if (modified)
+                {
+                    File.WriteAllLines(filePath, kept.ToArray(), new UTF8Encoding(false));
+                    res.FreedBytes += 256L;
+                    return true;
+                }
             }
-
-            context.Log(string.Format("[DEEP SCAN] {0}: Freed {1} ({2} files deleted, {3} locked/skipped).",
-                Name, FormatBytes(res.FreedBytes), res.DeletedCount, res.ErrorOrLockedCount));
-            return res;
+            catch
+            {
+                res.ErrorOrLockedCount++;
+            }
+            return false;
         }
-    }
 
-    #endregion
-
-    #region 5. CLEANER REGISTRY / FACTORY
-
-    public static class CleanerRegistry
-    {
-        public static List<BaseCleaner> CreateAllCleaners(Func<string, string, string> localizer)
+        private static bool OfficeXcuContainsHistory(string filePath)
         {
-            Func<string, string, string> T = localizer ?? ((k, d) => d);
-            string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            string progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-            List<BaseCleaner> list = new List<BaseCleaner>();
-
-            // =================================================================
-            // TAB 1: WINDOWS
-            // =================================================================
-
-            // SECTION 1.1: MICROSOFT EDGE
-            list.Add(new ChromiumSubpathCleaner(
-                "edge_cache",
-                T("Cleaner_Item_EdgeCache", "Internet Cache (Temporary Files)"),
-                T("Cleaner_Desc_EdgeCache", "Temporary files, GPU cache, and shader cache in Microsoft Edge"),
-                "🌐", false, "", true,
-                new string[] { @"Cache\Cache_Data", "Code Cache", "GPUCache", @"Service Worker\CacheStorage", @"Service Worker\ScriptCache", "DawnCache", "GrShaderCache", "ShaderCache" },
-                null,
-                new string[] { "ShaderCache", "GrShaderCache", "GraphiteDawnCache" },
-                "edge")
+            if (!File.Exists(filePath)) return false;
+            try
             {
-                TabId = "windows",
-                SectionId = "edge",
-                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "edge_history",
-                T("Cleaner_Item_EdgeHistory", "Browsing History"),
-                T("Cleaner_Desc_EdgeHistory", "Visited links, download history, and top sites in Microsoft Edge"),
-                "📜", true,
-                T("Cleaner_Warn_EdgeHistory", "Deletes your browsing and download history in Microsoft Edge."),
-                false,
-                null,
-                new string[] { "History", "History-journal", "Visited Links", "Top Sites", "Top Sites-journal" },
-                null,
-                "edge")
-            {
-                TabId = "windows",
-                SectionId = "edge",
-                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "edge_cookies",
-                T("Cleaner_Item_EdgeCookies", "Cookies"),
-                T("Cleaner_Desc_EdgeCookies", "Active website cookies and login sessions in Microsoft Edge"),
-                "🍪", true,
-                T("Cleaner_Warn_EdgeCookies", "Clearing cookies will sign you out of websites in Microsoft Edge."),
-                false,
-                null,
-                new string[] { "Cookies", "Cookies-journal", @"Network\Cookies", @"Network\Cookies-journal" },
-                null,
-                "edge")
-            {
-                TabId = "windows",
-                SectionId = "edge",
-                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "edge_form_data",
-                T("Cleaner_Item_EdgeFormData", "Autofill Form Information"),
-                T("Cleaner_Desc_EdgeFormData", "Saved autofill form entries and search suggestions in Microsoft Edge"),
-                "📝", true,
-                "Cleaning Form Data removes saved autofill text entries in Microsoft Edge.",
-                false,
-                null,
-                new string[] { "Web Data", "Web Data-journal" },
-                null,
-                "edge")
-            {
-                TabId = "windows",
-                SectionId = "edge",
-                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "edge_sessions",
-                T("Cleaner_Item_EdgeSessions", "Saved Sessions & Tabs"),
-                T("Cleaner_Desc_EdgeSessions", "Previously open tabs and session recovery in Microsoft Edge"),
-                "🗂️", true,
-                T("Cleaner_Warn_EdgeSessions", "Closes and forgets currently open tabs in Microsoft Edge."),
-                false,
-                new string[] { "Sessions" },
-                new string[] { "Current Session", "Current Tabs", "Last Session", "Last Tabs" },
-                null,
-                "edge")
-            {
-                TabId = "windows",
-                SectionId = "edge",
-                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSqliteVacuumCleaner("edge_vacuum", "edge")
-            {
-                Name = T("Cleaner_Item_EdgeVacuum", "Compact SQLite Databases (Vacuum)"),
-                Description = T("Cleaner_Desc_EdgeVacuum", "Defragments and compacts Microsoft Edge SQLite database files without losing data"),
-                TabId = "windows",
-                SectionId = "edge",
-                SectionTitle = T("Cleaner_Section_Edge", "Microsoft Edge"),
-                SectionIcon = "🌐"
-            });
-
-            // SECTION 1.2: WINDOWS EXPLORER
-            list.Add(new ExplorerRecentDocsCleaner()
-            {
-                Name = T("Cleaner_Item_RecentDocs", "Recent Documents & Jump Lists"),
-                Description = T("Cleaner_Desc_RecentDocs", "Shortcuts in %APPDATA%\\Microsoft\\Windows\\Recent, AutomaticDestinations, and CustomDestinations"),
-                TabId = "windows",
-                SectionId = "explorer",
-                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
-                SectionIcon = "📁"
-            });
-
-            list.Add(new ExplorerRunMruCleaner()
-            {
-                Name = T("Cleaner_Item_RunMru", "Run (in Start menu) History"),
-                Description = T("Cleaner_Desc_RunMru", "Clears Win+R Run command history in HKCU\\...\\Explorer\\RunMRU"),
-                TabId = "windows",
-                SectionId = "explorer",
-                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
-                SectionIcon = "📁"
-            });
-
-            list.Add(new ExplorerShellbagsCleaner()
-            {
-                Name = T("Cleaner_Item_Shellbags", "Other Explorer MRUs & Shellbags"),
-                Description = T("Cleaner_Desc_Shellbags", "Clears BagMRU, Bags, and Explorer search box history (WordWheelQuery)"),
-                TabId = "windows",
-                SectionId = "explorer",
-                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
-                SectionIcon = "📁"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "thumbnails", "explorer", T("Cleaner_Section_Explorer", "Windows Explorer"),
-                T("Cleaner_Item_Thumbnails", "Thumbnail Cache"),
-                T("Cleaner_Desc_Thumbnails", "Deletes thumbcache_*.db and iconcache_*.db in %LOCALAPPDATA%\\Microsoft\\Windows\\Explorer"),
-                "🖼️", false, false, "", true,
-                () => new List<string>() { Path.Combine(localAppData, "Microsoft", "Windows", "Explorer") },
-                "thumbcache_*.db", false)
-            {
-                TabId = "windows",
-                SectionId = "explorer",
-                SectionTitle = T("Cleaner_Section_Explorer", "Windows Explorer"),
-                SectionIcon = "📁"
-            });
-
-            // SECTION 1.3: SYSTEM
-            list.Add(new RecycleBinCleaner()
-            {
-                Name = T("Cleaner_Item_RecycleBin", "Empty Recycle Bin"),
-                Description = T("Cleaner_Desc_RecycleBin", "Permanently empties Recycle Bins across all drives via SHEmptyRecycleBin"),
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "user_temp", "system", T("Cleaner_Section_System", "System"),
-                T("Cleaner_Item_UserTemp", "Temporary Files (%TEMP%)"),
-                T("Cleaner_Desc_UserTemp", "Temporary files and application caches in %TEMP% and %LOCALAPPDATA%\\Temp"),
-                "📁", false, false, "", true,
-                () => new List<string>() { Path.GetTempPath(), Path.Combine(localAppData, "Temp") })
-            {
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "system_temp", "system", T("Cleaner_Section_System", "System"),
-                T("Cleaner_Item_SystemTemp", "System Temp (Windows\\Temp)"),
-                T("Cleaner_Desc_SystemTemp", "System-wide temporary files and installer leftovers in C:\\Windows\\Temp"),
-                "📁", true, false, "", true,
-                () => new List<string>() { Path.Combine(winDir, "Temp") })
-            {
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new ClipboardCleaner()
-            {
-                Name = T("Cleaner_Item_Clipboard", "Clipboard"),
-                Description = T("Cleaner_Desc_Clipboard", "Clears all currently copied text, images, and data from memory clipboard"),
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "memory_dumps", "system", T("Cleaner_Section_System", "System"),
-                T("Cleaner_Item_MemoryDumps", "Memory Dumps"),
-                T("Cleaner_Desc_MemoryDumps", "Kernel/Complete crash dumps (MEMORY.DMP), Minidumps, and LiveKernelReports"),
-                "💥", true, false, "", true,
-                () => new List<string>()
-                {
-                    Path.Combine(winDir, "Minidump"),
-                    Path.Combine(winDir, "LiveKernelReports"),
-                    Path.Combine(localAppData, "CrashDumps")
-                },
-                "*", true,
-                new List<string>() { Path.Combine(winDir, "MEMORY.DMP") })
-            {
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "win_update", "system", T("Cleaner_Section_System", "System"),
-                T("Cleaner_Item_WinUpdate", "Windows Update Cache"),
-                T("Cleaner_Desc_WinUpdate", "Downloaded update packages in SoftwareDistribution\\Download and Delivery Optimization cache"),
-                "🔄", true, false, "", true,
-                () => new List<string>()
-                {
-                    Path.Combine(winDir, "SoftwareDistribution", "Download"),
-                    Path.Combine(winDir, "SoftwareDistribution", "DeliveryOptimization"),
-                    Path.Combine(winDir, "ServiceProfiles", "NetworkService", "AppData", "Local", "Microsoft", "Windows", "DeliveryOptimization", "Cache")
-                })
-            {
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "prefetch", "system", T("Cleaner_Section_System", "System"),
-                T("Cleaner_Item_Prefetch", "Windows Prefetch"),
-                T("Cleaner_Desc_Prefetch", "Application preloading traces (*.pf) in C:\\Windows\\Prefetch"),
-                "🚀", true, false, "", false,
-                () => new List<string>() { Path.Combine(winDir, "Prefetch") }, "*.pf", false)
-            {
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new EventLogsCleaner()
-            {
-                Name = T("Cleaner_Item_SystemLogs", "Windows Event Logs"),
-                Description = T("Cleaner_Desc_SystemLogs", "Clears Windows Event Logs (Application, System, Setup), CBS logs, Panther, and WER reports"),
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "error_reports", "system", T("Cleaner_Section_System", "System"),
-                T("Cleaner_Item_ErrorReports", "Windows Error Reporting"),
-                T("Cleaner_Desc_ErrorReports", "Archived crash reports, mini-dumps, and error reporting queues"),
-                "📊", false, false, "", true,
-                () => new List<string>()
-                {
-                    Path.Combine(progData, "Microsoft", "Windows", "WER", "ReportArchive"),
-                    Path.Combine(progData, "Microsoft", "Windows", "WER", "ReportQueue"),
-                    Path.Combine(localAppData, "Microsoft", "Windows", "WER", "ReportArchive"),
-                    Path.Combine(localAppData, "Microsoft", "Windows", "WER", "ReportQueue")
-                })
-            {
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new DnsCacheCleaner()
-            {
-                Name = T("Cleaner_Item_DnsCache", "DNS Cache (Flush DNS)"),
-                Description = T("Cleaner_Desc_DnsCache", "Flushes the local DNS cache via DnsFlushResolverCache / ipconfig /flushdns"),
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            list.Add(new MuiCacheCleaner()
-            {
-                Name = T("Cleaner_Item_MuiCache", "Registry MUICache"),
-                Description = T("Cleaner_Desc_MuiCache", "Clears cached application display names in HKCU\\...\\Shell\\MuiCache"),
-                TabId = "windows",
-                SectionId = "system",
-                SectionTitle = T("Cleaner_Section_System", "System"),
-                SectionIcon = "🪟"
-            });
-
-            // =================================================================
-            // TAB 2: APPLICATIONS ("apps")
-            // =================================================================
-
-            // SECTION 2.1: GOOGLE CHROME
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_cache",
-                T("Cleaner_Item_ChromeCache", "Internet Cache"),
-                T("Cleaner_Desc_ChromeCache", "Web cache, code cache, GPUCache, and shaders in Google Chrome"),
-                "🌐", false, "", true,
-                new string[] { @"Cache\Cache_Data", "Code Cache", "GPUCache", @"Service Worker\CacheStorage", @"Service Worker\ScriptCache", "DawnCache", "GrShaderCache", "ShaderCache" },
-                null,
-                new string[] { "ShaderCache", "GrShaderCache", "GraphiteDawnCache" },
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_history",
-                T("Cleaner_Item_ChromeHistory", "Browsing History"),
-                T("Cleaner_Desc_ChromeHistory", "Visited links, download history, and top sites in Google Chrome"),
-                "📜", true,
-                T("Cleaner_Warn_ChromeHistory", "Deletes your browsing and download history in Google Chrome."),
-                false,
-                null,
-                new string[] { "History", "History-journal", "Visited Links", "Top Sites", "Top Sites-journal" },
-                null,
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_cookies",
-                T("Cleaner_Item_ChromeCookies", "Cookies"),
-                T("Cleaner_Desc_ChromeCookies", "Active website cookies and login sessions in Google Chrome"),
-                "🍪", true,
-                T("Cleaner_Warn_ChromeCookies", "Clearing cookies will sign you out of websites in Google Chrome."),
-                false,
-                null,
-                new string[] { "Cookies", "Cookies-journal", @"Network\Cookies", @"Network\Cookies-journal" },
-                null,
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_form_data",
-                T("Cleaner_Item_ChromeFormData", "Autofill Form Information"),
-                T("Cleaner_Desc_ChromeFormData", "Saved autofill form entries and search suggestions in Google Chrome"),
-                "📝", true,
-                "Cleaning Form Data removes saved autofill text entries in Google Chrome.",
-                false,
-                null,
-                new string[] { "Web Data", "Web Data-journal" },
-                null,
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_site_data",
-                T("Cleaner_Item_ChromeSiteData", "Site Storage (LocalStorage & IndexedDB)"),
-                T("Cleaner_Desc_ChromeSiteData", "HTML5 LocalStorage, IndexedDB, and offline web app caches in Google Chrome"),
-                "🗄️", true,
-                T("Cleaner_Warn_ChromeSiteData", "Clears offline web app storage and site settings in Google Chrome."),
-                false,
-                new string[] { @"Local Storage\leveldb", "IndexedDB", "Session Storage", "File System" },
-                null,
-                null,
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_ai_models",
-                T("Cleaner_Item_ChromeAiModels", "Local AI Models (Gemini Nano)"),
-                T("Cleaner_Desc_ChromeAiModels", "Downloaded on-device AI models in Google Chrome"),
-                "🤖", false, "", false,
-                new string[] { "optimization_guide_model_store", "optimization_guide_prediction_model_downloads" },
-                null,
-                new string[] { "OptGuideOnDeviceModel" },
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSqliteVacuumCleaner("chrome_vacuum", "chrome")
-            {
-                Name = T("Cleaner_Item_ChromeVacuum", "Compact SQLite Databases (Vacuum)"),
-                Description = T("Cleaner_Desc_ChromeVacuum", "Defragments and compacts Google Chrome SQLite database files without losing data"),
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            list.Add(new ChromiumSubpathCleaner(
-                "chrome_crash",
-                T("Cleaner_Item_ChromeCrash", "Crash Reports (Crashpad)"),
-                T("Cleaner_Desc_ChromeCrash", "Diagnostic crash reports and telemetry queues in Google Chrome"),
-                "🚑", false, "", true,
-                null, null,
-                new string[] { @"Crashpad\reports", @"Crashpad\completed", @"Crashpad\pending" },
-                "chrome")
-            {
-                TabId = "apps",
-                SectionId = "chrome",
-                SectionTitle = T("Cleaner_Section_Chrome", "Google Chrome"),
-                SectionIcon = "🌐"
-            });
-
-            // SECTION 2.2: WINDOWS DEFENDER
-            list.Add(new DirectoryPatternCleaner(
-                "defender_temp", "defender", T("Cleaner_Section_Defender", "Windows Defender"),
-                T("Cleaner_Item_DefenderTemp", "Scan Logs & History"),
-                T("Cleaner_Desc_DefenderTemp", "Temporary detection histories, operational support logs, and engine cache in ProgramData"),
-                "🛡️", true, false, "", true,
-                () => new List<string>()
-                {
-                    Path.Combine(progData, "Microsoft", "Windows Defender", "Scans", "History", "Service", "DetectionHistory"),
-                    Path.Combine(progData, "Microsoft", "Windows Defender", "Scans", "History", "Results"),
-                    Path.Combine(progData, "Microsoft", "Windows Defender", "Support"),
-                    Path.Combine(progData, "Microsoft", "Windows Defender", "Scans", "MetaStore")
-                })
-            {
-                TabId = "apps",
-                SectionId = "defender",
-                SectionTitle = T("Cleaner_Section_Defender", "Windows Defender"),
-                SectionIcon = "🛡️"
-            });
-
-            list.Add(new DirectoryPatternCleaner(
-                "defender_quarantine", "defender", T("Cleaner_Section_Defender", "Windows Defender"),
-                T("Cleaner_Item_DefenderQuarantine", "Quarantined Files"),
-                T("Cleaner_Desc_DefenderQuarantine", "Deletes quarantined malware/threat files in C:\\ProgramData\\Microsoft\\Windows Defender\\Quarantine"),
-                "☣️", true, true,
-                T("Cleaner_Warn_DefenderQuarantine", "Quarantined files cannot be restored once deleted. Requires Administrator/SYSTEM privileges."),
-                false,
-                () => new List<string>()
-                {
-                    Path.Combine(progData, "Microsoft", "Windows Defender", "Quarantine", "ResourceData"),
-                    Path.Combine(progData, "Microsoft", "Windows Defender", "Quarantine", "Entries")
-                })
-            {
-                TabId = "apps",
-                SectionId = "defender",
-                SectionTitle = T("Cleaner_Section_Defender", "Windows Defender"),
-                SectionIcon = "🛡️"
-            });
-
-            // SECTION 2.3: DEVELOPER & DEEP SCAN
-            list.Add(new DeepScanOrphanFilesCleaner()
-            {
-                Name = T("Cleaner_Item_DeepOrphans", "Orphaned Files (.DS_Store, Thumbs.db)"),
-                Description = T("Cleaner_Desc_DeepOrphans", "Deep scans for .DS_Store, Thumbs.db, and Vim swap/temp files (*.swp, *.swo, *.tmp) within the selected root folder"),
-                TabId = "apps",
-                SectionId = "deep_scan",
-                SectionTitle = T("Cleaner_Section_DeepScan", "Developer & Deep Scan"),
-                SectionIcon = "📦"
-            });
-
-            list.Add(new DeepScanDirectoryCleaner(
-                "deep_node_modules",
-                T("Cleaner_Item_DeepNode", "Node.js & Angular Dependencies (node_modules, .angular)"),
-                T("Cleaner_Desc_DeepNode", "Finds and removes heavy node_modules and .angular build folders inside the Deep Scan root path"),
-                "📦",
-                "Deleting node_modules or .angular folders requires running 'npm install' again in those projects.",
-                new string[] { "node_modules", ".angular" })
-            {
-                TabId = "apps",
-                SectionId = "deep_scan",
-                SectionTitle = T("Cleaner_Section_DeepScan", "Developer & Deep Scan"),
-                SectionIcon = "📦"
-            });
-
-            list.Add(new DeepScanDirectoryCleaner(
-                "deep_python_cache",
-                T("Cleaner_Item_DeepPython", "Python Bytecode & Virtual Environments (__pycache__, venv)"),
-                T("Cleaner_Desc_DeepPython", "Finds and removes __pycache__ and Python virtual environments (venv / .venv) in the Deep Scan root path"),
-                "🐍",
-                "Deleting 'venv' or '.venv' directories removes installed Python packages for those virtual environments.",
-                new string[] { "__pycache__", "venv", ".venv" })
-            {
-                TabId = "apps",
-                SectionId = "deep_scan",
-                SectionTitle = T("Cleaner_Section_DeepScan", "Developer & Deep Scan"),
-                SectionIcon = "📦"
-            });
-
-            return list;
+                string content = File.ReadAllText(filePath, Encoding.UTF8);
+                return content.IndexOf("org.openoffice.Office.Histories", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       content.IndexOf("org.openoffice.Office.Common/History", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch { return false; }
         }
+
+        private static bool CleanOfficeXcuHistory(string filePath, ref CleanResult res)
+        {
+            if (!File.Exists(filePath) || NativeCleanerHelper.IsFileLocked(filePath)) return false;
+            try
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.Load(filePath);
+                XmlNode root = doc.DocumentElement;
+                if (root == null) return false;
+
+                List<XmlNode> toRemove = new List<XmlNode>();
+                foreach (XmlNode child in root.ChildNodes)
+                {
+                    if (child.Attributes != null)
+                    {
+                        foreach (XmlAttribute attr in child.Attributes)
+                        {
+                            if (attr.Value != null &&
+                                (attr.Value.IndexOf("org.openoffice.Office.Histories", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 attr.Value.IndexOf("org.openoffice.Office.Common/History", StringComparison.OrdinalIgnoreCase) >= 0))
+                            {
+                                toRemove.Add(child);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (toRemove.Count > 0)
+                {
+                    foreach (XmlNode n in toRemove) root.RemoveChild(n);
+                    doc.Save(filePath);
+                    res.FreedBytes += toRemove.Count * 256L;
+                    return true;
+                }
+            }
+            catch
+            {
+                res.ErrorOrLockedCount++;
+            }
+            return false;
+        }
+
+        #endregion
+
+        #endregion
     }
-
-    #endregion
-
-    #region 6. OPTIASSIST ADDON UI & CONTROLLER
 
     /// <summary>
-    /// BleachBit-inspired System Cleaner & Optimizer Add-on Module compiled into SystemCleaner.dll.
+    /// Parses BleachBit CleanerML XML files from Config\Addons\SystemCleaner\cleaners\*.xml,
+    /// filtering strictly for Windows-compatible cleaners, options, variables, and actions.
+    /// </summary>
+    public static class CleanerMlEngine
+    {
+        private static readonly HashSet<string> WindowsCoreCleanerIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "windows_explorer",
+            "windows_defender",
+            "microsoft_edge",
+            "internet_explorer",
+            "windows_media_player",
+            "paint",
+            "wordpad",
+            "deepscan"
+        };
+
+        private static readonly HashSet<string> SafeRecommendedOptionIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "cache",
+            "temp",
+            "tmp",
+            "logs",
+            "log",
+            "debug_logs",
+            "crash_reports",
+            "thumbnails",
+            "mru",
+            "recent_documents",
+            "run",
+            "search_history",
+            "history"
+        };
+
+        private static readonly HashSet<string> SensitiveOptionIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "passwords",
+            "cookies",
+            "session",
+            "sessionjson",
+            "site_data",
+            "sync",
+            "quarantine",
+            "backup"
+        };
+
+        public static string GetCleanersDirectory()
+        {
+            try
+            {
+                string dllDir = Path.GetDirectoryName(typeof(SystemCleanerAddon).Assembly.Location);
+                if (!string.IsNullOrEmpty(dllDir))
+                {
+                    string candidate = Path.Combine(dllDir, "cleaners");
+                    if (Directory.Exists(candidate)) return candidate;
+                }
+            }
+            catch { }
+
+            string fallback = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons", "SystemCleaner", "cleaners");
+            return fallback;
+        }
+
+        /// <summary>
+        /// Checks whether an XML `os` attribute is compatible with Windows.
+        /// Explicitly rejects linux, unix, macos, bsd, posix, or !windows.
+        /// </summary>
+        public static bool IsWindowsCompatibleOs(string osAttr)
+        {
+            if (string.IsNullOrWhiteSpace(osAttr)) return true;
+
+            string[] tokens = osAttr.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            bool hasWindows = false;
+            foreach (string raw in tokens)
+            {
+                string t = raw.Trim().ToLowerInvariant();
+                if (t == "!windows" || t == "!win32") return false;
+                if (t == "windows" || t == "win32") hasWindows = true;
+            }
+            return hasWindows;
+        }
+
+        /// <summary>
+        /// Rejects Linux/Unix/macOS paths and commands even when the `os` attribute was omitted in XML.
+        /// </summary>
+        public static bool IsNonWindowsPathOrCommand(string command, string rawPath)
+        {
+            if (!string.IsNullOrEmpty(command))
+            {
+                string c = command.Trim().ToLowerInvariant();
+                if (c.StartsWith("apt.") ||
+                    c.StartsWith("dnf.") ||
+                    c.StartsWith("yum.") ||
+                    c.StartsWith("pacman.") ||
+                    c.StartsWith("snap.") ||
+                    c.StartsWith("flatpak.") ||
+                    c.StartsWith("journald.") ||
+                    c.StartsWith("macos.") ||
+                    c.StartsWith("x11."))
+                {
+                    return true;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(rawPath))
+            {
+                string p = rawPath.Trim();
+                if (p.StartsWith("/") ||
+                    p.StartsWith("~") ||
+                    p.StartsWith("$HOME", StringComparison.OrdinalIgnoreCase) ||
+                    p.StartsWith("$LOGNAME", StringComparison.OrdinalIgnoreCase) ||
+                    p.StartsWith("$XDG_", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Expands Windows environment variables and BleachBit-specific Windows placeholders.
+        /// </summary>
+        public static string ExpandWindowsPathVariables(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            string s = input.Trim();
+
+            // Expand single-dollar Windows variables used in some CleanerML XMLs ($APPDATA, $LOCALAPPDATA, $PROGRAMDATA, $USERPROFILE)
+            s = Regex.Replace(s, @"(?<!\$)\$APPDATA(?!\$)", "%AppData%", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"(?<!\$)\$LOCALAPPDATA(?!\$)", "%LocalAppData%", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"(?<!\$)\$PROGRAMDATA(?!\$)", "%CommonAppData%", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"(?<!\$)\$USERPROFILE(?!\$)", "%UserProfile%", RegexOptions.IgnoreCase);
+
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrEmpty(localAppData) || localAppData.IndexOf(@"\Packages\sandbox.", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                localAppData = Path.Combine(userProfile, @"AppData\Local");
+            }
+            string commonAppData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            string localAppDataLow = Path.Combine(userProfile, @"AppData\LocalLow");
+            string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string music = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+            string pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            string videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+            string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string winSys = Environment.SystemDirectory;
+            string tempDir = Path.GetTempPath().TrimEnd('\\', '/');
+
+            s = ReplaceInsensitive(s, "%CommonAppData%", commonAppData);
+            s = ReplaceInsensitive(s, "%ProgramData%", commonAppData);
+            s = ReplaceInsensitive(s, "%AppData%", appData);
+            s = ReplaceInsensitive(s, "%LocalAppData%", localAppData);
+            s = ReplaceInsensitive(s, "%LocalAppDataLow%", localAppDataLow);
+            s = ReplaceInsensitive(s, "%UserProfile%", userProfile);
+            s = ReplaceInsensitive(s, "%Documents%", documents);
+            s = ReplaceInsensitive(s, "%Music%", music);
+            s = ReplaceInsensitive(s, "%Pictures%", pictures);
+            s = ReplaceInsensitive(s, "%Videos%", videos);
+            s = ReplaceInsensitive(s, "%WinDir%", winDir);
+            s = ReplaceInsensitive(s, "%WindowsSystem%", winSys);
+            s = ReplaceInsensitive(s, "%Temp%", tempDir);
+            s = ReplaceInsensitive(s, "%Tmp%", tempDir);
+
+            s = Environment.ExpandEnvironmentVariables(s);
+            s = s.Replace('/', '\\');
+            while (s.Contains("\\\\") && !s.StartsWith("\\\\"))
+            {
+                s = s.Replace("\\\\", "\\");
+            }
+            return s;
+        }
+
+        private static string ReplaceInsensitive(string input, string search, string replacement)
+        {
+            if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(search)) return input;
+            return Regex.Replace(input, Regex.Escape(search), (replacement ?? "").Replace("$", "$$"), RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>
+        /// Resolves a Windows path that may contain wildcard segments (* or ?) in intermediate directories or leaf file/folder names.
+        /// </summary>
+        public static List<string> ResolvePathWithWildcards(string rawExpandedPath)
+        {
+            List<string> results = new List<string>();
+            if (string.IsNullOrWhiteSpace(rawExpandedPath)) return results;
+
+            string normalized = rawExpandedPath.Trim().Replace('/', '\\').TrimEnd('\\');
+            if (normalized.Length <= 3) return results;
+
+            // Fast path when no wildcard characters are present
+            if (normalized.IndexOf('*') < 0 && normalized.IndexOf('?') < 0)
+            {
+                if (File.Exists(normalized) || Directory.Exists(normalized))
+                {
+                    results.Add(normalized);
+                }
+                return results;
+            }
+
+            string root = Path.GetPathRoot(normalized);
+            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return results;
+
+            string remainder = normalized.Substring(root.Length).TrimStart('\\');
+            string[] segments = remainder.Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0) return results;
+
+            List<string> currentDirs = new List<string>() { root.TrimEnd('\\') + "\\" };
+
+            for (int i = 0; i < segments.Length; i++)
+            {
+                string seg = segments[i];
+                bool isLast = (i == segments.Length - 1);
+                bool hasWildcard = (seg.IndexOf('*') >= 0 || seg.IndexOf('?') >= 0);
+                List<string> nextMatches = new List<string>();
+
+                foreach (string parent in currentDirs)
+                {
+                    if (!Directory.Exists(parent)) continue;
+
+                    if (!hasWildcard)
+                    {
+                        string combined = Path.Combine(parent, seg);
+                        if (isLast)
+                        {
+                            if (File.Exists(combined) || Directory.Exists(combined))
+                            {
+                                nextMatches.Add(combined);
+                            }
+                        }
+                        else if (Directory.Exists(combined))
+                        {
+                            nextMatches.Add(combined);
+                        }
+                    }
+                    else
+                    {
+                        // Wildcard segment
+                        try
+                        {
+                            string[] matchedDirs = Directory.GetDirectories(parent, seg, SearchOption.TopDirectoryOnly);
+                            foreach (string md in matchedDirs)
+                            {
+                                nextMatches.Add(md);
+                            }
+                        }
+                        catch { }
+
+                        if (isLast)
+                        {
+                            try
+                            {
+                                string[] matchedFiles = Directory.GetFiles(parent, seg, SearchOption.TopDirectoryOnly);
+                                foreach (string mf in matchedFiles)
+                                {
+                                    nextMatches.Add(mf);
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                if (nextMatches.Count == 0)
+                {
+                    return results;
+                }
+
+                if (isLast)
+                {
+                    results.AddRange(nextMatches);
+                }
+                else
+                {
+                    currentDirs = nextMatches;
+                }
+            }
+
+            return results;
+        }
+
+        private static List<string> GetBuiltInProgramFilesList()
+        {
+            List<string> pf = new List<string>();
+            string pf64 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string pfw6432 = Environment.GetEnvironmentVariable("ProgramW6432");
+
+            if (!string.IsNullOrEmpty(pf64) && !pf.Contains(pf64)) pf.Add(pf64.TrimEnd('\\'));
+            if (!string.IsNullOrEmpty(pf86) && !pf.Contains(pf86)) pf.Add(pf86.TrimEnd('\\'));
+            if (!string.IsNullOrEmpty(pfw6432) && !pf.Contains(pfw6432.TrimEnd('\\'))) pf.Add(pfw6432.TrimEnd('\\'));
+            return pf;
+        }
+
+        /// <summary>
+        /// Expands all $$varname$$ placeholders in a raw path using the cleaner's <var> dictionary.
+        /// </summary>
+        private static List<string> ExpandPathWithVariables(string rawPath, Dictionary<string, List<string>> varTable)
+        {
+            List<string> results = new List<string>();
+            if (string.IsNullOrWhiteSpace(rawPath)) return results;
+
+            List<string> working = new List<string>() { rawPath.Trim() };
+
+            // Handle %ProgramFiles% across both 64-bit and 32-bit Program Files directories
+            if (rawPath.IndexOf("%ProgramFiles%", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                List<string> pfExpanded = new List<string>();
+                foreach (string w in working)
+                {
+                    foreach (string pf in GetBuiltInProgramFilesList())
+                    {
+                        pfExpanded.Add(ReplaceInsensitive(w, "%ProgramFiles%", pf));
+                    }
+                }
+                working = pfExpanded;
+            }
+
+            int safetyIterations = 0;
+            while (safetyIterations++ < 5)
+            {
+                bool replacedAny = false;
+                List<string> nextPass = new List<string>();
+
+                foreach (string item in working)
+                {
+                    Match m = Regex.Match(item, @"\$\$([A-Za-z0-9_-]+)\$\$");
+                    if (!m.Success)
+                    {
+                        nextPass.Add(item);
+                        continue;
+                    }
+
+                    replacedAny = true;
+                    string varName = m.Groups[1].Value;
+                    List<string> vals;
+                    if (varTable.TryGetValue(varName, out vals) && vals != null && vals.Count > 0)
+                    {
+                        foreach (string v in vals)
+                        {
+                            string substituted = item.Substring(0, m.Index) + v + item.Substring(m.Index + m.Length);
+                            nextPass.Add(substituted);
+                        }
+                    }
+                }
+
+                working = nextPass;
+                if (!replacedAny || working.Count == 0) break;
+            }
+
+            HashSet<string> unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string w in working)
+            {
+                if (w.IndexOf("$$", StringComparison.Ordinal) >= 0) continue; // Unresolved non-Windows variable
+                if (IsNonWindowsPathOrCommand(null, w)) continue;
+
+                string expanded = ExpandWindowsPathVariables(w);
+                if (!string.IsNullOrWhiteSpace(expanded) && !IsNonWindowsPathOrCommand(null, expanded))
+                {
+                    if (unique.Add(expanded))
+                    {
+                        results.Add(expanded);
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Loads all Windows-compatible CleanerML XML files and creates their option cleaners.
+        /// </summary>
+        public static List<BaseCleaner> LoadAllCleanersFromXml(Func<string, string, string> localizer, string currentLangCode)
+        {
+            List<BaseCleaner> allCleaners = new List<BaseCleaner>();
+            string cleanersDir = GetCleanersDirectory();
+            if (string.IsNullOrEmpty(cleanersDir) || !Directory.Exists(cleanersDir))
+            {
+                return allCleaners;
+            }
+
+            string[] xmlFiles = Directory.GetFiles(cleanersDir, "*.xml", SearchOption.TopDirectoryOnly);
+            Array.Sort(xmlFiles, StringComparer.OrdinalIgnoreCase);
+
+            List<BaseCleaner> windowsTabList = new List<BaseCleaner>();
+            List<BaseCleaner> appsTabList = new List<BaseCleaner>();
+
+            foreach (string xmlFile in xmlFiles)
+            {
+                try
+                {
+                    List<BaseCleaner> parsedOptions = ParseSingleXmlFile(xmlFile, localizer, currentLangCode);
+                    foreach (BaseCleaner opt in parsedOptions)
+                    {
+                        if (string.Equals(opt.TabId, "windows", StringComparison.OrdinalIgnoreCase))
+                        {
+                            windowsTabList.Add(opt);
+                        }
+                        else
+                        {
+                            appsTabList.Add(opt);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // Order Windows tab sections logically: Microsoft Edge, Windows Explorer, Windows Defender, Internet Explorer, Media Player, Paint, WordPad, Deep Scan
+            string[] preferredWinOrder = new string[]
+            {
+                "microsoft_edge",
+                "windows_explorer",
+                "windows_defender",
+                "internet_explorer",
+                "windows_media_player",
+                "paint",
+                "wordpad",
+                "deepscan"
+            };
+
+            foreach (string prefId in preferredWinOrder)
+            {
+                foreach (BaseCleaner c in windowsTabList)
+                {
+                    if (string.Equals(c.SectionId, prefId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        allCleaners.Add(c);
+                    }
+                }
+            }
+            foreach (BaseCleaner c in windowsTabList)
+            {
+                if (!allCleaners.Contains(c))
+                {
+                    allCleaners.Add(c);
+                }
+            }
+
+            // Sort Applications tab alphabetically by SectionTitle
+            appsTabList.Sort((a, b) =>
+            {
+                int cmp = string.Compare(a.SectionTitle, b.SectionTitle, StringComparison.OrdinalIgnoreCase);
+                if (cmp != 0) return cmp;
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
+            allCleaners.AddRange(appsTabList);
+
+            return allCleaners;
+        }
+
+        private static List<BaseCleaner> ParseSingleXmlFile(string xmlFilePath, Func<string, string, string> localizer, string currentLangCode)
+        {
+            List<BaseCleaner> optionsList = new List<BaseCleaner>();
+
+            XmlDocument doc = new XmlDocument();
+            doc.Load(xmlFilePath);
+
+            XmlElement cleanerEl = doc.DocumentElement;
+            if (cleanerEl == null || !string.Equals(cleanerEl.Name, "cleaner", StringComparison.OrdinalIgnoreCase))
+            {
+                return optionsList;
+            }
+
+            string cleanerOs = cleanerEl.GetAttribute("os");
+            if (!IsWindowsCompatibleOs(cleanerOs))
+            {
+                return optionsList;
+            }
+
+            string cleanerId = cleanerEl.GetAttribute("id");
+            if (string.IsNullOrWhiteSpace(cleanerId))
+            {
+                cleanerId = Path.GetFileNameWithoutExtension(xmlFilePath);
+            }
+
+            string rawCleanerLabel = GetChildElementText(cleanerEl, "label", cleanerId);
+
+            // Parse <running type="exe" os="windows">
+            List<string> runningExes = new List<string>();
+            foreach (XmlNode node in cleanerEl.ChildNodes)
+            {
+                XmlElement el = node as XmlElement;
+                if (el == null || !string.Equals(el.Name, "running", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!IsWindowsCompatibleOs(el.GetAttribute("os"))) continue;
+
+                string runType = el.GetAttribute("type");
+                string exeName = (el.InnerText ?? "").Trim();
+                if (string.Equals(runType, "exe", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(exeName))
+                {
+                    if (!IsNonWindowsPathOrCommand(null, exeName) && !runningExes.Contains(exeName))
+                    {
+                        runningExes.Add(exeName);
+                    }
+                }
+            }
+
+            // Parse <var name="...">
+            Dictionary<string, List<string>> varTable = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            varTable["ProgramFiles"] = GetBuiltInProgramFilesList();
+
+            foreach (XmlNode node in cleanerEl.ChildNodes)
+            {
+                XmlElement varEl = node as XmlElement;
+                if (varEl == null || !string.Equals(varEl.Name, "var", StringComparison.OrdinalIgnoreCase)) continue;
+
+                string varName = varEl.GetAttribute("name");
+                if (string.IsNullOrWhiteSpace(varName)) continue;
+
+                List<string> values = new List<string>();
+                foreach (XmlNode valNode in varEl.ChildNodes)
+                {
+                    XmlElement valEl = valNode as XmlElement;
+                    if (valEl == null || !string.Equals(valEl.Name, "value", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!IsWindowsCompatibleOs(valEl.GetAttribute("os"))) continue;
+
+                    string rawVal = (valEl.InnerText ?? "").Trim();
+                    if (string.IsNullOrEmpty(rawVal) || IsNonWindowsPathOrCommand(null, rawVal)) continue;
+
+                    string expandedVal = ExpandWindowsPathVariables(rawVal);
+                    if (!string.IsNullOrEmpty(expandedVal) && !IsNonWindowsPathOrCommand(null, expandedVal))
+                    {
+                        values.Add(expandedVal);
+                    }
+                }
+
+                if (values.Count > 0)
+                {
+                    varTable[varName] = values;
+                }
+            }
+
+            // Parse <option id="...">
+            List<CleanerMlAction> allCleanerActions = new List<CleanerMlAction>();
+            bool isWinCore = WindowsCoreCleanerIds.Contains(cleanerId);
+            string tabId = isWinCore ? "windows" : "apps";
+            string sectionId = string.Equals(cleanerId, "deepscan", StringComparison.OrdinalIgnoreCase) ? "deep_scan" : cleanerId;
+            string sectionIcon = GetCleanerIcon(cleanerId);
+
+            foreach (XmlNode node in cleanerEl.ChildNodes)
+            {
+                XmlElement optEl = node as XmlElement;
+                if (optEl == null || !string.Equals(optEl.Name, "option", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!IsWindowsCompatibleOs(optEl.GetAttribute("os"))) continue;
+
+                string optId = optEl.GetAttribute("id");
+                if (string.IsNullOrWhiteSpace(optId)) continue;
+
+                string rawOptLabel = GetChildElementText(optEl, "label", optId);
+                string rawOptDesc = GetChildElementText(optEl, "description", "");
+                string rawWarning = GetChildElementText(optEl, "warning", "");
+
+                List<CleanerMlAction> validActions = new List<CleanerMlAction>();
+                bool requiresAdmin = string.Equals(cleanerId, "windows_defender", StringComparison.OrdinalIgnoreCase);
+
+                foreach (XmlNode actNode in optEl.ChildNodes)
+                {
+                    XmlElement actEl = actNode as XmlElement;
+                    if (actEl == null || !string.Equals(actEl.Name, "action", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!IsWindowsCompatibleOs(actEl.GetAttribute("os"))) continue;
+
+                    string cmd = actEl.GetAttribute("command");
+                    string search = actEl.GetAttribute("search");
+                    string rawPath = actEl.GetAttribute("path");
+
+                    if (IsNonWindowsPathOrCommand(cmd, rawPath)) continue;
+
+                    CleanerMlAction action = new CleanerMlAction
+                    {
+                        Command = string.IsNullOrEmpty(cmd) ? "delete" : cmd.Trim(),
+                        Search = (search ?? "").Trim(),
+                        RawPath = (rawPath ?? "").Trim(),
+                        RegistryValueName = actEl.GetAttribute("name"),
+                        JsonAddress = actEl.GetAttribute("address"),
+                        IniSection = actEl.GetAttribute("section"),
+                        IniParameter = actEl.GetAttribute("parameter"),
+                        RegexPattern = actEl.GetAttribute("regex"),
+                        NRegexPattern = actEl.GetAttribute("nregex"),
+                        WholeRegexPattern = actEl.GetAttribute("wholeregex"),
+                        NWholeRegexPattern = actEl.GetAttribute("nwholeregex"),
+                        FileTypeFilter = actEl.GetAttribute("type"),
+                        ProcessCmd = actEl.GetAttribute("cmd"),
+                        ProcessWait = !string.Equals(actEl.GetAttribute("wait"), "false", StringComparison.OrdinalIgnoreCase)
+                    };
+
+                    string cmdLower = action.Command.ToLowerInvariant();
+                    if (cmdLower == "winreg" || cmdLower == "win.shell.change.notify" ||
+                        cmdLower == "process" || cmdLower == "process.terminate" ||
+                        string.Equals(action.Search, "deep", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (cmdLower == "winreg" && action.RawPath.StartsWith("HKLM\\", StringComparison.OrdinalIgnoreCase))
+                        {
+                            requiresAdmin = true;
+                        }
+                        validActions.Add(action);
+                        allCleanerActions.Add(action);
+                    }
+                    else if (!string.IsNullOrEmpty(action.RawPath))
+                    {
+                        List<string> expandedPaths = ExpandPathWithVariables(action.RawPath, varTable);
+                        if (expandedPaths.Count > 0)
+                        {
+                            action.ExpandedPaths = expandedPaths;
+                            validActions.Add(action);
+                            allCleanerActions.Add(action);
+                        }
+                    }
+                }
+
+                if (validActions.Count == 0) continue;
+
+                bool isDangerous = !string.IsNullOrEmpty(rawWarning) || SensitiveOptionIds.Contains(optId);
+                bool isRecommended = !isDangerous &&
+                    !string.Equals(cleanerId, "deepscan", StringComparison.OrdinalIgnoreCase) &&
+                    SafeRecommendedOptionIds.Contains(optId);
+
+                string locSectionTitle = TranslateCleanerLabel(rawCleanerLabel, currentLangCode);
+                string locOptLabel = TranslateOptionLabel(rawOptLabel, currentLangCode);
+                string locOptDesc = TranslateOptionDescription(rawOptDesc, currentLangCode);
+                string locWarning = TranslateWarningText(rawWarning, optId, currentLangCode);
+
+                CleanerMlOptionCleaner optCleaner = new CleanerMlOptionCleaner(
+                    cleanerId,
+                    optId,
+                    locSectionTitle,
+                    locOptLabel,
+                    locOptDesc,
+                    locWarning,
+                    tabId,
+                    sectionIcon,
+                    requiresAdmin,
+                    isDangerous,
+                    isRecommended,
+                    true,
+                    runningExes,
+                    validActions)
+                {
+                    RawCleanerLabel = rawCleanerLabel,
+                    RawOptionLabel = rawOptLabel,
+                    RawOptionDescription = rawOptDesc,
+                    RawWarning = rawWarning,
+                    SectionId = sectionId
+                };
+
+                optionsList.Add(optCleaner);
+            }
+
+            if (optionsList.Count > 0)
+            {
+                bool isInstalled = isWinCore || DetectCleanerPresenceOnSystem(varTable, allCleanerActions);
+                foreach (BaseCleaner opt in optionsList)
+                {
+                    opt.IsInstalledOnSystem = isInstalled;
+                }
+            }
+
+            return optionsList;
+        }
+
+        /// <summary>
+        /// Checks whether an application defined in a CleanerML file is actually installed/present on this Windows PC.
+        /// </summary>
+        private static bool DetectCleanerPresenceOnSystem(Dictionary<string, List<string>> varTable, List<CleanerMlAction> actions)
+        {
+            try
+            {
+                // 1. Check <var> directories/globs (excluding built-in ProgramFiles)
+                foreach (KeyValuePair<string, List<string>> kvp in varTable)
+                {
+                    if (string.Equals(kvp.Key, "ProgramFiles", StringComparison.OrdinalIgnoreCase)) continue;
+                    foreach (string val in kvp.Value)
+                    {
+                        if (string.IsNullOrWhiteSpace(val)) continue;
+                        if (val.IndexOf('*') >= 0 || val.IndexOf('?') >= 0)
+                        {
+                            if (ResolvePathWithWildcards(val).Count > 0) return true;
+                        }
+                        else if (Directory.Exists(val) || File.Exists(val))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                // 2. Check action paths or parent application directories & registry keys
+                foreach (CleanerMlAction act in actions)
+                {
+                    if (string.Equals(act.Command, "winreg", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(act.RawPath))
+                    {
+                        string p = act.RawPath.Replace('/', '\\');
+                        int slash = p.IndexOf('\\');
+                        if (slash > 0 && slash < p.Length - 1)
+                        {
+                            string hiveStr = p.Substring(0, slash).ToUpperInvariant();
+                            string subKey = p.Substring(slash + 1);
+                            RegistryKey hive = hiveStr == "HKCU" ? Registry.CurrentUser : (hiveStr == "HKLM" ? Registry.LocalMachine : null);
+                            if (hive != null)
+                            {
+                                using (RegistryKey k = hive.OpenSubKey(subKey, false))
+                                {
+                                    if (k != null) return true;
+                                }
+                                string parentKey = Path.GetDirectoryName(subKey);
+                                if (!string.IsNullOrEmpty(parentKey) && parentKey.IndexOf('\\') > 0)
+                                {
+                                    using (RegistryKey pk = hive.OpenSubKey(parentKey, false))
+                                    {
+                                        if (pk != null) return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    foreach (string exp in act.ExpandedPaths)
+                    {
+                        if (string.IsNullOrWhiteSpace(exp)) continue;
+                        if (exp.IndexOf('*') >= 0 || exp.IndexOf('?') >= 0)
+                        {
+                            if (ResolvePathWithWildcards(exp).Count > 0) return true;
+                        }
+                        else
+                        {
+                            if (File.Exists(exp) || Directory.Exists(exp)) return true;
+                            if (string.Equals(act.Search, "file", StringComparison.OrdinalIgnoreCase))
+                            {
+                                string parentDir = Path.GetDirectoryName(exp.TrimEnd('\\'));
+                                if (!string.IsNullOrEmpty(parentDir) && Directory.Exists(parentDir))
+                                {
+                                    if (PathSanitizer.IsSafeToDelete(parentDir) &&
+                                        !string.Equals(parentDir.TrimEnd('\\'), Path.GetTempPath().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
+        private static string GetChildElementText(XmlElement parent, string tagName, string fallback)
+        {
+            if (parent == null) return fallback;
+            foreach (XmlNode n in parent.ChildNodes)
+            {
+                XmlElement el = n as XmlElement;
+                if (el != null && string.Equals(el.Name, tagName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (el.InnerText ?? "").Trim();
+                }
+            }
+            return fallback;
+        }
+
+        public static string GetCleanerIcon(string cleanerId)
+        {
+            if (string.IsNullOrEmpty(cleanerId)) return "🧹";
+            switch (cleanerId.ToLowerInvariant())
+            {
+                case "windows_explorer": return "📁";
+                case "windows_defender": return "🛡️";
+                case "microsoft_edge":
+                case "google_chrome":
+                case "firefox":
+                case "brave":
+                case "chromium":
+                case "opera":
+                case "vivaldi":
+                case "librewolf":
+                case "waterfox":
+                case "palemoon":
+                case "zen":
+                case "helium":
+                case "internet_explorer":
+                case "safari_windows":
+                case "seamonkey":
+                    return "🌐";
+                case "deepscan": return "🔎";
+                case "vscode":
+                case "android_studio":
+                case "vim":
+                case "tortoisesvn":
+                case "docker":
+                case "java":
+                    return "💻";
+                case "discord":
+                case "slack":
+                case "zoom":
+                case "skype":
+                case "teamviewer":
+                case "pidgin":
+                case "hexchat":
+                case "thunderbird":
+                    return "💬";
+                case "vlc":
+                case "windows_media_player":
+                case "winamp":
+                case "realplayer":
+                case "miro":
+                case "gpodder":
+                    return "🎬";
+                case "microsoft_office":
+                case "libreoffice":
+                case "openoffice":
+                case "adobe_reader":
+                case "wordpad":
+                    return "📄";
+                case "winrar":
+                case "winzip":
+                    return "📦";
+                case "gimp":
+                case "paint":
+                    return "🎨";
+                default:
+                    return "🧩";
+            }
+        }
+
+        #region BILINGUAL TRANSLATION FOR CLEANERML METADATA (EN-US / PT-BR)
+
+        private static bool IsPortuguese(string langCode)
+        {
+            return !string.IsNullOrEmpty(langCode) && langCode.StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string TranslateCleanerLabel(string rawLabel, string langCode)
+        {
+            if (!IsPortuguese(langCode) || string.IsNullOrEmpty(rawLabel)) return rawLabel;
+
+            switch (rawLabel.Trim())
+            {
+                case "Deep scan": return "Varredura Profunda (Deep Scan)";
+                case "Visual Studio Code and forks": return "Visual Studio Code e derivados";
+                default: return rawLabel;
+            }
+        }
+
+        public static string TranslateOptionLabel(string rawLabel, string langCode)
+        {
+            if (!IsPortuguese(langCode) || string.IsNullOrEmpty(rawLabel)) return rawLabel;
+
+            switch (rawLabel.Trim())
+            {
+                case "Cache": return "Cache";
+                case "Cookies": return "Cookies";
+                case "History": return "Histórico";
+                case "URL history": return "Histórico de URLs";
+                case "Download history": return "Histórico de downloads";
+                case "Form history": return "Histórico de formulários";
+                case "Search history": return "Histórico de pesquisa";
+                case "Search engines": return "Mecanismos de pesquisa";
+                case "Session": return "Sessão";
+                case "Site data": return "Dados de sites (LocalStorage / IndexedDB)";
+                case "Site preferences": return "Preferências de sites";
+                case "Passwords": return "Senhas salvas";
+                case "Sync": return "Sincronização (Sync)";
+                case "Vacuum": return "Compactar bancos SQLite (Vacuum)";
+                case "Crash reports": return "Relatórios de falhas (Crash reports)";
+                case "Logs": return "Arquivos de log";
+                case "Debug logs": return "Logs de depuração";
+                case "Temporary files": return "Arquivos temporários";
+                case "Backup files": return "Arquivos de backup";
+                case "Most recently used": return "Arquivos usados recentemente (MRU)";
+                case "Recent documents": return "Documentos recentes";
+                case "Recent documents list": return "Lista de documentos recentes";
+                case "Run": return "Executar (Win+R)";
+                case "Shellbags": return "Shellbags (Visualização de pastas)";
+                case "Thumbnails": return "Cache de miniaturas (Thumbnails)";
+                case "Quarantine": return "Arquivos em quarentena";
+                case "Installers": return "Instaladores em cache";
+                case "Statistics": return "Estatísticas";
+                case "Memory dump": return "Despejo de memória";
+                case "AI": return "Modelos locais de IA";
+                case "Gradle cache": return "Cache do Gradle";
+                case "IDE cache": return "Cache da IDE";
+                default: return rawLabel;
+            }
+        }
+
+        public static string TranslateOptionDescription(string rawDesc, string langCode)
+        {
+            if (!IsPortuguese(langCode) || string.IsNullOrEmpty(rawDesc)) return rawDesc;
+
+            switch (rawDesc.Trim())
+            {
+                case "Delete the cache": return "Excluir os arquivos de cache";
+                case "Delete the web cache, which reduces time to display revisited pages": return "Excluir o cache da web, que reduz o tempo de exibição de páginas revisitadas";
+                case "Delete cookies, which store login information, website preferences, and tracking identifiers": return "Excluir cookies, que armazenam sessões de login, preferências de sites e identificadores";
+                case "Delete the files": return "Excluir os arquivos";
+                case "Delete the logs": return "Excluir os registros de log";
+                case "Delete the debug logs": return "Excluir os logs de depuração";
+                case "Delete the temporary files": return "Excluir os arquivos temporários";
+                case "Delete the backup files": return "Excluir os arquivos de backup";
+                case "Delete the usage history": return "Excluir o histórico de uso";
+                case "Delete the history which includes visited sites, downloads, and thumbnails": return "Excluir o histórico de sites visitados, downloads e miniaturas";
+                case "List of visited web pages": return "Lista de páginas da web visitadas";
+                case "A history of forms entered in websites": return "Histórico de formulários preenchidos em sites";
+                case "Saved form entries and search bar history": return "Entradas de formulários salvas e histórico da barra de pesquisa";
+                case "Previously open tabs and windows": return "Guias e janelas abertas anteriormente";
+                case "Delete LocalStorage, IndexedDB, and other data stored by websites": return "Excluir LocalStorage, IndexedDB e outros dados armazenados por sites";
+                case "Settings for individual sites": return "Configurações específicas de sites individuais";
+                case "Delete the sync data (including web apps) and sign out of the browser": return "Excluir dados de sincronização e desconectar a conta do navegador";
+                case "A database of usernames and passwords as well as a list of sites that should not store passwords": return "Banco de dados de usuários e senhas salvas no navegador";
+                case "Clean database fragmentation to reduce space and improve speed without removing any data": return "Desfragmentar bancos de dados SQLite para reduzir espaço e melhorar a velocidade sem remover dados";
+                case "Reset the search engine usage history and delete non-factory search engines, some of which are added automatically": return "Redefinir o histórico de mecanismos de busca e excluir mecanismos adicionados automaticamente";
+                case "Delete the most recently used list": return "Excluir a lista de arquivos usados recentemente (MRU)";
+                case "Delete the list of recently used documents": return "Excluir a lista de documentos abertos recentemente";
+                case "Delete the Start menu's Run history": return "Excluir o histórico do comando Executar (Win+R)";
+                case "Delete the search history": return "Excluir o histórico de pesquisas";
+                case "Delete the folder view settings, window sizes, and positions": return "Excluir configurações de visualização de pastas, tamanhos e posições de janelas";
+                case "Delete the thumbnails of pictures and videos": return "Excluir o cache de miniaturas de imagens e vídeos";
+                case "Delete quarantined files": return "Excluir arquivos colocados em quarentena pelo Windows Defender";
+                case "Delete the AI models": return "Excluir modelos locais de inteligência artificial";
+                default: return rawDesc;
+            }
+        }
+
+        public static string TranslateWarningText(string rawWarning, string optId, string langCode)
+        {
+            bool pt = IsPortuguese(langCode);
+            if (!string.IsNullOrEmpty(rawWarning))
+            {
+                if (pt)
+                {
+                    if (rawWarning.IndexOf("delete your saved passwords", StringComparison.OrdinalIgnoreCase) >= 0)
+                        return "Esta opção excluirá suas senhas salvas.";
+                    if (rawWarning.IndexOf("slow", StringComparison.OrdinalIgnoreCase) >= 0)
+                        return "Esta operação realiza uma varredura profunda e pode levar alguns minutos.";
+                }
+                return rawWarning;
+            }
+
+            if (SensitiveOptionIds.Contains(optId ?? ""))
+            {
+                return pt
+                    ? "Esta opção pode remover sessões ativas de login, preferências ou dados sensíveis."
+                    : "This option may clear active login sessions, preferences, or sensitive data.";
+            }
+
+            return "";
+        }
+
+        #endregion
+    }
+
+    #endregion
+
+    #region 5. OPTIASSIST ADDON UI & CONTROLLER
+
+    /// <summary>
+    /// BleachBit CleanerML-powered System Cleaner & Optimizer Add-on Module compiled into SystemCleaner.dll.
     /// </summary>
     public class SystemCleanerAddon : IOptiAssistAddon
     {
         private IOptiAssistHost _host;
         private ObservableCollection<BaseCleaner> _allCleaners;
         private string _activeTab = "windows"; // "windows" or "apps"
+        private string _currentLang = "en-US";
         private bool _isBusy = false;
         private bool _disableSelectionWarnings = false;
+        private bool _hideUninstalledApps = true;
         private CancellationTokenSource _cts;
 
         // UI Controls - Left Pane
@@ -2337,6 +2586,7 @@ namespace OptiAssist.Addons.SystemCleaner
         private Button _btnSelectAll;
         private Button _btnDeselectAll;
         private Button _btnSelectRecommended;
+        private CheckBox _chkHideUninstalled;
         private CheckBox _chkDisableWarnings;
         private StackPanel _pnlCategoriesContainer;
         private TextBox _txtDeepScanRoot;
@@ -2375,7 +2625,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
         public string Id { get { return "system-cleaner"; } }
         public string Name { get { return T("Nav_SystemCleaner", "System Cleaner"); } }
-        public string Description { get { return T("Cleaner_Subtitle", "BleachBit-style modular dry-run analysis and safe cleaning for Windows, Browsers, Defender, and Developer caches"); } }
+        public string Description { get { return T("Cleaner_Subtitle", "BleachBit CleanerML-driven dry-run analysis and safe cleaning for Windows and applications"); } }
         public string Version { get { return "1.1.0.0"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🧹"; } }
@@ -2383,7 +2633,21 @@ namespace OptiAssist.Addons.SystemCleaner
         public void Initialize(IOptiAssistHost host)
         {
             _host = host;
+            DetectCurrentLanguage();
             InitCleaners();
+        }
+
+        private void DetectCurrentLanguage()
+        {
+            string probe = T("Cleaner_Quick_All", "Select All");
+            if (probe.IndexOf("Selecionar", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _currentLang = "pt-BR";
+            }
+            else
+            {
+                _currentLang = "en-US";
+            }
         }
 
         private string T(string key, string fallback)
@@ -2406,9 +2670,16 @@ namespace OptiAssist.Addons.SystemCleaner
         private void InitCleaners()
         {
             LoadCleanerSettings();
-            List<BaseCleaner> list = CleanerRegistry.CreateAllCleaners(T);
+            List<BaseCleaner> list = CleanerMlEngine.LoadAllCleanersFromXml(T, _currentLang);
             _allCleaners = new ObservableCollection<BaseCleaner>(list);
-            ApplyLocalizedMetadata();
+        }
+
+        private bool IsCleanerVisible(BaseCleaner cleaner)
+        {
+            if (cleaner == null) return false;
+            if (string.Equals(cleaner.TabId, "windows", StringComparison.OrdinalIgnoreCase)) return true;
+            if (!_hideUninstalledApps) return true;
+            return cleaner.IsInstalledOnSystem;
         }
 
         private string GetCleanerSettingsPath()
@@ -2443,6 +2714,17 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         _disableSelectionWarnings = false;
                     }
+
+                    if (json.IndexOf("\"HideUninstalledApps\": false", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        json.IndexOf("\"HideUninstalledApps\":false", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _hideUninstalledApps = false;
+                    }
+                    else if (json.IndexOf("\"HideUninstalledApps\": true", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             json.IndexOf("\"HideUninstalledApps\":true", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _hideUninstalledApps = true;
+                    }
                 }
             }
             catch { }
@@ -2455,36 +2737,12 @@ namespace OptiAssist.Addons.SystemCleaner
                 string path = GetCleanerSettingsPath();
                 if (!string.IsNullOrEmpty(path))
                 {
-                    string json = "{\r\n  \"DisableSelectionWarnings\": " + (_disableSelectionWarnings ? "true" : "false") + "\r\n}";
+                    string json = "{\r\n  \"DisableSelectionWarnings\": " + (_disableSelectionWarnings ? "true" : "false") +
+                                  ",\r\n  \"HideUninstalledApps\": " + (_hideUninstalledApps ? "true" : "false") + "\r\n}";
                     File.WriteAllText(path, json, new UTF8Encoding(false));
                 }
             }
             catch { }
-        }
-
-        private static ControlTemplate CreateGreenProgressBarTemplate()
-        {
-            FrameworkElementFactory borderRoot = new FrameworkElementFactory(typeof(Border));
-            borderRoot.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
-            borderRoot.SetResourceReference(Border.BackgroundProperty, "BrushBorderCard");
-            borderRoot.SetValue(Border.BorderThicknessProperty, new Thickness(0));
-
-            FrameworkElementFactory grid = new FrameworkElementFactory(typeof(Grid));
-
-            FrameworkElementFactory track = new FrameworkElementFactory(typeof(Border));
-            track.Name = "PART_Track";
-
-            FrameworkElementFactory indicator = new FrameworkElementFactory(typeof(Border));
-            indicator.Name = "PART_Indicator";
-            indicator.SetValue(Border.HorizontalAlignmentProperty, HorizontalAlignment.Left);
-            indicator.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
-            indicator.SetValue(Border.BackgroundProperty, new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50))); // CCleaner vibrant green
-
-            grid.AppendChild(track);
-            grid.AppendChild(indicator);
-            borderRoot.AppendChild(grid);
-
-            return new ControlTemplate(typeof(ProgressBar)) { VisualTree = borderRoot };
         }
 
         public FrameworkElement CreateView()
@@ -2498,6 +2756,7 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 Margin = new Thickness(0)
             };
+
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -2604,7 +2863,7 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 foreach (BaseCleaner c in _allCleaners)
                 {
-                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase) && IsCleanerVisible(c))
                     {
                         c.IsSelected = true;
                     }
@@ -2625,8 +2884,10 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 foreach (BaseCleaner c in _allCleaners)
                 {
-                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase) && IsCleanerVisible(c))
+                    {
                         c.IsSelected = false;
+                    }
                 }
                 UpdateSelectedSummary();
             };
@@ -2643,8 +2904,10 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 foreach (BaseCleaner c in _allCleaners)
                 {
-                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase) && IsCleanerVisible(c))
+                    {
                         c.IsSelected = c.IsRecommended && !c.IsDangerous;
+                    }
                 }
                 UpdateSelectedSummary();
             };
@@ -2653,6 +2916,34 @@ namespace OptiAssist.Addons.SystemCleaner
             spQuick.Children.Add(_btnDeselectAll);
             spQuick.Children.Add(_btnSelectRecommended);
             spQuickContainer.Children.Add(spQuick);
+
+            _chkHideUninstalled = new CheckBox
+            {
+                Content = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                    ? "Ocultar apps não instalados"
+                    : "Hide uninstalled applications",
+                FontSize = 10.5,
+                IsChecked = _hideUninstalledApps,
+                Margin = new Thickness(4, 6, 4, 0),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Cursor = Cursors.Hand
+            };
+            _chkHideUninstalled.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextSecondary");
+            _chkHideUninstalled.Checked += (s, e) =>
+            {
+                _hideUninstalledApps = true;
+                SaveCleanerSettings();
+                BuildCategoriesTree();
+                UpdateSelectedSummary();
+            };
+            _chkHideUninstalled.Unchecked += (s, e) =>
+            {
+                _hideUninstalledApps = false;
+                SaveCleanerSettings();
+                BuildCategoriesTree();
+                UpdateSelectedSummary();
+            };
+            spQuickContainer.Children.Add(_chkHideUninstalled);
 
             quickBar.Child = spQuickContainer;
 
@@ -2676,7 +2967,7 @@ namespace OptiAssist.Addons.SystemCleaner
             root.Children.Add(leftBorder);
 
             // -------------------------------------------------------------
-            // RIGHT COLUMN: TOP GREEN PROGRESS BAR + CENTER DISPLAY + BOTTOM ACTIONS
+            // RIGHT COLUMN: TOP PROGRESS BAR + CENTER DISPLAY + BOTTOM ACTIONS
             // -------------------------------------------------------------
             Border rightBorder = new Border
             {
@@ -2831,7 +3122,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
             _txtRunningItem = new TextBlock
             {
-                Text = "Taskleiste Jumplist",
+                Text = "Thumbnails",
                 FontSize = 12,
                 Margin = new Thickness(0, 2, 0, 0)
             };
@@ -3024,6 +3315,11 @@ namespace OptiAssist.Addons.SystemCleaner
                 _tabAppsText.SetResourceReference(TextBlock.ForegroundProperty, !isWindows ? "BrushTextPrimary" : "BrushTextSecondary");
             }
 
+            if (_chkHideUninstalled != null)
+            {
+                _chkHideUninstalled.Visibility = isWindows ? Visibility.Collapsed : Visibility.Visible;
+            }
+
             BuildCategoriesTree();
         }
 
@@ -3032,11 +3328,11 @@ namespace OptiAssist.Addons.SystemCleaner
             if (_pnlCategoriesContainer == null || _allCleaners == null) return;
             _pnlCategoriesContainer.Children.Clear();
 
-            // Group cleaners of the active tab by SectionId
+            // Group visible cleaners of the active tab by SectionId
             List<string> sections = new List<string>();
             foreach (BaseCleaner c in _allCleaners)
             {
-                if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase) && IsCleanerVisible(c))
                 {
                     if (!sections.Contains(c.SectionId))
                     {
@@ -3054,7 +3350,8 @@ namespace OptiAssist.Addons.SystemCleaner
                 foreach (BaseCleaner c in _allCleaners)
                 {
                     if (string.Equals(c.TabId, _activeTab, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(c.SectionId, secId, StringComparison.OrdinalIgnoreCase))
+                        string.Equals(c.SectionId, secId, StringComparison.OrdinalIgnoreCase) &&
+                        IsCleanerVisible(c))
                     {
                         items.Add(c);
                         secTitle = c.SectionTitle;
@@ -3090,7 +3387,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 secHeader.Children.Add(titleTb);
                 _pnlCategoriesContainer.Children.Add(secHeader);
 
-                // Checkboxes for each item
+                // Checkboxes for each option
                 foreach (BaseCleaner cleaner in items)
                 {
                     CheckBox cb = new CheckBox
@@ -3161,7 +3458,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
 
                 // If Deep Scan section, add root folder picker row and Disable Warnings checkbox
-                if (secId == "deep_scan")
+                if (string.Equals(secId, "deep_scan", StringComparison.OrdinalIgnoreCase))
                 {
                     _chkDisableWarnings = new CheckBox
                     {
@@ -3281,7 +3578,7 @@ namespace OptiAssist.Addons.SystemCleaner
             int count = 0;
             foreach (BaseCleaner c in _allCleaners)
             {
-                if (c.IsSelected)
+                if (c.IsSelected && IsCleanerVisible(c))
                 {
                     count++;
                     totalBytes += c.SizeBytes;
@@ -3342,7 +3639,7 @@ namespace OptiAssist.Addons.SystemCleaner
             List<BaseCleaner> selected = new List<BaseCleaner>();
             foreach (BaseCleaner c in _allCleaners)
             {
-                if (c.IsSelected) selected.Add(c);
+                if (c.IsSelected && IsCleanerVisible(c)) selected.Add(c);
             }
 
             if (selected.Count == 0)
@@ -3366,8 +3663,8 @@ namespace OptiAssist.Addons.SystemCleaner
                 List<BaseCleaner> withFindings = new List<BaseCleaner>();
 
                 Log("=================================================");
-                Log("   STARTING SYSTEM CLEANER DRY-RUN SCAN          ");
-                Log(string.Format("   Selected modules: {0} | Elevated: {1}", selected.Count, ctx.IsProcessElevated));
+                Log("   STARTING SYSTEM CLEANER DRY-RUN SCAN (XML)    ");
+                Log(string.Format("   Selected options: {0} | Elevated: {1}", selected.Count, ctx.IsProcessElevated));
                 Log("=================================================");
 
                 for (int i = 0; i < selected.Count; i++)
@@ -3402,8 +3699,8 @@ namespace OptiAssist.Addons.SystemCleaner
                         withFindings.Add(cleaner);
                     }
 
-                    Log(string.Format("[SCAN] {0}: {1} ({2} items found, {3} skipped/locked)",
-                        cleaner.Name, BaseCleaner.FormatBytes(sr.EstimatedBytes), sr.FoundItems.Count, sr.SkippedOrLockedCount));
+                    Log(string.Format("[SCAN] {0} ({1}): {2} ({3} items found, {4} skipped/locked)",
+                        cleaner.SectionTitle, cleaner.Name, BaseCleaner.FormatBytes(sr.EstimatedBytes), sr.FoundItems.Count, sr.SkippedOrLockedCount));
                 }
 
                 Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -3471,7 +3768,6 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
                 else
                 {
-                    // Group findings by section
                     Dictionary<string, List<BaseCleaner>> grouped = new Dictionary<string, List<BaseCleaner>>();
                     foreach (BaseCleaner c in withFindings)
                     {
@@ -3684,13 +3980,17 @@ namespace OptiAssist.Addons.SystemCleaner
                                         {
                                             try
                                             {
-                                                if (File.Exists(capturedPath) || Directory.Exists(capturedPath))
+                                                string cleanPath = capturedPath;
+                                                int bracketIdx = cleanPath.IndexOf(" [", StringComparison.Ordinal);
+                                                if (bracketIdx > 0) cleanPath = cleanPath.Substring(0, bracketIdx);
+
+                                                if (File.Exists(cleanPath) || Directory.Exists(cleanPath))
                                                 {
-                                                    Process.Start("explorer.exe", string.Format("/select,\"{0}\"", capturedPath));
+                                                    Process.Start("explorer.exe", string.Format("/select,\"{0}\"", cleanPath));
                                                 }
                                                 else
                                                 {
-                                                    string dir = Path.GetDirectoryName(capturedPath);
+                                                    string dir = Path.GetDirectoryName(cleanPath);
                                                     if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
                                                     {
                                                         Process.Start("explorer.exe", dir);
@@ -3758,28 +4058,50 @@ namespace OptiAssist.Addons.SystemCleaner
             }
         }
 
+        private List<string> CheckRunningProcessesForSelected(List<BaseCleaner> selected)
+        {
+            List<string> activeApps = new List<string>();
+            HashSet<string> checkedExes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (BaseCleaner c in selected)
+            {
+                if (c.RunningExecutables == null) continue;
+                foreach (string exe in c.RunningExecutables)
+                {
+                    if (string.IsNullOrWhiteSpace(exe) || !checkedExes.Add(exe)) continue;
+                    try
+                    {
+                        string procName = Path.GetFileNameWithoutExtension(exe);
+                        if (!string.IsNullOrEmpty(procName) && Process.GetProcessesByName(procName).Length > 0)
+                        {
+                            activeApps.Add(string.Format("{0} ({1})", c.SectionTitle, exe));
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            return activeApps;
+        }
+
         private void BtnClean_Click(object sender, RoutedEventArgs e)
         {
             if (_isBusy || _allCleaners == null) return;
 
             List<BaseCleaner> selected = new List<BaseCleaner>();
             List<string> warnings = new List<string>();
-            bool hasChromeSelected = false;
-            bool hasEdgeSelected = false;
             long estimatedSpace = 0;
 
             foreach (BaseCleaner c in _allCleaners)
             {
-                if (c.IsSelected)
+                if (c.IsSelected && IsCleanerVisible(c))
                 {
                     selected.Add(c);
                     estimatedSpace += c.SizeBytes;
                     if (c.IsDangerous && !string.IsNullOrEmpty(c.WarningMessage))
                     {
-                        warnings.Add("• " + c.Name + ": " + c.WarningMessage);
+                        warnings.Add("• " + c.SectionTitle + " - " + c.Name + ": " + c.WarningMessage);
                     }
-                    if (string.Equals(c.SectionId, "chrome", StringComparison.OrdinalIgnoreCase)) hasChromeSelected = true;
-                    if (string.Equals(c.SectionId, "edge", StringComparison.OrdinalIgnoreCase)) hasEdgeSelected = true;
                 }
             }
 
@@ -3789,33 +4111,16 @@ namespace OptiAssist.Addons.SystemCleaner
                 return;
             }
 
-            // Check running browsers
-            if (hasChromeSelected)
+            // Check running processes defined in CleanerML <running type="exe" os="windows">
+            List<string> runningApps = CheckRunningProcessesForSelected(selected);
+            if (runningApps.Count > 0)
             {
-                List<string> chromeRunning = ChromiumHelper.GetRunningChromiumBrowsers("chrome");
-                if (chromeRunning.Count > 0)
+                string browserMsg = string.Format(
+                    T("Msg_CleanerBrowserRunning", "The following applications are currently running:\n• {0}\n\nOpen databases (Cookies, History, SQLite Vacuum) may be locked. Close the application first for a complete cleanup, or click Yes to continue and skip locked files."),
+                    string.Join("\n• ", runningApps.ToArray()));
+                if (MessageBox.Show(browserMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 {
-                    string browserMsg = string.Format(
-                        T("Msg_CleanerBrowserRunning", "The following browsers are currently running:\n• {0}\n\nOpen browser databases (Cookies, History, SQLite Vacuum) may be locked. Close the browser first for a complete cleanup, or click Yes to continue and skip locked files."),
-                        string.Join("\n• ", chromeRunning.ToArray()));
-                    if (MessageBox.Show(browserMsg, "OptiAssist - Browser Running", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
-                    {
-                        return;
-                    }
-                }
-            }
-            if (hasEdgeSelected)
-            {
-                List<string> edgeRunning = ChromiumHelper.GetRunningChromiumBrowsers("edge");
-                if (edgeRunning.Count > 0)
-                {
-                    string browserMsg = string.Format(
-                        T("Msg_CleanerBrowserRunning", "The following browsers are currently running:\n• {0}\n\nOpen browser databases (Cookies, History, SQLite Vacuum) may be locked. Close the browser first for a complete cleanup, or click Yes to continue and skip locked files."),
-                        string.Join("\n• ", edgeRunning.ToArray()));
-                    if (MessageBox.Show(browserMsg, "OptiAssist - Browser Running", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
-                    {
-                        return;
-                    }
+                    return;
                 }
             }
 
@@ -3859,8 +4164,8 @@ namespace OptiAssist.Addons.SystemCleaner
                 List<BaseCleaner> cleanedItems = new List<BaseCleaner>();
 
                 Log("=================================================");
-                Log("   STARTING SYSTEM CLEANING & OPTIMIZATION       ");
-                Log(string.Format("   Modules to clean: {0}", selected.Count));
+                Log("   STARTING SYSTEM CLEANING & OPTIMIZATION (XML) ");
+                Log(string.Format("   Options to clean: {0}", selected.Count));
                 Log("=================================================");
 
                 for (int i = 0; i < selected.Count; i++)
@@ -3876,7 +4181,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         _txtPercent.Text = pct + "%";
                         _txtRunningCategory.Text = cleaner.SectionTitle;
                         _txtRunningItem.Text = cleaner.Name;
-                        _txtRunningStats.Text = string.Format("{0} freed • {1} files deleted",
+                        _txtRunningStats.Text = string.Format("{0} freed • {1} items cleaned",
                             BaseCleaner.FormatBytes(totalFreed), totalDeleted);
                     }));
 
@@ -3947,7 +4252,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 StackPanel sp = new StackPanel();
                 TextBlock tb = new TextBlock
                 {
-                    Text = string.Format("✔️ {0} files deleted • {1} reclaimable space freed.", totalDeleted, BaseCleaner.FormatBytes(totalFreed)),
+                    Text = string.Format("✔️ {0} items cleaned • {1} reclaimable space freed.", totalDeleted, BaseCleaner.FormatBytes(totalFreed)),
                     FontSize = 12,
                     FontWeight = FontWeights.SemiBold,
                     HorizontalAlignment = HorizontalAlignment.Center
@@ -3959,7 +4264,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 {
                     TextBlock tbSkipped = new TextBlock
                     {
-                        Text = string.Format("ℹ️ {0} files were skipped because they were currently locked or in use.", totalSkipped),
+                        Text = string.Format("ℹ️ {0} items were skipped because they were currently locked or in use.", totalSkipped),
                         FontSize = 10,
                         Margin = new Thickness(0, 4, 0, 0),
                         HorizontalAlignment = HorizontalAlignment.Center
@@ -3984,7 +4289,7 @@ namespace OptiAssist.Addons.SystemCleaner
             string msg = string.Format(
                 T("Msg_CleanerDangerousPrompt",
                   "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nThis option may clear active login sessions, browsing preferences, or sensitive caches.\n\nAre you sure you want to enable this option for cleaning anyway?"),
-                cleaner.Name, warn);
+                cleaner.SectionTitle + " - " + cleaner.Name, warn);
 
             Window win = new Window
             {
@@ -4095,11 +4400,19 @@ namespace OptiAssist.Addons.SystemCleaner
 
         public void OnLanguageChanged(string langCode)
         {
+            _currentLang = string.IsNullOrEmpty(langCode) ? "en-US" : langCode;
+
             if (_tabWindowsText != null) _tabWindowsText.Text = T("Cleaner_Tab_Windows", "Windows");
             if (_tabAppsText != null) _tabAppsText.Text = T("Cleaner_Tab_Apps", "Applications");
             if (_btnSelectAll != null) _btnSelectAll.Content = T("Cleaner_Quick_All", "Select All");
             if (_btnDeselectAll != null) _btnDeselectAll.Content = T("Cleaner_Quick_None", "Deselect All");
             if (_btnSelectRecommended != null) _btnSelectRecommended.Content = T("Cleaner_Quick_Default", "Defaults");
+            if (_chkHideUninstalled != null)
+            {
+                _chkHideUninstalled.Content = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                    ? "Ocultar apps não instalados"
+                    : "Hide uninstalled applications";
+            }
             if (_chkDisableWarnings != null) _chkDisableWarnings.Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items");
             if (_txtIdleTitle != null) _txtIdleTitle.Text = T("Cleaner_Status_Idle_Title", "System Cleaner & Optimizer");
             if (_txtIdleDesc != null) _txtIdleDesc.Text = T("Cleaner_Status_Idle_Desc", "Select the items you wish to clean on the left, then click 'Analyze' to check cleanable space or 'Run Cleaner' to begin.");
@@ -4115,23 +4428,16 @@ namespace OptiAssist.Addons.SystemCleaner
         {
             if (_allCleaners == null) return;
 
-            List<BaseCleaner> localizedTemplates = CleanerRegistry.CreateAllCleaners(T);
-            Dictionary<string, BaseCleaner> map = new Dictionary<string, BaseCleaner>();
-            foreach (BaseCleaner tmpl in localizedTemplates)
-            {
-                map[tmpl.Id] = tmpl;
-            }
-
             foreach (BaseCleaner item in _allCleaners)
             {
-                BaseCleaner tmpl;
-                if (map.TryGetValue(item.Id, out tmpl))
+                CleanerMlOptionCleaner xmlOpt = item as CleanerMlOptionCleaner;
+                if (xmlOpt != null)
                 {
-                    item.Name = tmpl.Name;
-                    item.Description = tmpl.Description;
-                    item.Category = tmpl.Category;
-                    item.SectionTitle = tmpl.SectionTitle;
-                    item.WarningMessage = tmpl.WarningMessage;
+                    xmlOpt.SectionTitle = CleanerMlEngine.TranslateCleanerLabel(xmlOpt.RawCleanerLabel, _currentLang);
+                    xmlOpt.Category = xmlOpt.SectionTitle;
+                    xmlOpt.Name = CleanerMlEngine.TranslateOptionLabel(xmlOpt.RawOptionLabel, _currentLang);
+                    xmlOpt.Description = CleanerMlEngine.TranslateOptionDescription(xmlOpt.RawOptionDescription, _currentLang);
+                    xmlOpt.WarningMessage = CleanerMlEngine.TranslateWarningText(xmlOpt.RawWarning, xmlOpt.OptionXmlId, _currentLang);
                 }
             }
         }
