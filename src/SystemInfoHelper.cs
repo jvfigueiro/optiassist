@@ -7,6 +7,15 @@ using Microsoft.Win32;
 
 namespace OptiAssist
 {
+    public class ProblemDeviceEntry
+    {
+        public string Name { get; set; }
+        public string DeviceId { get; set; }
+        public string HardwareId { get; set; }
+        public int ErrorCode { get; set; }
+        public string StatusDescription { get; set; }
+    }
+
     public class HardwareSummary
     {
         public string OsName { get; set; }
@@ -32,6 +41,7 @@ namespace OptiAssist
         public bool SecureBootActive { get; set; }
         public string BitLockerStatus { get; set; }
         public bool BitLockerActive { get; set; }
+        public System.Collections.Generic.List<ProblemDeviceEntry> ProblemDevices { get; set; }
 
         public HardwareSummary()
         {
@@ -51,6 +61,7 @@ namespace OptiAssist
             TpmStatus = "Detecting TPM...";
             SecureBootStatus = "Detecting Secure Boot...";
             BitLockerStatus = "Detecting BitLocker...";
+            ProblemDevices = new System.Collections.Generic.List<ProblemDeviceEntry>();
         }
     }
 
@@ -167,18 +178,17 @@ namespace OptiAssist
                     {
                         if (mo["SerialNumber"] != null)
                         {
-                            string sn = mo["SerialNumber"].ToString().Trim();
-                            if (!string.IsNullOrEmpty(sn) &&
-                                !sn.Equals("To be filled by O.E.M.", StringComparison.OrdinalIgnoreCase) &&
-                                !sn.Equals("Default string", StringComparison.OrdinalIgnoreCase) &&
-                                !sn.Equals("System Serial Number", StringComparison.OrdinalIgnoreCase))
+                            string sn = SanitizeSmbiosValue(mo["SerialNumber"].ToString());
+                            if (!string.IsNullOrEmpty(sn) && sn != LocalizationHelper.Get("Status_NotAvailable", "Not available"))
                             {
                                 summary.SerialNumber = sn;
                             }
                         }
 
-                        string biosVendor = mo["Manufacturer"] != null ? mo["Manufacturer"].ToString().Trim() : "";
-                        string biosVer = mo["SMBIOSBIOSVersion"] != null ? mo["SMBIOSBIOSVersion"].ToString().Trim() : "";
+                        string biosVendor = mo["Manufacturer"] != null ? SanitizeSmbiosValue(mo["Manufacturer"].ToString()) : "";
+                        if (biosVendor == LocalizationHelper.Get("Status_NotAvailable", "Not available")) biosVendor = "";
+                        string biosVer = mo["SMBIOSBIOSVersion"] != null ? SanitizeSmbiosValue(mo["SMBIOSBIOSVersion"].ToString()) : "";
+                        if (biosVer == LocalizationHelper.Get("Status_NotAvailable", "Not available")) biosVer = "";
                         string biosDate = "";
                         if (mo["ReleaseDate"] != null)
                         {
@@ -196,7 +206,8 @@ namespace OptiAssist
                             }
                         }
 
-                        summary.BiosInfo = string.Format("{0} v{1} ({2})", biosVendor, biosVer, biosDate).Trim();
+                        string formattedBios = string.Format("{0} {1} {2}", biosVendor, string.IsNullOrEmpty(biosVer) ? "" : "v" + biosVer, string.IsNullOrEmpty(biosDate) ? "" : "(" + biosDate + ")").Trim();
+                        summary.BiosInfo = SanitizeSmbiosValue(formattedBios);
                         break;
                     }
                 }
@@ -204,7 +215,7 @@ namespace OptiAssist
             catch { }
 
             // Fallback for Serial Number via Win32_ComputerSystemProduct
-            if (string.IsNullOrEmpty(summary.SerialNumber) || summary.SerialNumber == "Not informed" || summary.SerialNumber == "Não informado")
+            if (string.IsNullOrEmpty(summary.SerialNumber) || summary.SerialNumber == "Not informed" || summary.SerialNumber == "Não informado" || summary.SerialNumber == LocalizationHelper.Get("Status_NotAvailable", "Not available"))
             {
                 try
                 {
@@ -214,10 +225,8 @@ namespace OptiAssist
                         {
                             if (mo["IdentifyingNumber"] != null)
                             {
-                                string id = mo["IdentifyingNumber"].ToString().Trim();
-                                if (!string.IsNullOrEmpty(id) &&
-                                    !id.Equals("To be filled by O.E.M.", StringComparison.OrdinalIgnoreCase) &&
-                                    !id.Equals("Default string", StringComparison.OrdinalIgnoreCase))
+                                string id = SanitizeSmbiosValue(mo["IdentifyingNumber"].ToString());
+                                if (!string.IsNullOrEmpty(id) && id != LocalizationHelper.Get("Status_NotAvailable", "Not available"))
                                 {
                                     summary.SerialNumber = id;
                                     break;
@@ -236,16 +245,19 @@ namespace OptiAssist
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        string mbVendor = mo["Manufacturer"] != null ? mo["Manufacturer"].ToString().Trim() : "";
-                        string mbProduct = mo["Product"] != null ? mo["Product"].ToString().Trim() : "";
-                        summary.Motherboard = string.Format("{0} {1}", mbVendor, mbProduct).Trim();
+                        string mbVendor = mo["Manufacturer"] != null ? SanitizeSmbiosValue(mo["Manufacturer"].ToString()) : "";
+                        if (mbVendor == LocalizationHelper.Get("Status_NotAvailable", "Not available")) mbVendor = "";
+                        string mbProduct = mo["Product"] != null ? SanitizeSmbiosValue(mo["Product"].ToString()) : "";
+                        if (mbProduct == LocalizationHelper.Get("Status_NotAvailable", "Not available")) mbProduct = "";
+                        string combinedMb = string.Format("{0} {1}", mbVendor, mbProduct).Trim();
+                        summary.Motherboard = SanitizeSmbiosValue(combinedMb);
                         break;
                     }
                 }
             }
             catch
             {
-                summary.Motherboard = "Unknown Motherboard";
+                summary.Motherboard = LocalizationHelper.Get("Status_NotAvailable", "Not available");
             }
 
             // 4. Processor (CPU)
@@ -267,19 +279,44 @@ namespace OptiAssist
                 summary.CpuName = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown Processor";
             }
 
-            // 5. RAM Memory
+            // 5. RAM Memory (Physical sum first, then usable fallback with friendly rounding)
             try
             {
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
+                ulong physicalBytesSum = 0;
+                try
                 {
-                    foreach (ManagementObject mo in searcher.Get())
+                    using (ManagementObjectSearcher physSearcher = new ManagementObjectSearcher("SELECT Capacity FROM Win32_PhysicalMemory"))
                     {
-                        if (mo["TotalPhysicalMemory"] != null)
+                        foreach (ManagementObject mo in physSearcher.Get())
                         {
-                            ulong totalBytes = Convert.ToUInt64(mo["TotalPhysicalMemory"]);
-                            summary.RamTotalGb = Math.Round(totalBytes / (1024.0 * 1024.0 * 1024.0), 1);
+                            if (mo["Capacity"] != null)
+                            {
+                                physicalBytesSum += Convert.ToUInt64(mo["Capacity"]);
+                            }
                         }
-                        break;
+                    }
+                }
+                catch { }
+
+                if (physicalBytesSum > 0)
+                {
+                    double rawGb = physicalBytesSum / (1024.0 * 1024.0 * 1024.0);
+                    summary.RamTotalGb = NormalizeRamGb(rawGb);
+                }
+                else
+                {
+                    using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
+                    {
+                        foreach (ManagementObject mo in searcher.Get())
+                        {
+                            if (mo["TotalPhysicalMemory"] != null)
+                            {
+                                ulong totalBytes = Convert.ToUInt64(mo["TotalPhysicalMemory"]);
+                                double rawGb = totalBytes / (1024.0 * 1024.0 * 1024.0);
+                                summary.RamTotalGb = NormalizeRamGb(rawGb);
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -444,6 +481,9 @@ namespace OptiAssist
 
             // 10. BitLocker & Device Encryption
             DetectBitLockerStatus(summary);
+
+            // 11. Problem / Missing Drivers Detection (Win32_PnPEntity with ConfigManagerErrorCode != 0)
+            DetectProblemDevices(summary);
 
             return summary;
         }
@@ -686,6 +726,135 @@ namespace OptiAssist
             catch (Exception ex)
             {
                 log("[WINSAT ERROR] Failed to run benchmark: " + ex.Message);
+            }
+        }
+
+        public static string SanitizeSmbiosValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return LocalizationHelper.Get("Status_NotAvailable", "Not available");
+            }
+
+            string s = value.Trim();
+
+            // Check against common OEM and generic BIOS placeholders
+            if (s.Equals("To be filled by O.E.M.", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("To Be Filled By O.E.M.", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("To Be Filled bt OEM", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("To be filled by OEM", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("To Be Filled By OEM", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("System Product Name", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("System Manufacturer", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("System Serial Number", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Default string", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("All Series", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("None", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Type2 - Board Serial Number", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("0123456789", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Base Board Serial Number", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Chassis Serial Number", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Not Specified", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("SKU", StringComparison.OrdinalIgnoreCase))
+            {
+                return LocalizationHelper.Get("Status_NotAvailable", "Not available");
+            }
+
+            return s;
+        }
+
+        public static double NormalizeRamGb(double rawGb)
+        {
+            if (rawGb <= 0) return 0;
+
+            // Common desktop/laptop RAM capacities (GB)
+            double[] standardCapacities = new double[] { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256 };
+            foreach (double std in standardCapacities)
+            {
+                // If raw reported RAM is within standard bounds (e.g. 7.1GB - 8.05GB -> 8GB)
+                if (rawGb >= (std * 0.88) && rawGb <= (std * 1.05))
+                {
+                    return std;
+                }
+            }
+
+            return Math.Round(rawGb, 1);
+        }
+
+        private static void DetectProblemDevices(HardwareSummary summary)
+        {
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Name, DeviceID, HardwareID, ConfigManagerErrorCode, Status FROM Win32_PnPEntity WHERE ConfigManagerErrorCode IS NOT NULL AND ConfigManagerErrorCode <> 0"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        try
+                        {
+                            int errCode = Convert.ToInt32(mo["ConfigManagerErrorCode"]);
+                            string devName = mo["Name"] != null ? mo["Name"].ToString().Trim() : "";
+                            string devId = mo["DeviceID"] != null ? mo["DeviceID"].ToString().Trim() : "";
+                            string hwId = "";
+
+                            if (mo["HardwareID"] is string[])
+                            {
+                                string[] hwArr = (string[])mo["HardwareID"];
+                                if (hwArr.Length > 0 && !string.IsNullOrEmpty(hwArr[0])) hwId = hwArr[0];
+                            }
+                            else if (mo["HardwareID"] != null)
+                            {
+                                hwId = mo["HardwareID"].ToString();
+                            }
+
+                            if (string.IsNullOrEmpty(devName))
+                            {
+                                devName = !string.IsNullOrEmpty(hwId) ? hwId : (!string.IsNullOrEmpty(devId) ? devId : "Unknown Device");
+                            }
+
+                            string statusDesc = GetProblemDeviceDescription(errCode);
+
+                            summary.ProblemDevices.Add(new ProblemDeviceEntry
+                            {
+                                Name = devName,
+                                DeviceId = devId,
+                                HardwareId = hwId,
+                                ErrorCode = errCode,
+                                StatusDescription = statusDesc
+                            });
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static string GetProblemDeviceDescription(int errorCode)
+        {
+            switch (errorCode)
+            {
+                case 1:
+                case 28:
+                    return LocalizationHelper.Get("DevStatus_DriverMissing", "Driver not installed (Code 28)");
+                case 10:
+                    return LocalizationHelper.Get("DevStatus_Code10", "Device cannot start (Code 10)");
+                case 12:
+                    return LocalizationHelper.Get("DevStatus_Code12", "Cannot find enough free resources (Code 12)");
+                case 14:
+                    return LocalizationHelper.Get("DevStatus_Code14", "Restart required to complete setup (Code 14)");
+                case 18:
+                    return LocalizationHelper.Get("DevStatus_Code18", "Reinstall drivers for this device (Code 18)");
+                case 19:
+                    return LocalizationHelper.Get("DevStatus_Code19", "Registry information is incomplete or damaged (Code 19)");
+                case 22:
+                    return LocalizationHelper.Get("DevStatus_Code22", "Device is disabled (Code 22)");
+                case 31:
+                    return LocalizationHelper.Get("DevStatus_Code31", "Device not working properly (Code 31)");
+                case 43:
+                    return LocalizationHelper.Get("DevStatus_Code43", "Device stopped because it reported problems (Code 43)");
+                default:
+                    return string.Format(LocalizationHelper.Get("DevStatus_GenericProblem", "Hardware or driver issue (Code {0})"), errorCode);
             }
         }
 

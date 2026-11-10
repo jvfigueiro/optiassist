@@ -504,6 +504,28 @@ namespace OptiAssist
             UpdateStatusBadge(txtTpmStatus, info.TpmStatus);
             UpdateStatusBadge(txtSecureBootStatus, info.SecureBootStatus);
 
+            if (txtDriversStatus != null)
+            {
+                if (info.ProblemDevices != null && info.ProblemDevices.Count > 0)
+                {
+                    txtDriversStatus.Text = string.Format(LocalizationHelper.Get("Status_DriversIssue", "{0} issue(s) detected"), info.ProblemDevices.Count);
+                    txtDriversStatus.SetResourceReference(TextBlock.ForegroundProperty, "BrushDanger");
+                    if (pnlDriversStatus != null)
+                    {
+                        pnlDriversStatus.ToolTip = string.Format("{0} device(s) missing or with driver issues. Click to inspect.", info.ProblemDevices.Count);
+                    }
+                }
+                else
+                {
+                    txtDriversStatus.Text = LocalizationHelper.Get("Status_DriversOk", "All drivers OK");
+                    txtDriversStatus.SetResourceReference(TextBlock.ForegroundProperty, "BrushSuccess");
+                    if (pnlDriversStatus != null)
+                    {
+                        pnlDriversStatus.ToolTip = "All device drivers are functional and operating properly.";
+                    }
+                }
+            }
+
             // Clean Header Bar: Motherboard on line 1, CPU and RAM on line 2
             lblHeaderDevice.Text = info.Motherboard;
             lblHeaderDevice.ToolTip = string.Format("{0}: {1}\n{2}: {3}\n{4}: {5}",
@@ -543,9 +565,11 @@ namespace OptiAssist
 
             // Hardware Information Card (Left - 1 per line)
             string sn = info.SerialNumber;
-            if (string.IsNullOrEmpty(sn) || sn == "Not informed" || sn == "Não informado" || sn == "Not available" || sn == "...")
+            string notAvailStr = LocalizationHelper.Get("Status_NotAvailable", "Not available");
+            string notInfStr = LocalizationHelper.Get("Status_NotInformed", "Not informed");
+            if (string.IsNullOrEmpty(sn) || sn == "Not informed" || sn == "Não informado" || sn == "Not available" || sn == "Não disponível" || sn == "...")
             {
-                lblSerialNumber.Text = LocalizationHelper.Get("Status_NotInformed", "Not informed");
+                lblSerialNumber.Text = notAvailStr;
             }
             else
             {
@@ -569,7 +593,9 @@ namespace OptiAssist
         private void BtnCopySerial_Click(object sender, RoutedEventArgs e)
         {
             string sn = lblSerialNumber.Text;
-            if (!string.IsNullOrEmpty(sn) && sn != "..." && sn != "Não informado" && sn != "Not informed" && sn != "Not available")
+            string notAvailStr = LocalizationHelper.Get("Status_NotAvailable", "Not available");
+            string notInfStr = LocalizationHelper.Get("Status_NotInformed", "Not informed");
+            if (!string.IsNullOrEmpty(sn) && sn != "..." && sn != "Não informado" && sn != "Not informed" && sn != "Not available" && sn != "Não disponível" && sn != notAvailStr && sn != notInfStr)
             {
                 Clipboard.SetText(sn);
                 MessageBox.Show(LocalizationHelper.Get("Msg_SerialCopied", "Serial number copied to clipboard!") + "\n\n" + sn, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -599,6 +625,223 @@ namespace OptiAssist
                     Log("[BIOS WARNING] " + error);
                 }
             }
+        }
+
+        private void PnlDriversStatus_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            ShowProblemDriversDialog();
+        }
+
+        private void ShowProblemDriversDialog()
+        {
+            var probDevs = _hardware != null && _hardware.ProblemDevices != null
+                ? _hardware.ProblemDevices
+                : new System.Collections.Generic.List<ProblemDeviceEntry>();
+
+            Window win = new Window
+            {
+                Title = LocalizationHelper.Get("Drivers_Dialog_Title", "OptiAssist - Hardware Drivers Status"),
+                Width = 620,
+                Height = 440,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.CanResizeWithGrip
+            };
+            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
+
+            Grid root = new Grid { Margin = new Thickness(16) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            TextBlock header = new TextBlock
+            {
+                FontSize = 13,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 10),
+                TextWrapping = TextWrapping.Wrap
+            };
+            header.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+
+            if (probDevs.Count == 0)
+            {
+                header.Text = "✔️ " + LocalizationHelper.Get("Drivers_Dialog_Ok", "All hardware devices and drivers are currently operating properly with no errors detected.");
+                header.SetResourceReference(TextBlock.ForegroundProperty, "BrushSuccess");
+            }
+            else
+            {
+                header.Text = string.Format("⚠️ {0} ({1})",
+                    LocalizationHelper.Get("Drivers_Dialog_IssuesFound", "The following hardware devices were found with missing or faulty drivers in Windows:"),
+                    probDevs.Count);
+            }
+            Grid.SetRow(header, 0);
+            root.Children.Add(header);
+
+            ScrollViewer sv = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            StackPanel list = new StackPanel();
+
+            if (probDevs.Count == 0)
+            {
+                Border okBox = new Border
+                {
+                    Padding = new Thickness(16),
+                    CornerRadius = new CornerRadius(6),
+                    BorderThickness = new Thickness(1),
+                    Margin = new Thickness(0, 10, 0, 0)
+                };
+                okBox.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+                okBox.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+                TextBlock okText = new TextBlock
+                {
+                    Text = "No missing drivers or hardware code errors were found in Device Manager (PnP entities).",
+                    FontSize = 11.5,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                okText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                okBox.Child = okText;
+                list.Children.Add(okBox);
+            }
+            else
+            {
+                foreach (var dev in probDevs)
+                {
+                    Border card = new Border
+                    {
+                        CornerRadius = new CornerRadius(6),
+                        BorderThickness = new Thickness(1),
+                        Padding = new Thickness(10),
+                        Margin = new Thickness(0, 0, 0, 8)
+                    };
+                    card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+                    card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                    StackPanel cardSp = new StackPanel();
+
+                    TextBlock nameTb = new TextBlock
+                    {
+                        Text = "⚠️ " + dev.Name,
+                        FontWeight = FontWeights.Bold,
+                        FontSize = 11.5
+                    };
+                    nameTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                    cardSp.Children.Add(nameTb);
+
+                    TextBlock statusTb = new TextBlock
+                    {
+                        Text = "Status: " + dev.StatusDescription,
+                        FontSize = 10.5,
+                        Margin = new Thickness(0, 2, 0, 4)
+                    };
+                    statusTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushDanger");
+                    cardSp.Children.Add(statusTb);
+
+                    if (!string.IsNullOrEmpty(dev.HardwareId))
+                    {
+                        Grid hwRow = new Grid { Margin = new Thickness(0, 2, 0, 0) };
+                        hwRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                        hwRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                        TextBlock hwTb = new TextBlock
+                        {
+                            Text = "Hardware ID: " + dev.HardwareId,
+                            FontSize = 10,
+                            FontFamily = new FontFamily("Consolas, Segoe UI"),
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        hwTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                        Grid.SetColumn(hwTb, 0);
+                        hwRow.Children.Add(hwTb);
+
+                        Button btnCopyHw = new Button
+                        {
+                            Content = "📋 Copy ID",
+                            FontSize = 9.5,
+                            Height = 20,
+                            Padding = new Thickness(6, 0, 6, 0),
+                            Margin = new Thickness(6, 0, 0, 0),
+                            Cursor = Cursors.Hand
+                        };
+                        btnCopyHw.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                        string capturedHw = dev.HardwareId;
+                        btnCopyHw.Click += (s, e) =>
+                        {
+                            try { Clipboard.SetText(capturedHw); MessageBox.Show(win, "Hardware ID copied to clipboard:\n\n" + capturedHw, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information); } catch { }
+                        };
+                        Grid.SetColumn(btnCopyHw, 1);
+                        hwRow.Children.Add(btnCopyHw);
+
+                        cardSp.Children.Add(hwRow);
+                    }
+
+                    if (!string.IsNullOrEmpty(dev.DeviceId) && dev.DeviceId != dev.HardwareId)
+                    {
+                        TextBlock idTb = new TextBlock
+                        {
+                            Text = "Device ID: " + dev.DeviceId,
+                            FontSize = 9.5,
+                            FontFamily = new FontFamily("Consolas, Segoe UI"),
+                            Margin = new Thickness(0, 2, 0, 0),
+                            TextTrimming = TextTrimming.CharacterEllipsis
+                        };
+                        idTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+                        cardSp.Children.Add(idTb);
+                    }
+
+                    card.Child = cardSp;
+                    list.Children.Add(card);
+                }
+            }
+
+            sv.Content = list;
+            Grid.SetRow(sv, 1);
+            root.Children.Add(sv);
+
+            Grid footer = new Grid();
+            footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            Button btnDevMgmt = new Button
+            {
+                Content = LocalizationHelper.Get("Drivers_Btn_OpenDevMgmt", "🖥️ Open Device Manager"),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11,
+                Cursor = Cursors.Hand
+            };
+            btnDevMgmt.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnDevMgmt.Click += (s, e) =>
+            {
+                try { Process.Start("devmgmt.msc"); } catch { }
+            };
+            Grid.SetColumn(btnDevMgmt, 0);
+            footer.Children.Add(btnDevMgmt);
+
+            Button btnClose = new Button
+            {
+                Content = LocalizationHelper.Get("Drivers_Btn_Close", "Close"),
+                Height = 28,
+                Padding = new Thickness(16, 0, 16, 0),
+                FontSize = 11,
+                Cursor = Cursors.Hand,
+                IsCancel = true
+            };
+            btnClose.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            btnClose.Click += (s, e) => win.Close();
+            Grid.SetColumn(btnClose, 2);
+            footer.Children.Add(btnClose);
+
+            Grid.SetRow(footer, 2);
+            root.Children.Add(footer);
+
+            win.Content = root;
+            win.ShowDialog();
         }
 
         private void BtnRunPostInstallTask_Click(object sender, RoutedEventArgs e)
