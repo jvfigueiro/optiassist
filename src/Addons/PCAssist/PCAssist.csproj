@@ -28,6 +28,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Core\NativeMethods.cs" />
     <Compile Include="Core\HardwareMonitorService.cs" />
+    <Compile Include="Core\DisplayInfoService.cs" />
+    <Compile Include="Core\DeviceInventoryService.cs" />
     <Compile Include="Core\BatteryDiagnosticService.cs" />
     <Compile Include="Core\BenchEngineService.cs" />
     <Compile Include="PCAssistAddon.cs" />

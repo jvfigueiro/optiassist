@@ -13,15 +13,16 @@ Traditionally, technicians had to download and run multiple disparate external u
 ## 2. Technician Usage Guide
 
 ### Step 1: Navigating the Module
-Select **PC Assist** from the OptiAssist sidebar. The interface displays three dedicated sub-tabs:
-1. **📊 Hardware Monitor**: Real-time 1-second telemetry of CPU, RAM, GPU, and physical storage.
-2. **🔋 Battery & Power**: Mobile device battery wear, voltage, charging rates, and official Windows battery reports.
-3. **🚀 Bench Diagnostics**: Quick benchmarks for CPU, RAM, disk drive, and thermal stress testing.
+Select **PC Assist** from the OptiAssist sidebar. The interface displays four specialized views:
+1. **🖥️ System Summary**: High-density 3-column command center (inspired by HWiNFO64) showing processor details, instruction feature matrix, motherboard, chipset, memory channels and modules, GPU, displays, drives, and platform security badges.
+2. **🔌 Devices & Peripherals**: Deep inventory of chipset LPC/eSPI controllers, audio codecs, network adapters (Ethernet & Wi-Fi), displays with EDID details, and physical storage.
+3. **🔋 Battery & Power**: Mobile device battery wear, voltage, charging rates, and official Windows battery reports.
+4. **🚀 Bench Diagnostics**: Quick benchmarks for CPU, RAM, disk drive, and thermal stress testing.
 
-### Step 2: Live Hardware Monitoring
-- The hardware monitor updates every second using low-overhead native counters.
-- If performing intensive work, click **⏸️ Pause Monitor** in the top-right corner to freeze polling.
-- Observe real-time disk transfer speeds (Read/Write MB/s) and SMART drive health warnings (`MSStorageDriver_FailurePredictStatus`).
+### Step 2: HWiNFO-Style System Summary
+- **CPU Column**: Displays CPU model, socket, stepping, core topology (P-cores / E-cores), L1/L2/L3 caches, an illuminated neon green/gray instruction matrix (`MMX`, `SSE`, `SSE2`, `SSE3`, `SSSE3`, `SSE4.1`, `SSE4.2`, `AVX`, `AVX2`, `AVX-512`, `AES-NI`, `VMX/SVM`, `SHA`, `64-bit`, `Turbo`), and live operational clocks.
+- **Motherboard & Memory Column**: Motherboard model, chipset PCH controller, BIOS version, release date, UEFI status, total RAM capacity, dual-channel operating mode, installed module specs per slot, and network link status.
+- **Graphics & System Column**: GPU model, PCIe link interface, VRAM size, active monitors (resolution, refresh rate, connection type), audio codecs, physical storage media, and Windows security badges (`UEFI Boot`, `Secure Boot`, `TPM 2.0`, `BitLocker`).
 
 ### Step 3: Battery Health Inspection (Notebooks)
 - When running on a notebook, PC Assist queries the embedded controller via ACPI WMI tables (`root\wmi`).
@@ -82,9 +83,12 @@ sequenceDiagram
 ---
 
 ## 5. Related Source Files
-- Implementation: [`src/Addons/PCAssist/PCAssistAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/PCAssistAddon.cs)
-- Native Win32 Imports: [`src/Addons/PCAssist/Core/NativeMethods.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/NativeMethods.cs)
-- Hardware Monitor Engine: [`src/Addons/PCAssist/Core/HardwareMonitorService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/HardwareMonitorService.cs)
-- Battery Analysis Service: [`src/Addons/PCAssist/Core/BatteryDiagnosticService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/BatteryDiagnosticService.cs)
-- Benchmark Engine: [`src/Addons/PCAssist/Core/BenchEngineService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/BenchEngineService.cs)
-- Project Configuration: [`src/Addons/PCAssist/PCAssist.csproj`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/PCAssist.csproj)
+- Related Source Files:
+  - Add-on Core: [`src/Addons/PCAssist/PCAssistAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/PCAssistAddon.cs)
+  - Native Win32 API & P/Invoke: [`src/Addons/PCAssist/Core/NativeMethods.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/NativeMethods.cs)
+  - Hardware Monitor Engine: [`src/Addons/PCAssist/Core/HardwareMonitorService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/HardwareMonitorService.cs)
+  - Display & EDID Parser: [`src/Addons/PCAssist/Core/DisplayInfoService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/DisplayInfoService.cs)
+  - Device Inventory Service: [`src/Addons/PCAssist/Core/DeviceInventoryService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/DeviceInventoryService.cs)
+  - Battery Analysis Service: [`src/Addons/PCAssist/Core/BatteryDiagnosticService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/BatteryDiagnosticService.cs)
+  - Benchmark Engine: [`src/Addons/PCAssist/Core/BenchEngineService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/BenchEngineService.cs)
+  - Project Configuration: [`src/Addons/PCAssist/PCAssist.csproj`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/PCAssist.csproj)
