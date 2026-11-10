@@ -1,0 +1,39 @@
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <OutputType>Library</OutputType>
+    <RootNamespace>OptiAssist.Addons.PCAssist</RootNamespace>
+    <AssemblyName>PCAssist</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <OutputPath>..\..\..\Config\Addons\PCAssist\</OutputPath>
+    <DebugSymbols>false</DebugSymbols>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="OptiAssist">
+      <HintPath>..\..\..\OptiAssist.exe</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Core\NativeMethods.cs" />
+    <Compile Include="Core\HardwareMonitorService.cs" />
+    <Compile Include="Core\BatteryDiagnosticService.cs" />
+    <Compile Include="Core\BenchEngineService.cs" />
+    <Compile Include="PCAssistAddon.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="CleanupAddonArtifacts" AfterTargets="Build">
+    <Delete Files="$(OutputPath)mscorlib.dll;$(OutputPath)normidna.nlp;$(OutputPath)normnfc.nlp;$(OutputPath)normnfd.nlp;$(OutputPath)normnfkc.nlp;$(OutputPath)normnfkd.nlp" />
+  </Target>
+</Project>

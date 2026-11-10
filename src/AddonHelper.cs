@@ -385,6 +385,10 @@ namespace OptiAssist
                 case "maintenance-report":
                 case "maintenance_report":
                     return 5;
+                case "pc-assist":
+                case "pc_assist":
+                case "pcassist":
+                    return 6;
                 default:
                     return 50;
             }
