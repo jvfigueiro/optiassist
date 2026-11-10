@@ -7,6 +7,24 @@ using Microsoft.Win32;
 
 namespace OptiAssist
 {
+    public enum RecommendationLevel
+    {
+        Info,
+        Warning,
+        Critical
+    }
+
+    public class HardwareRecommendation
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string ActionButtonText { get; set; }
+        public string ActionTag { get; set; }
+        public string Category { get; set; }
+        public RecommendationLevel Level { get; set; }
+        public string Icon { get; set; }
+    }
+
     public class ProblemDeviceEntry
     {
         public string Name { get; set; }
@@ -32,6 +50,10 @@ namespace OptiAssist
         public double RamFreeGb { get; set; }
         public string GpuName { get; set; }
         public string PrimaryDiskInfo { get; set; }
+        public double PrimaryDiskTotalGb { get; set; }
+        public double PrimaryDiskFreeGb { get; set; }
+        public string PrimaryDiskMediaType { get; set; }
+        public int RamSlotsCount { get; set; }
         public string SerialNumber { get; set; }
         public string Motherboard { get; set; }
         public string BiosInfo { get; set; }
@@ -42,6 +64,7 @@ namespace OptiAssist
         public string BitLockerStatus { get; set; }
         public bool BitLockerActive { get; set; }
         public System.Collections.Generic.List<ProblemDeviceEntry> ProblemDevices { get; set; }
+        public System.Collections.Generic.List<HardwareRecommendation> Recommendations { get; set; }
 
         public HardwareSummary()
         {
@@ -55,6 +78,10 @@ namespace OptiAssist
             CpuName = "Detecting CPU...";
             GpuName = "Detecting GPU...";
             PrimaryDiskInfo = "Detecting storage...";
+            PrimaryDiskTotalGb = 0;
+            PrimaryDiskFreeGb = 0;
+            PrimaryDiskMediaType = "";
+            RamSlotsCount = 0;
             SerialNumber = "Not informed";
             Motherboard = "Detecting motherboard...";
             BiosInfo = "Detecting BIOS...";
@@ -62,6 +89,7 @@ namespace OptiAssist
             SecureBootStatus = "Detecting Secure Boot...";
             BitLockerStatus = "Detecting BitLocker...";
             ProblemDevices = new System.Collections.Generic.List<ProblemDeviceEntry>();
+            Recommendations = new System.Collections.Generic.List<HardwareRecommendation>();
         }
     }
 
@@ -292,6 +320,7 @@ namespace OptiAssist
                             if (mo["Capacity"] != null)
                             {
                                 physicalBytesSum += Convert.ToUInt64(mo["Capacity"]);
+                                summary.RamSlotsCount++;
                             }
                         }
                     }
@@ -358,10 +387,32 @@ namespace OptiAssist
                 DriveInfo cDrive = new DriveInfo("C");
                 if (cDrive.IsReady)
                 {
-                    double totalGb = Math.Round(cDrive.TotalSize / (1024.0 * 1024.0 * 1024.0), 0);
-                    double freeGb = Math.Round(cDrive.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0), 0);
-                    summary.PrimaryDiskInfo = string.Format("C: ({0} GB / {1} GB - {2})", freeGb, totalGb, cDrive.DriveFormat);
+                    summary.PrimaryDiskTotalGb = Math.Round(cDrive.TotalSize / (1024.0 * 1024.0 * 1024.0), 0);
+                    summary.PrimaryDiskFreeGb = Math.Round(cDrive.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0), 0);
+                    summary.PrimaryDiskInfo = string.Format("C: ({0} GB / {1} GB - {2})", summary.PrimaryDiskFreeGb, summary.PrimaryDiskTotalGb, cDrive.DriveFormat);
                 }
+
+                try
+                {
+                    using (ManagementObjectSearcher diskSearcher = new ManagementObjectSearcher("SELECT Model, MediaType FROM Win32_DiskDrive"))
+                    {
+                        foreach (ManagementObject mo in diskSearcher.Get())
+                        {
+                            string mt = mo["MediaType"] != null ? mo["MediaType"].ToString() : "";
+                            string model = mo["Model"] != null ? mo["Model"].ToString() : "";
+                            if (mt.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 || model.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 || model.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                summary.PrimaryDiskMediaType = "SSD";
+                            }
+                            else if (mt.IndexOf("Fixed", StringComparison.OrdinalIgnoreCase) >= 0 && string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
+                            {
+                                summary.PrimaryDiskMediaType = "HDD";
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch { }
             }
             catch
             {
@@ -484,6 +535,9 @@ namespace OptiAssist
 
             // 11. Problem / Missing Drivers Detection (Win32_PnPEntity with ConfigManagerErrorCode != 0)
             DetectProblemDevices(summary);
+
+            // 12. Smart Hardware & Maintenance Recommendations Engine
+            GenerateHardwareRecommendations(summary);
 
             return summary;
         }
@@ -855,6 +909,134 @@ namespace OptiAssist
                     return LocalizationHelper.Get("DevStatus_Code43", "Device stopped because it reported problems (Code 43)");
                 default:
                     return string.Format(LocalizationHelper.Get("DevStatus_GenericProblem", "Hardware or driver issue (Code {0})"), errorCode);
+            }
+        }
+
+        private static void GenerateHardwareRecommendations(HardwareSummary summary)
+        {
+            if (summary == null) return;
+            var list = summary.Recommendations;
+
+            bool isWin11 = (summary.OsName ?? "").IndexOf("11", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           (summary.OsBuild ?? "").StartsWith("10.0.2", StringComparison.OrdinalIgnoreCase);
+
+            // 1. RAM Recommendations
+            if (summary.RamTotalGb > 0 && summary.RamTotalGb <= 4.5)
+            {
+                if (isWin11)
+                {
+                    list.Add(new HardwareRecommendation
+                    {
+                        Title = LocalizationHelper.Get("Rec_RamLow_Title", "RAM Upgrade Strongly Recommended"),
+                        Description = LocalizationHelper.Get("Rec_RamLow_Win11Desc", "This system is running Windows 11 with 4 GB of RAM (minimum requirement). Modern workloads and browser tabs will experience page-file throttling. Upgrading to at least 8 GB or 16 GB is strongly advised."),
+                        Category = "Memory",
+                        Level = RecommendationLevel.Critical,
+                        Icon = "🧠",
+                        ActionButtonText = LocalizationHelper.Get("Rec_Btn_MemDiag", "Run Memory Diagnostic"),
+                        ActionTag = "memory_diag"
+                    });
+                }
+                else
+                {
+                    list.Add(new HardwareRecommendation
+                    {
+                        Title = LocalizationHelper.Get("Rec_RamLow_Title", "RAM Upgrade Strongly Recommended"),
+                        Description = LocalizationHelper.Get("Rec_RamLow_Win10Desc", "This PC has 4 GB of RAM installed. While Windows 10 functions, running multiple applications concurrently will cause memory bottlenecks. Adding more RAM will noticeably improve responsiveness."),
+                        Category = "Memory",
+                        Level = RecommendationLevel.Warning,
+                        Icon = "🧠",
+                        ActionButtonText = LocalizationHelper.Get("Rec_Btn_MemDiag", "Run Memory Diagnostic"),
+                        ActionTag = "memory_diag"
+                    });
+                }
+            }
+            else if (summary.RamTotalGb > 4.5 && summary.RamTotalGb <= 8.5 && summary.RamSlotsCount == 1)
+            {
+                list.Add(new HardwareRecommendation
+                {
+                    Title = LocalizationHelper.Get("Rec_DualChannel_Title", "Enable Dual-Channel Memory"),
+                    Description = LocalizationHelper.Get("Rec_DualChannel_Desc", "Detected 8 GB of RAM operating in single-channel mode (1 slot populated). Installing a matching second RAM module enables Dual Channel, providing up to 15-25% higher memory bandwidth for integrated graphics and multitasking."),
+                    Category = "Memory",
+                    Level = RecommendationLevel.Info,
+                    Icon = "⚡",
+                    ActionButtonText = LocalizationHelper.Get("Rec_Btn_LearnMore", "Learn More"),
+                    ActionTag = "dual_channel_info"
+                });
+            }
+
+            // 2. Storage Recommendations
+            if (summary.PrimaryDiskTotalGb > 0)
+            {
+                if (summary.PrimaryDiskFreeGb < 15 || (summary.PrimaryDiskFreeGb / summary.PrimaryDiskTotalGb) < 0.12)
+                {
+                    list.Add(new HardwareRecommendation
+                    {
+                        Title = LocalizationHelper.Get("Rec_DiskLow_Title", "Low Free Space on Drive C:"),
+                        Description = string.Format(LocalizationHelper.Get("Rec_DiskLow_Desc", "Drive C: has only {0} GB free space left. Running low on storage hampers Windows Update, page-file virtual memory, and SSD health. Run System Cleaner to reclaim disk space."), summary.PrimaryDiskFreeGb),
+                        Category = "Storage",
+                        Level = RecommendationLevel.Critical,
+                        Icon = "💾",
+                        ActionButtonText = LocalizationHelper.Get("Rec_Btn_SystemCleaner", "Run System Cleaner"),
+                        ActionTag = "system_cleaner"
+                    });
+                }
+                else if (summary.PrimaryDiskFreeGb < 30)
+                {
+                    list.Add(new HardwareRecommendation
+                    {
+                        Title = LocalizationHelper.Get("Rec_DiskWarning_Title", "Storage Maintenance Advised"),
+                        Description = string.Format(LocalizationHelper.Get("Rec_DiskWarning_Desc", "Drive C: has {0} GB free. Clean residual update archives, browser caches, and temp files to ensure smooth system upgrades."), summary.PrimaryDiskFreeGb),
+                        Category = "Storage",
+                        Level = RecommendationLevel.Warning,
+                        Icon = "🧹",
+                        ActionButtonText = LocalizationHelper.Get("Rec_Btn_SystemCleaner", "Run System Cleaner"),
+                        ActionTag = "system_cleaner"
+                    });
+                }
+
+                if (string.Equals(summary.PrimaryDiskMediaType, "HDD", StringComparison.OrdinalIgnoreCase))
+                {
+                    list.Add(new HardwareRecommendation
+                    {
+                        Title = LocalizationHelper.Get("Rec_Hdd_Title", "Upgrade Mechanical Hard Drive to SSD"),
+                        Description = LocalizationHelper.Get("Rec_Hdd_Desc", "Windows is operating on a mechanical hard drive (HDD). Replacing it with a solid-state drive (SSD SATA or NVMe) will provide up to 5x-10x faster boot times and eliminate system latency."),
+                        Category = "Storage",
+                        Level = RecommendationLevel.Critical,
+                        Icon = "🚀",
+                        ActionButtonText = LocalizationHelper.Get("Rec_Btn_LearnMore", "Learn More"),
+                        ActionTag = "ssd_upgrade_info"
+                    });
+                }
+            }
+
+            // 3. Driver & Device Issues
+            if (summary.ProblemDevices != null && summary.ProblemDevices.Count > 0)
+            {
+                list.Add(new HardwareRecommendation
+                {
+                    Title = LocalizationHelper.Get("Rec_Drivers_Title", "Missing or Faulty Hardware Drivers"),
+                    Description = string.Format(LocalizationHelper.Get("Rec_Drivers_Desc", "Detected {0} device(s) with missing or error-flagged drivers in Device Manager. Missing chipsets, audio, or graphics drivers reduce system stability."), summary.ProblemDevices.Count),
+                    Category = "Drivers",
+                    Level = RecommendationLevel.Warning,
+                    Icon = "🔌",
+                    ActionButtonText = LocalizationHelper.Get("Rec_Btn_InspectDrivers", "Inspect Drivers"),
+                    ActionTag = "inspect_drivers"
+                });
+            }
+
+            // 4. Windows 11 Readiness & Security
+            if (isWin11 && !summary.SecureBootActive)
+            {
+                list.Add(new HardwareRecommendation
+                {
+                    Title = LocalizationHelper.Get("Rec_SecureBoot_Title", "Enable Secure Boot in UEFI"),
+                    Description = LocalizationHelper.Get("Rec_SecureBoot_Desc", "Secure Boot is currently disabled. Enabling it in your UEFI BIOS firmware protects against bootkits and fulfills official Windows 11 platform security standards."),
+                    Category = "Security",
+                    Level = RecommendationLevel.Warning,
+                    Icon = "🛡️",
+                    ActionButtonText = LocalizationHelper.Get("Task_RebootBios", "⚡ Reboot to UEFI"),
+                    ActionTag = "reboot_uefi"
+                });
             }
         }
 

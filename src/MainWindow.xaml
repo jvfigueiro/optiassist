@@ -363,6 +363,27 @@
                             </Border>
                         </Grid>
 
+                        <!-- Recommendations Block: Technical suggestions for hardware upgrades and maintenance -->
+                        <Border x:Name="borderRecommendations"
+                                Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock x:Name="txtRecommendationsTitle"
+                                           Text="💡 System &amp; Hardware Recommendations"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource BrushAccent}"
+                                           Margin="0,0,0,8"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <StackPanel x:Name="pnlRecommendationsList" />
+                            </StackPanel>
+                        </Border>
+
                         <!-- Bottom Block: Quick Common Tasks -->
                         <Border Background="{DynamicResource BrushBgCard}"
                                 BorderBrush="{DynamicResource BrushBorderCard}"
@@ -953,7 +974,7 @@
                                            Margin="0,0,14,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock x:Name="txtAboutVersion"
-                                                   Text="OptiAssist v1.1.0"
+                                                   Text="OptiAssist v1.2.S4"
                                                    FontSize="16"
                                                    FontWeight="Bold"
                                                    Foreground="{DynamicResource BrushAccent}"

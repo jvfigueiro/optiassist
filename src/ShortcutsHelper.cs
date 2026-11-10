@@ -1731,7 +1731,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     if (key != null)
                     {
                         key.SetValue("DisplayName", "OptiAssist");
-                        key.SetValue("DisplayVersion", "1.1.0");
+                        key.SetValue("DisplayVersion", "1.2.S4");
                         key.SetValue("Publisher", "João Figueiró");
                         key.SetValue("InstallLocation", installDir);
                         key.SetValue("DisplayIcon", exePath + ",0");

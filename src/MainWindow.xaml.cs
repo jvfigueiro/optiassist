@@ -588,6 +588,170 @@ namespace OptiAssist
                 LocalizationHelper.Get("Label_Bios", "BIOS: "), info.BiosInfo);
             lblDiskDetails.Text = string.Format("{0}{1}",
                 LocalizationHelper.Get("Label_Storage", "Storage: "), info.PrimaryDiskInfo);
+
+            RenderRecommendations(info);
+        }
+
+        private void RenderRecommendations(HardwareSummary info)
+        {
+            if (pnlRecommendationsList == null) return;
+            pnlRecommendationsList.Children.Clear();
+
+            if (txtRecommendationsTitle != null)
+            {
+                txtRecommendationsTitle.Text = LocalizationHelper.Get("Card_Recommendations_Title", "💡 System & Hardware Recommendations");
+            }
+
+            var recs = info != null ? info.Recommendations : null;
+            if (recs == null || recs.Count == 0)
+            {
+                Border allGoodCard = new Border
+                {
+                    Padding = new Thickness(10),
+                    CornerRadius = new CornerRadius(5),
+                    BorderThickness = new Thickness(1)
+                };
+                allGoodCard.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                allGoodCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                StackPanel sp = new StackPanel();
+                TextBlock title = new TextBlock
+                {
+                    Text = "✔️ " + LocalizationHelper.Get("Rec_AllGood_Title", "Hardware & System Status Excellent"),
+                    FontSize = 11.5,
+                    FontWeight = FontWeights.Bold
+                };
+                title.SetResourceReference(TextBlock.ForegroundProperty, "BrushSuccess");
+
+                TextBlock desc = new TextBlock
+                {
+                    Text = LocalizationHelper.Get("Rec_AllGood_Desc", "No critical hardware bottlenecks or driver issues were detected for your system profile."),
+                    FontSize = 10.5,
+                    Margin = new Thickness(0, 2, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                desc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+
+                sp.Children.Add(title);
+                sp.Children.Add(desc);
+                allGoodCard.Child = sp;
+                pnlRecommendationsList.Children.Add(allGoodCard);
+                return;
+            }
+
+            foreach (var rec in recs)
+            {
+                Border card = new Border
+                {
+                    CornerRadius = new CornerRadius(5),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(10),
+                    Margin = new Thickness(0, 0, 0, 6)
+                };
+                card.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                Grid g = new Grid();
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                StackPanel left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+
+                StackPanel titleRow = new StackPanel { Orientation = Orientation.Horizontal };
+                TextBlock iconTb = new TextBlock
+                {
+                    Text = (rec.Icon ?? "💡") + " ",
+                    FontSize = 12,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                TextBlock titleTb = new TextBlock
+                {
+                    Text = rec.Title,
+                    FontSize = 11.5,
+                    FontWeight = FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                if (rec.Level == RecommendationLevel.Critical)
+                    titleTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushDanger");
+                else if (rec.Level == RecommendationLevel.Warning)
+                    titleTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushWarning");
+                else
+                    titleTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+
+                titleRow.Children.Add(iconTb);
+                titleRow.Children.Add(titleTb);
+                left.Children.Add(titleRow);
+
+                TextBlock descTb = new TextBlock
+                {
+                    Text = rec.Description,
+                    FontSize = 10.5,
+                    Margin = new Thickness(0, 3, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                descTb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                left.Children.Add(descTb);
+
+                Grid.SetColumn(left, 0);
+                g.Children.Add(left);
+
+                if (!string.IsNullOrEmpty(rec.ActionButtonText))
+                {
+                    Button btn = new Button
+                    {
+                        Content = rec.ActionButtonText,
+                        Height = 26,
+                        FontSize = 10,
+                        Padding = new Thickness(10, 0, 10, 0),
+                        Margin = new Thickness(10, 0, 0, 0),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Cursor = Cursors.Hand
+                    };
+                    btn.SetResourceReference(Button.StyleProperty, rec.Level == RecommendationLevel.Critical ? "BtnAccent" : "BtnDefault");
+                    string actionTag = rec.ActionTag;
+                    btn.Click += (s, e) => ExecuteRecommendationAction(actionTag, rec);
+
+                    Grid.SetColumn(btn, 1);
+                    g.Children.Add(btn);
+                }
+
+                card.Child = g;
+                pnlRecommendationsList.Children.Add(card);
+            }
+        }
+
+        private void ExecuteRecommendationAction(string actionTag, HardwareRecommendation rec)
+        {
+            try
+            {
+                switch (actionTag)
+                {
+                    case "system_cleaner":
+                        NavigateToAddon("system-cleaner");
+                        break;
+                    case "inspect_drivers":
+                        ShowProblemDriversDialog();
+                        break;
+                    case "memory_diag":
+                        Process.Start("mdsched.exe");
+                        break;
+                    case "reboot_uefi":
+                        BtnRebootBios_Click(this, null);
+                        break;
+                    case "dual_channel_info":
+                    case "ssd_upgrade_info":
+                        MessageBox.Show(rec.Description, rec.Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                        break;
+                    default:
+                        MessageBox.Show(rec.Description, rec.Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not launch action: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void BtnCopySerial_Click(object sender, RoutedEventArgs e)

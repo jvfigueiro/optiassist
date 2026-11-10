@@ -2626,7 +2626,7 @@ namespace OptiAssist.Addons.SystemCleaner
         public string Id { get { return "system-cleaner"; } }
         public string Name { get { return T("Nav_SystemCleaner", "System Cleaner"); } }
         public string Description { get { return T("Cleaner_Subtitle", "BleachBit CleanerML-driven dry-run analysis and safe cleaning for Windows and applications"); } }
-        public string Version { get { return "1.1.0.0"; } }
+        public string Version { get { return "1.2.S4"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🧹"; } }
 
