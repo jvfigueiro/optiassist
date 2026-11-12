@@ -378,5 +378,9 @@
   "InstallWin_Modules_Subtitle": "Choose which add-on modules to deploy to the destination installation.",
   "Settings_LangAuthor": "Translator:",
   "Btn_InstallOnPC": "Install on PC",
-  "Tooltip_InstallOnPC": "Install OptiAssist on this computer with Desktop and Start Menu shortcuts"
+  "Tooltip_InstallOnPC": "Install OptiAssist on this computer with Desktop and Start Menu shortcuts",
+  "Startup_Btn_Delete": "🗑️ Delete",
+  "Startup_Confirm_Delete_Title": "Confirm Deletion",
+  "Startup_Confirm_Delete_Msg": "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically.",
+  "Startup_Msg_DeleteFailed": "Could not delete startup entry: {0}"
 }

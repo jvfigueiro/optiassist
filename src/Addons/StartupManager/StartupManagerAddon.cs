@@ -644,7 +644,7 @@ namespace OptiAssist.Addons.StartupManager
                 Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand
             };
-            btnToggle.SetResourceReference(Button.StyleProperty, prog.IsEnabled ? "BtnDefault" : "BtnAccent");
+            btnToggle.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnToggle.Click += (s, e) =>
             {
                 string err;
@@ -660,7 +660,21 @@ namespace OptiAssist.Addons.StartupManager
             };
             spRight.Children.Add(btnToggle);
 
-            // Edit Button (Delete and Open Folder are now inside Edit dialog)
+            // Delete Button (between Toggle and Edit)
+            Button btnDelete = new Button
+            {
+                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
+                FontSize = 10.5,
+                Height = 26,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 4, 0),
+                Cursor = Cursors.Hand
+            };
+            btnDelete.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnDelete.Click += (s, e) => ConfirmAndDeleteProgram(prog);
+            spRight.Children.Add(btnDelete);
+
+            // Edit Button
             Button btnEdit = new Button
             {
                 Content = T("Startup_Btn_Edit", "✏️ Edit"),
@@ -851,7 +865,7 @@ namespace OptiAssist.Addons.StartupManager
                 Margin = new Thickness(0, 0, 4, 0),
                 Cursor = Cursors.Hand
             };
-            btnToggle.SetResourceReference(Button.StyleProperty, task.IsEnabled ? "BtnDefault" : "BtnAccent");
+            btnToggle.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnToggle.Click += (s, e) =>
             {
                 string err;
@@ -867,7 +881,21 @@ namespace OptiAssist.Addons.StartupManager
             };
             spRight.Children.Add(btnToggle);
 
-            // Edit Button (Run, Delete, and Open Folder are now inside Edit dialog)
+            // Delete Button (between Toggle and Edit)
+            Button btnDelete = new Button
+            {
+                Content = T("Startup_Btn_Delete", "🗑️ Delete"),
+                FontSize = 10.5,
+                Height = 26,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 4, 0),
+                Cursor = Cursors.Hand
+            };
+            btnDelete.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnDelete.Click += (s, e) => ConfirmAndDeleteTask(task);
+            spRight.Children.Add(btnDelete);
+
+            // Edit Button
             Button btnEdit = new Button
             {
                 Content = T("Startup_Btn_Edit", "✏️ Edit"),
@@ -1260,53 +1288,67 @@ namespace OptiAssist.Addons.StartupManager
             _editingTask = null;
         }
 
+        private void ConfirmAndDeleteProgram(StartupProgramItem prog)
+        {
+            if (prog == null) return;
+            string msg = string.Format(
+                T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically."),
+                prog.Name);
+
+            if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                string err;
+                if (!StartupEngine.DeleteStartupProgram(prog, out err))
+                {
+                    MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    _allPrograms.Remove(prog);
+                    RenderCurrentTabList();
+                }
+            }
+        }
+
+        private void ConfirmAndDeleteTask(StartupTaskItem task)
+        {
+            if (task == null) return;
+            string msg = string.Format(
+                T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete scheduled task '{0}'?"),
+                task.Name);
+
+            if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                string err;
+                if (!StartupEngine.DeleteTask(task, out err))
+                {
+                    MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
+                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    _allTasks.Remove(task);
+                    RenderCurrentTabList();
+                }
+            }
+        }
+
         private void HandleModalDelete()
         {
             if (_editingProgram != null)
             {
-                string msg = string.Format(
-                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically."),
-                    _editingProgram.Name);
-
-                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    string err;
-                    if (!StartupEngine.DeleteStartupProgram(_editingProgram, out err))
-                    {
-                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
-                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                    else
-                    {
-                        _allPrograms.Remove(_editingProgram);
-                        CloseModal();
-                        RenderCurrentTabList();
-                    }
-                }
+                var prog = _editingProgram;
+                CloseModal();
+                ConfirmAndDeleteProgram(prog);
             }
             else if (_editingTask != null)
             {
-                string msg = string.Format(
-                    T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete scheduled task '{0}'?"),
-                    _editingTask.Name);
-
-                if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    string err;
-                    if (!StartupEngine.DeleteTask(_editingTask, out err))
-                    {
-                        MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
-                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                    else
-                    {
-                        _allTasks.Remove(_editingTask);
-                        CloseModal();
-                        RenderCurrentTabList();
-                    }
-                }
+                var task = _editingTask;
+                CloseModal();
+                ConfirmAndDeleteTask(task);
             }
         }
 

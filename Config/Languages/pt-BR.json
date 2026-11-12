@@ -379,5 +379,9 @@
   "InstallWin_Modules_Subtitle": "Escolha os módulos a serem incluídos na instalação de destino.",
   "Settings_LangAuthor": "Autor da tradução:",
   "Btn_InstallOnPC": "Instalar no PC",
-  "Tooltip_InstallOnPC": "Instala o OptiAssist no computador, criando atalhos na Área de Trabalho e Menu Iniciar"
+  "Tooltip_InstallOnPC": "Instala o OptiAssist no computador, criando atalhos na Área de Trabalho e Menu Iniciar",
+  "Startup_Btn_Delete": "🗑️ Excluir",
+  "Startup_Confirm_Delete_Title": "Confirmar Exclusão",
+  "Startup_Confirm_Delete_Msg": "Tem certeza de que deseja excluir permanentemente '{0}' da inicialização do Windows?\n\nIsso não desinstala o aplicativo, mas impedirá sua inicialização automática.",
+  "Startup_Msg_DeleteFailed": "Não foi possível excluir a entrada: {0}"
 }

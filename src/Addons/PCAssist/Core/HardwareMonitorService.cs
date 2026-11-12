@@ -191,6 +191,41 @@ namespace OptiAssist.Addons.PCAssist.Core
                                 long.TryParse(obj["AdapterRAM"].ToString(), out ramBytes);
                                 _cachedGpuVramMb = ramBytes / (1024 * 1024);
                             }
+
+                            // Query 64-bit Registry VRAM for accurate dedicated memory on modern GPUs
+                            try
+                            {
+                                using (var classKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"))
+                                {
+                                    if (classKey != null)
+                                    {
+                                        foreach (string subName in classKey.GetSubKeyNames())
+                                        {
+                                            if (subName.Length == 4 && char.IsDigit(subName[0]))
+                                            {
+                                                using (var subKey = classKey.OpenSubKey(subName))
+                                                {
+                                                    if (subKey != null)
+                                                    {
+                                                        object qw = subKey.GetValue("HardwareInformation.qwMemorySize");
+                                                        if (qw != null)
+                                                        {
+                                                            long qwBytes = 0;
+                                                            if (long.TryParse(qw.ToString(), out qwBytes) && qwBytes > 0)
+                                                            {
+                                                                _cachedGpuVramMb = qwBytes / (1024 * 1024);
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+
                             break;
                         }
                     }

@@ -89,6 +89,8 @@ namespace OptiAssist.Addons.PCAssist.Core
         public string GpuCodename { get; set; }
         public string GpuMemoryType { get; set; }
         public int GpuBusWidthBits { get; set; }
+        public string GpuVramDisplay { get; set; }
+        public long GpuVramMb { get; set; }
 
         public List<MemoryModuleItem> MemoryModules { get; set; }
         public string RamChannelMode { get; set; }
@@ -420,17 +422,138 @@ namespace OptiAssist.Addons.PCAssist.Core
 
         private void ScanGpuDetails(DeviceInventory inv)
         {
-            inv.GpuPcieBus = "PCIe v3.0 / v4.0 x16";
-            inv.GpuMemoryType = "GDDR6";
-            inv.GpuBusWidthBits = 128;
+            inv.GpuPcieBus = "Não disponível";
+            inv.GpuVramDisplay = "Não disponível";
+            inv.GpuMemoryType = "";
+            inv.GpuBusWidthBits = 0;
 
             try
             {
-                using (var searcher = new ManagementObjectSearcher("SELECT VideoProcessor, VideoArchitecture, AdapterRAM FROM Win32_VideoController"))
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, VideoProcessor, DriverVersion, PNPDeviceID, AdapterRAM FROM Win32_VideoController"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
                     {
+                        string name = CleanString(obj["Name"]);
+                        if (string.IsNullOrEmpty(name)) continue;
+
+                        // Skip remote/virtual display adapters if not the primary
+                        if (name.IndexOf("Remote", StringComparison.OrdinalIgnoreCase) >= 0 && inv.GpuPcieBus != "Não disponível")
+                        {
+                            continue;
+                        }
+
                         if (obj["VideoProcessor"] != null) inv.GpuCodename = CleanString(obj["VideoProcessor"]);
+
+                        // 1. Genuine Bus Interface Detection
+                        string pnpId = CleanString(obj["PNPDeviceID"]);
+                        if (!string.IsNullOrEmpty(pnpId))
+                        {
+                            if (pnpId.StartsWith("PCI\\", StringComparison.OrdinalIgnoreCase))
+                            {
+                                inv.GpuPcieBus = "PCI Express (PCIe)";
+                            }
+                            else if (pnpId.StartsWith("SWD\\", StringComparison.OrdinalIgnoreCase) || pnpId.StartsWith("ROOT\\", StringComparison.OrdinalIgnoreCase))
+                            {
+                                inv.GpuPcieBus = "Dispositivo de Sistema / Virtual";
+                            }
+                            else if (pnpId.IndexOf("USB", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                inv.GpuPcieBus = "USB";
+                            }
+                            else
+                            {
+                                string rootPrefix = pnpId.Split('\\')[0];
+                                inv.GpuPcieBus = "Barramento do Sistema (" + rootPrefix + ")";
+                            }
+                        }
+
+                        // 2. Genuine VRAM Detection (Dedicated Video RAM)
+                        long vramBytes = 0;
+
+                        // Try Registry: HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000..
+                        try
+                        {
+                            using (var classKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"))
+                            {
+                                if (classKey != null)
+                                {
+                                    foreach (string subName in classKey.GetSubKeyNames())
+                                    {
+                                        if (subName.Length == 4 && char.IsDigit(subName[0]))
+                                        {
+                                            using (var subKey = classKey.OpenSubKey(subName))
+                                            {
+                                                if (subKey != null)
+                                                {
+                                                    string driverDesc = subKey.GetValue("DriverDesc") as string;
+                                                    if (!string.IsNullOrEmpty(driverDesc) &&
+                                                        (driverDesc.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                         name.IndexOf(driverDesc, StringComparison.OrdinalIgnoreCase) >= 0))
+                                                    {
+                                                        object qw = subKey.GetValue("HardwareInformation.qwMemorySize");
+                                                        if (qw != null)
+                                                        {
+                                                            long.TryParse(qw.ToString(), out vramBytes);
+                                                        }
+                                                        if (vramBytes == 0)
+                                                        {
+                                                            object dw = subKey.GetValue("HardwareInformation.MemorySize");
+                                                            byte[] b = dw as byte[];
+                                                            if (b != null && b.Length >= 4)
+                                                            {
+                                                                vramBytes = BitConverter.ToUInt32(b, 0);
+                                                            }
+                                                            else if (dw != null)
+                                                            {
+                                                                long.TryParse(dw.ToString(), out vramBytes);
+                                                            }
+                                                        }
+                                                        if (vramBytes > 0) break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+
+                        // Fallback to AdapterRAM from WMI
+                        if (vramBytes == 0 && obj["AdapterRAM"] != null)
+                        {
+                            long adapterRam = 0;
+                            long.TryParse(obj["AdapterRAM"].ToString(), out adapterRam);
+                            if (adapterRam > 0) vramBytes = adapterRam;
+                        }
+
+                        if (vramBytes > 0)
+                        {
+                            inv.GpuVramMb = vramBytes / (1024 * 1024);
+                            if (inv.GpuVramMb >= 1024)
+                            {
+                                inv.GpuVramDisplay = string.Format("{0:0.#} GB (Dedicada)", inv.GpuVramMb / 1024.0);
+                            }
+                            else
+                            {
+                                inv.GpuVramDisplay = string.Format("{0:N0} MB (Dedicada)", inv.GpuVramMb);
+                            }
+                        }
+                        else
+                        {
+                            // Integrated graphics fallback
+                            string nameLower = name.ToLowerInvariant();
+                            if (nameLower.Contains("intel") || nameLower.Contains("uhd") || nameLower.Contains("iris") ||
+                                nameLower.Contains("radeon(tm)") || nameLower.Contains("vega") || nameLower.Contains("graphics"))
+                            {
+                                inv.GpuVramDisplay = "Alocação Dinâmica (Memória Compartilhada)";
+                            }
+                            else
+                            {
+                                inv.GpuVramDisplay = "Não disponível";
+                            }
+                        }
+
                         break;
                     }
                 }
@@ -517,8 +640,62 @@ namespace OptiAssist.Addons.PCAssist.Core
             catch { }
         }
 
+        private static Dictionary<string, string> QueryPhysicalDiskBusTypes()
+        {
+            var busMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage", "SELECT DeviceId, FriendlyName, Model, BusType FROM MSFT_PhysicalDisk"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        int busType = 0;
+                        if (obj["BusType"] != null) int.TryParse(obj["BusType"].ToString(), out busType);
+                        string busName = FormatStorageBusType(busType);
+                        if (string.IsNullOrEmpty(busName)) continue;
+
+                        string devId = CleanString(obj["DeviceId"]);
+                        string friendly = CleanString(obj["FriendlyName"]);
+                        string model = CleanString(obj["Model"]);
+
+                        if (!string.IsNullOrEmpty(devId) && !busMap.ContainsKey("INDEX_" + devId))
+                            busMap["INDEX_" + devId] = busName;
+                        if (!string.IsNullOrEmpty(friendly) && !busMap.ContainsKey("NAME_" + friendly))
+                            busMap["NAME_" + friendly] = busName;
+                        if (!string.IsNullOrEmpty(model) && !busMap.ContainsKey("MODEL_" + model))
+                            busMap["MODEL_" + model] = busName;
+                    }
+                }
+            }
+            catch { }
+            return busMap;
+        }
+
+        private static string FormatStorageBusType(int busType)
+        {
+            switch (busType)
+            {
+                case 17: return "NVMe";
+                case 11: return "SATA";
+                case 7:  return "USB";
+                case 8:  return "RAID";
+                case 10: return "SAS";
+                case 1:  return "SCSI";
+                case 3:  return "ATA";
+                case 2:  return "ATAPI";
+                case 9:  return "iSCSI";
+                case 12: return "SD";
+                case 13: return "MMC";
+                case 18: return "SCM";
+                case 19: return "UFS";
+                default: return null;
+            }
+        }
+
         private void ScanPhysicalDrives(DeviceInventory inv)
         {
+            var storageBusMap = QueryPhysicalDiskBusTypes();
+
             try
             {
                 using (var searcher = new ManagementObjectSearcher("SELECT DeviceID, Index, Model, InterfaceType, PNPDeviceID, Size, Status FROM Win32_DiskDrive"))
@@ -528,6 +705,7 @@ namespace OptiAssist.Addons.PCAssist.Core
                         string model = CleanString(obj["Model"]);
                         string devId = CleanString(obj["DeviceID"]);
                         string pnpId = CleanString(obj["PNPDeviceID"]);
+                        string ifaceType = CleanString(obj["InterfaceType"]);
                         string status = CleanString(obj["Status"]);
                         int diskIndex = -1;
                         if (obj["Index"] != null) int.TryParse(obj["Index"].ToString(), out diskIndex);
@@ -538,8 +716,8 @@ namespace OptiAssist.Addons.PCAssist.Core
                             sizeGb = Math.Round(Convert.ToDouble(obj["Size"]) / (1024.0 * 1024.0 * 1024.0), 0);
                         }
 
-                        // Determine True Physical Bus (NVMe vs SATA vs USB)
-                        string iface = DetectDriveBusType(diskIndex, devId, pnpId, model);
+                        // Determine True Physical Bus (NVMe vs SATA vs USB etc.)
+                        string iface = DetectDriveBusType(diskIndex, devId, pnpId, ifaceType, model, storageBusMap);
 
                         inv.PhysicalDrives.Add(new PhysicalDriveItem
                         {
@@ -556,15 +734,45 @@ namespace OptiAssist.Addons.PCAssist.Core
             catch { }
         }
 
-        private static string DetectDriveBusType(int diskIndex, string deviceId, string pnpId, string model)
+        private static string DetectDriveBusType(int diskIndex, string deviceId, string pnpId, string ifaceType, string model, Dictionary<string, string> storageBusMap)
         {
-            // 1. Direct Kernel IOCTL Query to PhysicalDrive
+            // 1. Direct query from Windows Storage Management API (MSFT_PhysicalDisk)
+            if (storageBusMap != null)
+            {
+                string bus1;
+                if (diskIndex >= 0 && storageBusMap.TryGetValue("INDEX_" + diskIndex, out bus1))
+                    return bus1;
+                if (!string.IsNullOrEmpty(model))
+                {
+                    string bus2;
+                    if (storageBusMap.TryGetValue("MODEL_" + model, out bus2)) return bus2;
+                    string bus3;
+                    if (storageBusMap.TryGetValue("NAME_" + model, out bus3)) return bus3;
+                }
+            }
+
+            // 2. Hardware PNP Device ID Check
+            string pnpUpper = (pnpId ?? "").ToUpperInvariant();
+            if (pnpUpper.Contains("NVME") || pnpUpper.Contains("VEN_NVME"))
+            {
+                return "NVMe";
+            }
+            if (pnpUpper.Contains("USBSTOR") || pnpUpper.Contains("USB"))
+            {
+                return "USB";
+            }
+            if (pnpUpper.Contains("SCSI") && pnpUpper.Contains("NVME"))
+            {
+                return "NVMe";
+            }
+
+            // 3. Direct IOCTL Query to PhysicalDrive with full 1024-byte buffer
             string targetPath = !string.IsNullOrEmpty(deviceId) ? deviceId : (diskIndex >= 0 ? (@"\\.\PhysicalDrive" + diskIndex) : "");
             if (!string.IsNullOrEmpty(targetPath))
             {
                 IntPtr hDrive = NativeMethods.CreateFile(
                     targetPath,
-                    NativeMethods.GENERIC_READ,
+                    0, // 0 allows querying device info without administrative locks
                     NativeMethods.FILE_SHARE_READ | NativeMethods.FILE_SHARE_WRITE,
                     IntPtr.Zero,
                     NativeMethods.OPEN_EXISTING,
@@ -576,32 +784,27 @@ namespace OptiAssist.Addons.PCAssist.Core
                     try
                     {
                         var query = new NativeMethods.STORAGE_PROPERTY_QUERY { PropertyId = 0, QueryType = 0 };
-                        int descSize = Marshal.SizeOf(typeof(NativeMethods.STORAGE_DEVICE_DESCRIPTOR_HEADER));
-                        IntPtr pOut = Marshal.AllocHGlobal(descSize);
-
-                        uint bytesRet;
-                        bool ok = NativeMethods.DeviceIoControl(
-                            hDrive,
-                            NativeMethods.IOCTL_STORAGE_QUERY_PROPERTY,
-                            ref query,
-                            (uint)Marshal.SizeOf(query),
-                            pOut,
-                            (uint)descSize,
-                            out bytesRet,
-                            IntPtr.Zero);
-
-                        if (ok)
+                        int bufSize = 1024;
+                        IntPtr pOut = Marshal.AllocHGlobal(bufSize);
+                        try
                         {
-                            var header = (NativeMethods.STORAGE_DEVICE_DESCRIPTOR_HEADER)Marshal.PtrToStructure(pOut, typeof(NativeMethods.STORAGE_DEVICE_DESCRIPTOR_HEADER));
-                            Marshal.FreeHGlobal(pOut);
-
-                            if (header.BusType == 17) return "NVMe PCIe x4";
-                            if (header.BusType == 11) return "SATA 6 Gb/s";
-                            if (header.BusType == 7) return "USB 3.0";
-                            if (header.BusType == 8) return "RAID";
-                            if (header.BusType == 10) return "SAS";
+                            uint bytesRet;
+                            if (NativeMethods.DeviceIoControl(
+                                hDrive,
+                                NativeMethods.IOCTL_STORAGE_QUERY_PROPERTY,
+                                ref query,
+                                (uint)Marshal.SizeOf(query),
+                                pOut,
+                                (uint)bufSize,
+                                out bytesRet,
+                                IntPtr.Zero) && bytesRet >= 32)
+                            {
+                                int busType = Marshal.ReadInt32(pOut, 28);
+                                string busStr = FormatStorageBusType(busType);
+                                if (!string.IsNullOrEmpty(busStr)) return busStr;
+                            }
                         }
-                        else
+                        finally
                         {
                             Marshal.FreeHGlobal(pOut);
                         }
@@ -614,18 +817,7 @@ namespace OptiAssist.Addons.PCAssist.Core
                 }
             }
 
-            // 2. Hardware PNP Device ID Check
-            string pnpUpper = (pnpId ?? "").ToUpperInvariant();
-            if (pnpUpper.Contains("NVME") || pnpUpper.Contains("VEN_NVME") || pnpUpper.Contains("PCI\\VEN_"))
-            {
-                return "NVMe PCIe x4";
-            }
-            if (pnpUpper.Contains("USB") || pnpUpper.Contains("USBSTOR"))
-            {
-                return "USB 3.0";
-            }
-
-            // 3. Known NVMe Model Fingerprints
+            // 4. Model String Keywords
             string modelUpper = (model ?? "").ToUpperInvariant();
             if (modelUpper.Contains("NVME") ||
                 modelUpper.Contains("970 EVO") || modelUpper.Contains("980") || modelUpper.Contains("990") ||
@@ -637,10 +829,22 @@ namespace OptiAssist.Addons.PCAssist.Core
                 modelUpper.Contains("KC2500") || modelUpper.Contains("KC3000") || modelUpper.Contains("NV2") || modelUpper.Contains("NV3") ||
                 modelUpper.Contains("PM9A1") || modelUpper.Contains("PM981") || modelUpper.Contains("PM991"))
             {
-                return "NVMe PCIe x4";
+                return "NVMe";
+            }
+            if (modelUpper.Contains("SATA")) return "SATA";
+            if (modelUpper.Contains("USB")) return "USB";
+
+            // 5. InterfaceType from Win32_DiskDrive
+            if (!string.IsNullOrEmpty(ifaceType))
+            {
+                string ifUpper = ifaceType.ToUpperInvariant();
+                if (ifUpper.Contains("NVME")) return "NVMe";
+                if (ifUpper.Contains("USB")) return "USB";
+                if (ifUpper.Contains("IDE")) return "SATA";
+                if (ifUpper.Contains("SCSI")) return "SCSI";
             }
 
-            return "SATA 6 Gb/s";
+            return "Armazenamento";
         }
 
         private void ScanAllSystemDevices(DeviceInventory inv)

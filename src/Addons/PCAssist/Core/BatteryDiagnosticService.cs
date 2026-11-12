@@ -208,7 +208,7 @@ namespace OptiAssist.Addons.PCAssist.Core
                 catch { }
             }
 
-            report.HasBattery = foundWmiBattery;
+            report.HasBattery = foundWmiBattery && (report.DesignCapacityMwh > 0 || report.ChargePercent > 0 || IsMobileFormFactor());
             if (!report.HasBattery)
             {
                 report.Grade = BatteryHealthGrade.DesktopNoBattery;
@@ -310,6 +310,33 @@ namespace OptiAssist.Addons.PCAssist.Core
             catch { }
 
             return null;
+        }
+
+        public static bool IsMobileFormFactor()
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT ChassisTypes FROM Win32_SystemEnclosure"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        ushort[] types = obj["ChassisTypes"] as ushort[];
+                        if (types != null)
+                        {
+                            foreach (ushort t in types)
+                            {
+                                // 8: Portable, 9: Laptop, 10: Notebook, 11: Handheld, 12: Docking, 14: SubNotebook, 30: Tablet, 31: Convertible, 32: Detachable
+                                if (t == 8 || t == 9 || t == 10 || t == 11 || t == 12 || t == 14 || t == 30 || t == 31 || t == 32)
+                                {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            return false;
         }
     }
 }

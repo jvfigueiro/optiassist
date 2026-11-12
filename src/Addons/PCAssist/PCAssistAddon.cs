@@ -219,6 +219,7 @@ namespace OptiAssist.Addons.PCAssist
             tabsPanel.Children.Add(_tabDevicesBorder);
 
             _tabBatteryBorder = CreateTabButton("🔋 " + T("PCAssist_Tab_Battery", "Battery & Power"), false, out _tabBatteryText);
+            _tabBatteryBorder.Visibility = Visibility.Collapsed; // Hidden by default; only displayed when notebook/tablet with battery is detected
             _tabBatteryBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Battery);
             tabsPanel.Children.Add(_tabBatteryBorder);
 
@@ -783,11 +784,17 @@ namespace OptiAssist.Addons.PCAssist
                 {
                     if (!report.HasBattery)
                     {
-                        _cardBatteryDesktop.Visibility = Visibility.Visible;
-                        _cardBatteryNotebook.Visibility = Visibility.Collapsed;
+                        if (_tabBatteryBorder != null) _tabBatteryBorder.Visibility = Visibility.Collapsed;
+                        if (_cardBatteryDesktop != null) _cardBatteryDesktop.Visibility = Visibility.Collapsed;
+                        if (_cardBatteryNotebook != null) _cardBatteryNotebook.Visibility = Visibility.Collapsed;
+                        if (_currentTab == PCAssistTab.Battery)
+                        {
+                            SwitchTab(PCAssistTab.Summary);
+                        }
                         return;
                     }
 
+                    if (_tabBatteryBorder != null) _tabBatteryBorder.Visibility = Visibility.Visible;
                     _cardBatteryDesktop.Visibility = Visibility.Collapsed;
                     _cardBatteryNotebook.Visibility = Visibility.Visible;
 
@@ -1126,8 +1133,8 @@ namespace OptiAssist.Addons.PCAssist
             // Column 3: GPU, Displays, Drives (Operating System section completely removed per request)
             string gpuName = _host != null && _host.Hardware != null && !string.IsNullOrEmpty(_host.Hardware.GpuName) ? _host.Hardware.GpuName : "Video Controller";
             _txtGpuNameSum.Text = gpuName;
-            _txtGpuVramSum.Text = "8 GB GDDR6 (Dedicated/Shared)";
-            _txtGpuBusSum.Text = inv.GpuPcieBus;
+            _txtGpuVramSum.Text = !string.IsNullOrEmpty(inv.GpuVramDisplay) ? inv.GpuVramDisplay : "Não disponível";
+            _txtGpuBusSum.Text = !string.IsNullOrEmpty(inv.GpuPcieBus) ? inv.GpuPcieBus : "Não disponível";
 
             _pnlDisplaysSummary.Children.Clear();
             foreach (var d in inv.Displays)
@@ -1191,7 +1198,7 @@ namespace OptiAssist.Addons.PCAssist
             }
             else
             {
-                AddDetailRow(_pnlDevicesStorageControllers, "Controllers:", "Standard NVM Express & SATA AHCI Controller");
+                AddDetailRow(_pnlDevicesStorageControllers, "Controladores:", "Nenhum controlador de armazenamento adicional reportado");
             }
 
             // 3. Physical Drives
@@ -1212,7 +1219,7 @@ namespace OptiAssist.Addons.PCAssist
             }
             else
             {
-                AddDetailRow(_pnlDevicesPciBridges, "PCIe Bus:", "PCI Express Root Complex & Bridges Operational");
+                AddDetailRow(_pnlDevicesPciBridges, "Barramentos:", "Nenhum barramento PCI adicional reportado");
             }
 
             // 5. USB Controllers & Hubs
@@ -1226,7 +1233,7 @@ namespace OptiAssist.Addons.PCAssist
             }
             else
             {
-                AddDetailRow(_pnlDevicesUsb, "USB:", "USB 3.x xHCI Controller & Root Hubs Active");
+                AddDetailRow(_pnlDevicesUsb, "Controladores USB:", "Nenhum controlador USB reportado");
             }
 
             // 6. Displays & EDID
@@ -1270,7 +1277,7 @@ namespace OptiAssist.Addons.PCAssist
             }
             else
             {
-                AddDetailRow(_pnlDevicesSensors, "Thermal & Power Sensors:", "ACPI Thermal Zones & Battery Controller Sensor Active");
+                AddDetailRow(_pnlDevicesSensors, "Sensores:", "Sensores DTS de CPU/GPU exigem driver em nível de kernel (Ring-0)");
             }
 
             // 11. Input Devices
@@ -1284,7 +1291,7 @@ namespace OptiAssist.Addons.PCAssist
             }
             else
             {
-                AddDetailRow(_pnlDevicesInput, "HID Devices:", "Standard Keyboard & Mouse Pointing Devices Active");
+                AddDetailRow(_pnlDevicesInput, "Dispositivos de Entrada:", "Dispositivos padrão do sistema");
             }
         }
 
@@ -1305,9 +1312,15 @@ namespace OptiAssist.Addons.PCAssist
                         if (_txtCpuClockLive != null)
                         {
                             string pulseIcon = (_tickCount % 2 == 0) ? "⚡" : "•";
-                            string tempStr = snap.Cpu.TemperatureC.HasValue ? string.Format("  |  Temp: {0:F1} °C", snap.Cpu.TemperatureC.Value) : "  |  Temp: Sensor ACPI Ocioso";
-                            string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : "Dynamic";
-                            _txtCpuClockLive.Text = string.Format("{0} Live Clock: {1}{2}", pulseIcon, clockStr, tempStr);
+                            string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : "Dinâmico";
+                            if (snap.Cpu.TemperatureC.HasValue && snap.Cpu.TemperatureC.Value > 0)
+                            {
+                                _txtCpuClockLive.Text = string.Format("{0} Live Clock: {1}  |  Temp: {2:F1} °C", pulseIcon, clockStr, snap.Cpu.TemperatureC.Value);
+                            }
+                            else
+                            {
+                                _txtCpuClockLive.Text = string.Format("{0} Live Clock: {1}", pulseIcon, clockStr);
+                            }
                         }
                     });
                 }
