@@ -504,28 +504,6 @@ namespace OptiAssist
             UpdateStatusBadge(txtTpmStatus, info.TpmStatus);
             UpdateStatusBadge(txtSecureBootStatus, info.SecureBootStatus);
 
-            if (txtDriversStatus != null)
-            {
-                if (info.ProblemDevices != null && info.ProblemDevices.Count > 0)
-                {
-                    txtDriversStatus.Text = string.Format(LocalizationHelper.Get("Status_DriversIssue", "{0} issue(s) detected"), info.ProblemDevices.Count);
-                    txtDriversStatus.SetResourceReference(TextBlock.ForegroundProperty, "BrushDanger");
-                    if (pnlDriversStatus != null)
-                    {
-                        pnlDriversStatus.ToolTip = string.Format("{0} device(s) missing or with driver issues. Click to inspect.", info.ProblemDevices.Count);
-                    }
-                }
-                else
-                {
-                    txtDriversStatus.Text = LocalizationHelper.Get("Status_DriversOk", "All drivers OK");
-                    txtDriversStatus.SetResourceReference(TextBlock.ForegroundProperty, "BrushSuccess");
-                    if (pnlDriversStatus != null)
-                    {
-                        pnlDriversStatus.ToolTip = "All device drivers are functional and operating properly.";
-                    }
-                }
-            }
-
             // Clean Header Bar: Motherboard on line 1, CPU and RAM on line 2
             lblHeaderDevice.Text = info.Motherboard;
             lblHeaderDevice.ToolTip = string.Format("{0}: {1}\n{2}: {3}\n{4}: {5}",
@@ -789,11 +767,6 @@ namespace OptiAssist
                     Log("[BIOS WARNING] " + error);
                 }
             }
-        }
-
-        private void PnlDriversStatus_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            ShowProblemDriversDialog();
         }
 
         private void ShowProblemDriversDialog()

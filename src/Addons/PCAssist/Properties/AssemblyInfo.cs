@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("OptiAssist PC Assist Add-on")]
+[assembly: AssemblyTitle("OptiAssist Hardware Monitor Add-on")]
 [assembly: AssemblyDescription("Hardware monitor, notebook battery health analysis, and quick bench diagnostics")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("João Figueiró")]

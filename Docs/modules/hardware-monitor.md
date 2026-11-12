@@ -1,4 +1,4 @@
-# Module: PC Assist (Hardware Monitor, Battery Health & Bench Diagnostics)
+# Module: Hardware Monitor (Telemetry, Battery Health & Bench Diagnostics)
 
 ## 1. Overview and Problem Solved
 During computer maintenance, repair, and hardware upgrades, technicians frequently need to:
@@ -6,14 +6,14 @@ During computer maintenance, repair, and hardware upgrades, technicians frequent
 - Diagnose notebook battery degradation, design vs. current maximum capacity, cell wear percentage, and estimated autonomy.
 - Run quick, reproducible bench benchmarks (CPU compute throughput, RAM memory bandwidth, and sequential storage I/O) before and after procedures (such as dual-channel memory installations, SSD swaps, or thermal paste replacements).
 
-Traditionally, technicians had to download and run multiple disparate external utilities (HWiNFO, CPU-Z, CrystalDiskMark, BatteryInfoView). **PC Assist** consolidates all of these capabilities into a single, zero-external-dependency, native WPF module seamlessly integrated into the OptiAssist microkernel.
+Traditionally, technicians had to download and run multiple disparate external utilities (HWiNFO, CPU-Z, CrystalDiskMark, BatteryInfoView). **Hardware Monitor** consolidates all of these capabilities into a single, zero-external-dependency, native WPF module seamlessly integrated into the OptiAssist microkernel.
 
 ---
 
 ## 2. Technician Usage Guide
 
 ### Step 1: Navigating the Module
-Select **PC Assist** from the OptiAssist sidebar. The interface displays four specialized views:
+Select **Hardware Monitor** from the OptiAssist sidebar. The interface displays four specialized views:
 1. **🖥️ System Summary**: High-density 3-column command center (inspired by HWiNFO64) showing processor details, instruction feature matrix, motherboard, chipset, memory channels and modules, GPU, displays, drives, and platform security badges.
 2. **🔌 Devices & Peripherals**: Deep inventory of chipset LPC/eSPI controllers, audio codecs, network adapters (Ethernet & Wi-Fi), displays with EDID details, and physical storage.
 3. **🔋 Battery & Power**: Mobile device battery wear, voltage, charging rates, and official Windows battery reports.
@@ -25,11 +25,11 @@ Select **PC Assist** from the OptiAssist sidebar. The interface displays four sp
 - **Graphics & System Column**: GPU model, PCIe link interface, VRAM size, active monitors (resolution, refresh rate, connection type), audio codecs, physical storage media, and Windows security badges (`UEFI Boot`, `Secure Boot`, `TPM 2.0`, `BitLocker`).
 
 ### Step 3: Battery Health Inspection (Notebooks)
-- When running on a notebook, PC Assist queries the embedded controller via ACPI WMI tables (`root\wmi`).
+- When running on a notebook, Hardware Monitor queries the embedded controller via ACPI WMI tables (`root\wmi`).
 - Inspect the **Battery Health** percentage ($(\text{FullChargeCapacity} / \text{DesignCapacity}) \times 100$) and **Wear Level**.
 - Check the estimated runtime autonomy, instantaneous voltage, and wattage discharge rate.
 - Click **📄 Generate Official Report (HTML)** to automatically trigger Windows `powercfg /batteryreport` and launch the official Microsoft diagnostic in your browser.
-- On desktop computers, PC Assist automatically detects the absence of battery hardware and displays a clean direct-mains AC notice.
+- On desktop computers, Hardware Monitor automatically detects the absence of battery hardware and displays a clean direct-mains AC notice.
 
 ### Step 4: Quick Benchmarks & Thermal Testing
 - **CPU Multithread Benchmark**: Click **▶️ Start Benchmark** to run a 5-second multithreaded integer and cryptographic computation, generating a benchmark score with market tier comparisons.

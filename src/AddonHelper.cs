@@ -385,6 +385,9 @@ namespace OptiAssist
                 case "maintenance-report":
                 case "maintenance_report":
                     return 5;
+                case "hardware-monitor":
+                case "hardware_monitor":
+                case "hardwaremonitor":
                 case "pc-assist":
                 case "pc_assist":
                 case "pcassist":

@@ -38,7 +38,7 @@ These modules operate as independent .NET Framework 4.8 Class Libraries located 
 | **System Cleaner** | [system-cleaner.md](system-cleaner.md) | `Config\Addons\SystemCleaner\SystemCleaner.dll` | Modular deep disk cleaning engine inspired by BleachBit: preliminary non-destructive *Dry-Run* analysis, file inspector, SQLite VACUUM compaction, and `PathSanitizer` safety shielding. |
 | **Startup Manager** | [startup-manager.md](startup-manager.md) | `Config\Addons\StartupManager\StartupManager.dll` | Auditor and manager for autostart entries across Windows Registry keys (`Run`/`RunOnce` with non-destructive `StartupApproved` binary control), Startup folders, and Task Scheduler via COM (`Schedule.Service`). |
 | **Maintenance Report** | [maintenance-report.md](maintenance-report.md) | `Config\Addons\MaintenanceReport\MaintenanceReport.dll` | Technical service order and maintenance report generator in structured plain text, consolidating customer data, an 8-step maintenance checklist, and audited hardware specs. |
-| **PC Assist** | [pc-assist.md](pc-assist.md) | `Config\Addons\PCAssist\PCAssist.dll` | Real-time hardware telemetry monitor (CPU, RAM, GPU, Disks), deep notebook battery health and degradation analysis (ACPI wear level, autonomy, powercfg report), and quick bench diagnostics (CPU, RAM bandwidth, disk I/O, and thermal stress). |
+| **Hardware Monitor** | [hardware-monitor.md](hardware-monitor.md) | `Config\Addons\PCAssist\PCAssist.dll` | Real-time hardware telemetry monitor (CPU, RAM, GPU, Disks), deep notebook battery health and degradation analysis (ACPI wear level, autonomy, powercfg report), and quick bench diagnostics (CPU, RAM bandwidth, disk I/O, and thermal stress). |
 
 ---
 

@@ -125,9 +125,9 @@ namespace OptiAssist.Addons.PCAssist
         private Button _btnCancelBench;
 
         // Contract Properties
-        public string Id { get { return "pc-assist"; } }
-        public string Name { get { return T("Nav_PCAssist", "PC Assist"); } }
-        public string Description { get { return T("PCAssist_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"); } }
+        public string Id { get { return "hardware-monitor"; } }
+        public string Name { get { return T("Nav_HardwareMonitor", "Hardware Monitor"); } }
+        public string Description { get { return T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"); } }
         public string Version { get { return "1.2.S4"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "⚡"; } }
@@ -168,14 +168,14 @@ namespace OptiAssist.Addons.PCAssist
             StackPanel titlePanel = new StackPanel();
             _txtTitle = new TextBlock
             {
-                Text = "⚡ " + T("Nav_PCAssist", "PC Assist"),
+                Text = "⚡ " + T("Nav_HardwareMonitor", "Hardware Monitor"),
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
                 Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A")
             };
             _txtSubtitle = new TextBlock
             {
-                Text = T("PCAssist_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"),
+                Text = T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"),
                 FontSize = 12,
                 Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
                 Margin = new Thickness(0, 3, 0, 0)
@@ -1402,8 +1402,8 @@ namespace OptiAssist.Addons.PCAssist
 
         public void OnLanguageChanged(string langCode)
         {
-            if (_txtTitle != null) _txtTitle.Text = "⚡ " + T("Nav_PCAssist", "PC Assist");
-            if (_txtSubtitle != null) _txtSubtitle.Text = T("PCAssist_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics");
+            if (_txtTitle != null) _txtTitle.Text = "⚡ " + T("Nav_HardwareMonitor", "Hardware Monitor");
+            if (_txtSubtitle != null) _txtSubtitle.Text = T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics");
 
             if (_tabSummaryText != null) _tabSummaryText.Text = "🖥️ " + T("PCAssist_Tab_Summary", "System Summary");
             if (_tabDevicesText != null) _tabDevicesText.Text = "🔌 " + T("PCAssist_Tab_Devices", "Devices & Peripherals");

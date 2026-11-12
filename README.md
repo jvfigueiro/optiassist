@@ -22,7 +22,7 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 | **Startup Manager** | Unified autostart inspector: Windows Registry (`Run`/`RunOnce` with non-destructive `StartupApproved` binary control), Startup folders, and Task Scheduler entries via COM (`Schedule.Service`). | [Read Guide](Docs/modules/startup-manager.md) |
 | **Windows Tools** | Fast-launch control panel for native administrative consoles (`sysdm.cpl`, `services.msc`, `regedit`, `cleanmgr`, `dfrgui`), technician storage folders, and direct UEFI firmware reboot. | [Read Guide](Docs/modules/windows-tools.md) |
 | **Maintenance Report** | Technical service order and report generator with client details, machine specifications, an 8-point checklist of performed procedures, and structured `.txt` export. | [Read Guide](Docs/modules/maintenance-report.md) |
-| **PC Assist** | Real-time hardware telemetry monitor (CPU, RAM, GPU, Disks), deep notebook battery health and degradation analysis (ACPI wear level, autonomy, powercfg report), and quick bench diagnostics (CPU, RAM bandwidth, disk I/O, and thermal stress). | [Read Guide](Docs/modules/pc-assist.md) |
+| **Hardware Monitor** | Real-time hardware telemetry monitor (CPU, RAM, GPU, Disks), deep notebook battery health and degradation analysis (ACPI wear level, autonomy, powercfg report), and quick bench diagnostics (CPU, RAM bandwidth, disk I/O, and thermal stress). | [Read Guide](Docs/modules/hardware-monitor.md) |
 | **Settings & Deployment** | UI personalization (Light/Dark themes, accent color, top bar logo), zero-restart language hot-reloading (i18n), Always on Top window pinning, module manager, and built-in deployment engine. | [Read Guide](Docs/modules/settings-deployment.md) |
 | **Logs & Terminal** | Thread-safe real-time diagnostic terminal with an independent floating pop-out window (`LogWindow`), keyword search, clipboard copying, and `.txt` log export. | [Read Guide](Docs/modules/logs-terminal.md) |
 
@@ -165,6 +165,6 @@ For in-depth technical specifications, refer to the dedicated documentation file
   - [Startup Manager & Scheduled Tasks](Docs/modules/startup-manager.md)
   - [Windows Tools & Native Consoles](Docs/modules/windows-tools.md)
   - [Maintenance Report & Service Orders](Docs/modules/maintenance-report.md)
-  - [PC Assist Hardware Monitor & Bench](Docs/modules/pc-assist.md)
+  - [Hardware Monitor & Bench Diagnostics](Docs/modules/hardware-monitor.md)
   - [Settings & Native Deployment](Docs/modules/settings-deployment.md)
   - [Logs & Diagnostic Terminal](Docs/modules/logs-terminal.md)
