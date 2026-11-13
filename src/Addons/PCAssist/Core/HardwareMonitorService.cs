@@ -6,6 +6,13 @@ using System.Management;
 
 namespace OptiAssist.Addons.PCAssist.Core
 {
+    public class ThermalSensorReading
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public double TempC { get; set; }
+    }
+
     public class CpuMetrics
     {
         public string Name { get; set; }
@@ -15,6 +22,11 @@ namespace OptiAssist.Addons.PCAssist.Core
         public double ClockGhz { get; set; }
         public int ClockMhz { get; set; }
         public double? TemperatureC { get; set; }
+        public List<ThermalSensorReading> ThermalSensors { get; set; }
+        public CpuMetrics()
+        {
+            ThermalSensors = new List<ThermalSensorReading>();
+        }
     }
 
     public class RamMetrics
@@ -94,6 +106,7 @@ namespace OptiAssist.Addons.PCAssist.Core
         private int _cachedRamSpeed = 0;
         private int _cachedRamSlots = 0;
         private bool _hasInitializedStaticInfo = false;
+        public string SelectedThermalSensorId { get; set; }
 
         public HardwareMonitorService()
         {
@@ -285,7 +298,7 @@ namespace OptiAssist.Addons.PCAssist.Core
             }
             snapshot.Cpu.ClockMhz = dynamicMhz;
             snapshot.Cpu.ClockGhz = Math.Round(dynamicMhz / 1000.0, 2);
-            snapshot.Cpu.TemperatureC = QueryCpuTemperature();
+            snapshot.Cpu.TemperatureC = QueryCpuTemperature(snapshot.Cpu.ThermalSensors);
 
             // 2. RAM (via ultra-fast GlobalMemoryStatusEx)
             var memStatus = new NativeMethods.MEMORYSTATUSEX();
@@ -355,22 +368,35 @@ namespace OptiAssist.Addons.PCAssist.Core
             return snapshot;
         }
 
-        private double? QueryCpuTemperature()
+        private double? QueryCpuTemperature(List<ThermalSensorReading> sensors)
         {
-            // 1. Try ACPI Thermal Zone in root\wmi
+            if (sensors == null) sensors = new List<ThermalSensorReading>();
+
+            // 1. Enumerate all ACPI Thermal Zones in root\wmi
             try
             {
-                using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature"))
+                using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT InstanceName, CurrentTemperature FROM MSAcpi_ThermalZoneTemperature"))
                 {
+                    int idx = 0;
                     foreach (ManagementObject obj in searcher.Get())
                     {
+                        idx++;
                         if (obj["CurrentTemperature"] != null)
                         {
                             double kelvinTenths = Convert.ToDouble(obj["CurrentTemperature"]);
-                            double celsius = (kelvinTenths - 2732.0) / 10.0;
+                            double celsius = Math.Round((kelvinTenths - 2732.0) / 10.0, 1);
                             if (celsius > 10.0 && celsius < 125.0)
                             {
-                                return Math.Round(celsius, 1);
+                                string inst = obj["InstanceName"] != null ? obj["InstanceName"].ToString().Trim() : ("TZ" + idx);
+                                string shortName = inst;
+                                int slash = shortName.LastIndexOf('\\');
+                                if (slash >= 0 && slash + 1 < shortName.Length) shortName = shortName.Substring(slash + 1);
+                                sensors.Add(new ThermalSensorReading
+                                {
+                                    Id = "ACPI:" + inst,
+                                    Name = "ACPI " + shortName,
+                                    TempC = celsius
+                                });
                             }
                         }
                     }
@@ -378,20 +404,28 @@ namespace OptiAssist.Addons.PCAssist.Core
             }
             catch { }
 
-            // 2. Try ThermalZoneInformation in root\cimv2
+            // 2. Enumerate all ThermalZoneInformation counters in root\cimv2
             try
             {
-                using (var searcher = new ManagementObjectSearcher("SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation"))
+                using (var searcher = new ManagementObjectSearcher("SELECT Name, Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation"))
                 {
+                    int idx = 0;
                     foreach (ManagementObject obj in searcher.Get())
                     {
+                        idx++;
                         if (obj["Temperature"] != null)
                         {
                             double kelvin = Convert.ToDouble(obj["Temperature"]);
-                            double celsius = kelvin - 273.15;
+                            double celsius = Math.Round(kelvin - 273.15, 1);
                             if (celsius > 10.0 && celsius < 125.0)
                             {
-                                return Math.Round(celsius, 1);
+                                string zoneName = obj["Name"] != null ? obj["Name"].ToString().Trim() : ("Zone " + idx);
+                                sensors.Add(new ThermalSensorReading
+                                {
+                                    Id = "PERF:" + zoneName,
+                                    Name = "ThermalZone " + zoneName,
+                                    TempC = celsius
+                                });
                             }
                         }
                     }
@@ -399,7 +433,29 @@ namespace OptiAssist.Addons.PCAssist.Core
             }
             catch { }
 
-            return null;
+            if (sensors.Count == 0) return null;
+
+            // If user selected a specific sensor, return it
+            if (!string.IsNullOrEmpty(SelectedThermalSensorId))
+            {
+                foreach (var s in sensors)
+                {
+                    if (string.Equals(s.Id, SelectedThermalSensorId, StringComparison.OrdinalIgnoreCase))
+                        return s.TempC;
+                }
+            }
+
+            // Auto mode: avoid static 27.8°C (301.0K / 3010 tenths) dummy ACPI reading if any other sensor is available
+            ThermalSensorReading best = null;
+            foreach (var s in sensors)
+            {
+                bool isDummy278 = Math.Abs(s.TempC - 27.8) < 0.15 || Math.Abs(s.TempC - 27.9) < 0.15;
+                if (!isDummy278)
+                {
+                    if (best == null || s.TempC > best.TempC) best = s;
+                }
+            }
+            return best != null ? best.TempC : sensors[0].TempC;
         }
 
         private void CheckSmartStatus(StorageMetrics storage)

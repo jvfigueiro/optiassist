@@ -532,11 +532,11 @@ namespace OptiAssist.Addons.PCAssist.Core
                             inv.GpuVramMb = vramBytes / (1024 * 1024);
                             if (inv.GpuVramMb >= 1024)
                             {
-                                inv.GpuVramDisplay = string.Format("{0:0.#} GB (Dedicada)", inv.GpuVramMb / 1024.0);
+                                inv.GpuVramDisplay = string.Format("{0:0.#} GB", inv.GpuVramMb / 1024.0);
                             }
                             else
                             {
-                                inv.GpuVramDisplay = string.Format("{0:N0} MB (Dedicada)", inv.GpuVramMb);
+                                inv.GpuVramDisplay = string.Format("{0:N0} MB", inv.GpuVramMb);
                             }
                         }
                         else
@@ -546,11 +546,11 @@ namespace OptiAssist.Addons.PCAssist.Core
                             if (nameLower.Contains("intel") || nameLower.Contains("uhd") || nameLower.Contains("iris") ||
                                 nameLower.Contains("radeon(tm)") || nameLower.Contains("vega") || nameLower.Contains("graphics"))
                             {
-                                inv.GpuVramDisplay = "Alocação Dinâmica (Memória Compartilhada)";
+                                inv.GpuVramDisplay = "Dynamic Allocation (Shared Memory)";
                             }
                             else
                             {
-                                inv.GpuVramDisplay = "Não disponível";
+                                inv.GpuVramDisplay = "N/A";
                             }
                         }
 

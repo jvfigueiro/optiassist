@@ -61,9 +61,6 @@ namespace OptiAssist.Addons.PCAssist
         private TextBlock _txtCpuCacheSum;
         private WrapPanel _pnlCpuInstructions;
         private TextBlock _txtCpuClockLive;
-        private TextBlock _txtCpuTempLive;
-        private TextBlock _txtCpuLoadLive;
-        private ProgressBar _pbCpuLoadLive;
 
         private TextBlock _txtMoboNameSum;
         private TextBlock _txtChipsetNameSum;
@@ -164,13 +161,37 @@ namespace OptiAssist.Addons.PCAssist
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             StackPanel titlePanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            StackPanel titleRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             _txtTitle = new TextBlock
             {
                 Text = "⚡ " + T("Nav_HardwareMonitor", "Hardware Monitor"),
                 FontSize = 15,
                 FontWeight = FontWeights.Bold,
-                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A")
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                VerticalAlignment = VerticalAlignment.Center
             };
+            Border betaBadge = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(7, 2, 7, 2),
+                Margin = new Thickness(8, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            betaBadge.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            betaBadge.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+            TextBlock betaText = new TextBlock
+            {
+                Text = "Beta",
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            betaText.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            betaBadge.Child = betaText;
+            titleRow.Children.Add(_txtTitle);
+            titleRow.Children.Add(betaBadge);
+
             _txtSubtitle = new TextBlock
             {
                 Text = T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"),
@@ -178,7 +199,7 @@ namespace OptiAssist.Addons.PCAssist
                 Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
                 Margin = new Thickness(0, 2, 0, 0)
             };
-            titlePanel.Children.Add(_txtTitle);
+            titlePanel.Children.Add(titleRow);
             titlePanel.Children.Add(_txtSubtitle);
             Grid.SetColumn(titlePanel, 0);
             headerGrid.Children.Add(titlePanel);
@@ -309,7 +330,7 @@ namespace OptiAssist.Addons.PCAssist
         #region TAB 1: System Summary (HWiNFO-style)
         private ScrollViewer BuildSummaryTab()
         {
-            ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Visible };
+            ScrollViewer sv = CreateTabScrollViewer(Visibility.Visible);
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(4, 0, 4, 8) };
 
             // ==================== TOP LIVE USAGE BARS (CPU & RAM) ====================
@@ -408,40 +429,16 @@ namespace OptiAssist.Addons.PCAssist
             cpuDetails.Children.Add(cpuDRight);
             cpuPanel.Children.Add(cpuDetails);
 
-            cpuPanel.Children.Add(CreateSubDivider("OPERATING CLOCKS & LOAD"));
+            cpuPanel.Children.Add(CreateSubDivider("OPERATING CLOCK"));
             _txtCpuClockLive = new TextBlock
             {
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
-                Margin = new Thickness(0, 6, 0, 2),
-                Text = "Live Clock: Detecting..."
-            };
-            _txtCpuTempLive = new TextBlock
-            {
-                FontSize = 11.5,
-                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
-                Margin = new Thickness(0, 0, 0, 2),
-                Text = "Temperature: Detecting..."
-            };
-            _txtCpuLoadLive = new TextBlock
-            {
-                FontSize = 11.5,
-                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
-                Text = "CPU Load: 0.0%"
-            };
-            _pbCpuLoadLive = new ProgressBar
-            {
-                Height = 6,
-                Minimum = 0,
-                Maximum = 100,
                 Margin = new Thickness(0, 6, 0, 10),
-                Foreground = GetResourceBrush("BrushAccent", "#0EA5E9")
+                Text = "Clock: Detecting..."
             };
             cpuPanel.Children.Add(_txtCpuClockLive);
-            cpuPanel.Children.Add(_txtCpuTempLive);
-            cpuPanel.Children.Add(_txtCpuLoadLive);
-            cpuPanel.Children.Add(_pbCpuLoadLive);
 
             cpuPanel.Children.Add(CreateSubDivider("INSTRUCTION SET FEATURES"));
             _pnlCpuInstructions = new WrapPanel { Margin = new Thickness(0, 6, 0, 2) };
@@ -577,7 +574,7 @@ namespace OptiAssist.Addons.PCAssist
             _pnlNetworkSummary = new StackPanel { Margin = new Thickness(0, 6, 0, 10) };
             netAudioPanel.Children.Add(_pnlNetworkSummary);
 
-            netAudioPanel.Children.Add(CreateSubDivider("AUDIO CODECS"));
+            netAudioPanel.Children.Add(CreateSubDivider("AUDIO DEVICES"));
             _txtAudioSummary = new TextBlock
             {
                 FontSize = 11.5,
@@ -707,7 +704,7 @@ namespace OptiAssist.Addons.PCAssist
         #region TAB 2: Detailed Devices & Peripherals (Complete System Tree)
         private ScrollViewer BuildDevicesTab()
         {
-            ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Collapsed };
+            ScrollViewer sv = CreateTabScrollViewer(Visibility.Collapsed);
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(24, 16, 24, 24) };
 
             // 1. Motherboard & Chipset
@@ -770,11 +767,11 @@ namespace OptiAssist.Addons.PCAssist
             cardDisplays.Child = stDisp;
             rootPanel.Children.Add(cardDisplays);
 
-            // 7. Audio Codecs
+            // 7. Audio Devices
             Border cardAudio = CreateCard();
             cardAudio.Margin = new Thickness(0, 0, 0, 14);
             StackPanel stAudio = new StackPanel();
-            stAudio.Children.Add(CreateCardHeader("🔊 Audio Controllers & Codecs"));
+            stAudio.Children.Add(CreateCardHeader("🔊 " + T("PCAssist_Dev_AudioTitle", "Audio Devices")));
             _pnlDevicesAudio = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
             stAudio.Children.Add(_pnlDevicesAudio);
             cardAudio.Child = stAudio;
@@ -827,7 +824,7 @@ namespace OptiAssist.Addons.PCAssist
         #region TAB 3: Battery & Power View
         private ScrollViewer BuildBatteryTab()
         {
-            ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Collapsed };
+            ScrollViewer sv = CreateTabScrollViewer(Visibility.Collapsed);
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(24, 16, 24, 24) };
 
             _cardBatteryDesktop = CreateCard();
@@ -954,12 +951,28 @@ namespace OptiAssist.Addons.PCAssist
 
         private TextBlock AddDetailRow(StackPanel parent, string label, string value)
         {
-            Grid g = new Grid { Margin = new Thickness(0, 4, 0, 4) };
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(170) });
+            Grid g = new Grid { Margin = new Thickness(0, 5, 0, 5) };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            TextBlock lbl = new TextBlock { Text = label, FontSize = 12, Foreground = GetResourceBrush("BrushTextSecondary", "#475569") };
-            TextBlock val = new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), TextWrapping = TextWrapping.Wrap };
+            TextBlock lbl = new TextBlock
+            {
+                Text = label,
+                FontSize = 11.5,
+                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
+                Margin = new Thickness(0, 0, 14, 0),
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            TextBlock val = new TextBlock
+            {
+                Text = value,
+                FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Top
+            };
 
             Grid.SetColumn(lbl, 0);
             Grid.SetColumn(val, 1);
@@ -1031,8 +1044,8 @@ namespace OptiAssist.Addons.PCAssist
         #region TAB 4: Bench Diagnostics View
         private ScrollViewer BuildBenchTab()
         {
-            ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Collapsed };
-            StackPanel rootPanel = new StackPanel { Margin = new Thickness(24, 16, 24, 24) };
+            ScrollViewer sv = CreateTabScrollViewer(Visibility.Collapsed);
+            StackPanel rootPanel = new StackPanel { Margin = new Thickness(4, 0, 4, 12) };
 
             _btnCancelBench = CreateStyledButton(T("PCAssist_Bench_BtnCancel", "⏹️ Cancel Test"), GetResourceBrush("BrushDanger", "#EF4444"), Brushes.White);
             _btnCancelBench.Visibility = Visibility.Collapsed;
@@ -1043,9 +1056,15 @@ namespace OptiAssist.Addons.PCAssist
             };
             rootPanel.Children.Add(_btnCancelBench);
 
-            // 1. CPU Benchmark Card
+            Grid benchGrid = new Grid();
+            benchGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            benchGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            benchGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            benchGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            // 1. CPU Benchmark Card (Row 0, Col 0)
             Border cpuBenchCard = CreateCard();
-            cpuBenchCard.Margin = new Thickness(0, 0, 0, 16);
+            cpuBenchCard.Margin = new Thickness(0, 0, 6, 12);
             StackPanel cpuBStack = new StackPanel();
             cpuBStack.Children.Add(CreateCardHeader("⚡ " + T("PCAssist_Bench_CpuTitle", "CPU Multithread Benchmark")));
             cpuBStack.Children.Add(new TextBlock
@@ -1060,7 +1079,7 @@ namespace OptiAssist.Addons.PCAssist
             _btnCpuBench = CreateStyledButton(T("PCAssist_Bench_BtnStart", "▶️ Start Benchmark"), GetResourceBrush("BrushAccent", "#0EA5E9"), Brushes.White);
             _pbCpuBench = CreateMetricProgressBar();
             _pbCpuBench.Visibility = Visibility.Collapsed;
-            _txtCpuBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0) };
+            _txtCpuBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
 
             _btnCpuBench.Click += async (s, e) =>
             {
@@ -1077,11 +1096,13 @@ namespace OptiAssist.Addons.PCAssist
             cpuBStack.Children.Add(_pbCpuBench);
             cpuBStack.Children.Add(_txtCpuBenchResult);
             cpuBenchCard.Child = cpuBStack;
-            rootPanel.Children.Add(cpuBenchCard);
+            Grid.SetRow(cpuBenchCard, 0);
+            Grid.SetColumn(cpuBenchCard, 0);
+            benchGrid.Children.Add(cpuBenchCard);
 
-            // 2. RAM Benchmark Card
+            // 2. RAM Benchmark Card (Row 0, Col 1)
             Border ramBenchCard = CreateCard();
-            ramBenchCard.Margin = new Thickness(0, 0, 0, 16);
+            ramBenchCard.Margin = new Thickness(6, 0, 0, 12);
             StackPanel ramBStack = new StackPanel();
             ramBStack.Children.Add(CreateCardHeader("🧠 " + T("PCAssist_Bench_RamTitle", "RAM Bandwidth Benchmark")));
             ramBStack.Children.Add(new TextBlock
@@ -1096,7 +1117,7 @@ namespace OptiAssist.Addons.PCAssist
             _btnRamBench = CreateStyledButton(T("PCAssist_Bench_BtnStart", "▶️ Start Benchmark"), GetResourceBrush("BrushAccent", "#0EA5E9"), Brushes.White);
             _pbRamBench = CreateMetricProgressBar();
             _pbRamBench.Visibility = Visibility.Collapsed;
-            _txtRamBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0) };
+            _txtRamBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
 
             _btnRamBench.Click += async (s, e) =>
             {
@@ -1113,11 +1134,13 @@ namespace OptiAssist.Addons.PCAssist
             ramBStack.Children.Add(_pbRamBench);
             ramBStack.Children.Add(_txtRamBenchResult);
             ramBenchCard.Child = ramBStack;
-            rootPanel.Children.Add(ramBenchCard);
+            Grid.SetRow(ramBenchCard, 0);
+            Grid.SetColumn(ramBenchCard, 1);
+            benchGrid.Children.Add(ramBenchCard);
 
-            // 3. Storage Benchmark Card
+            // 3. Storage Benchmark Card (Row 1, Col 0)
             Border diskBenchCard = CreateCard();
-            diskBenchCard.Margin = new Thickness(0, 0, 0, 16);
+            diskBenchCard.Margin = new Thickness(0, 0, 6, 0);
             StackPanel diskBStack = new StackPanel();
             diskBStack.Children.Add(CreateCardHeader("💾 " + T("PCAssist_Bench_DiskTitle", "Sequential Drive C: Speed Test")));
             diskBStack.Children.Add(new TextBlock
@@ -1132,7 +1155,7 @@ namespace OptiAssist.Addons.PCAssist
             _btnDiskBench = CreateStyledButton(T("PCAssist_Bench_BtnStart", "▶️ Start Benchmark"), GetResourceBrush("BrushAccent", "#0EA5E9"), Brushes.White);
             _pbDiskBench = CreateMetricProgressBar();
             _pbDiskBench.Visibility = Visibility.Collapsed;
-            _txtDiskBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0) };
+            _txtDiskBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
 
             _btnDiskBench.Click += async (s, e) =>
             {
@@ -1149,10 +1172,13 @@ namespace OptiAssist.Addons.PCAssist
             diskBStack.Children.Add(_pbDiskBench);
             diskBStack.Children.Add(_txtDiskBenchResult);
             diskBenchCard.Child = diskBStack;
-            rootPanel.Children.Add(diskBenchCard);
+            Grid.SetRow(diskBenchCard, 1);
+            Grid.SetColumn(diskBenchCard, 0);
+            benchGrid.Children.Add(diskBenchCard);
 
-            // 4. Stress Test Card
+            // 4. Stress Test Card (Row 1, Col 1)
             Border stressBenchCard = CreateCard();
+            stressBenchCard.Margin = new Thickness(6, 0, 0, 0);
             StackPanel stressBStack = new StackPanel();
             stressBStack.Children.Add(CreateCardHeader("🔥 " + T("PCAssist_Bench_StressTitle", "Thermal & Cooling Stress Test (30s)")));
             stressBStack.Children.Add(new TextBlock
@@ -1167,7 +1193,7 @@ namespace OptiAssist.Addons.PCAssist
             _btnStressBench = CreateStyledButton(T("PCAssist_Bench_BtnStress", "🔥 Run Stress Test"), GetResourceBrush("BrushDanger", "#EF4444"), Brushes.White);
             _pbStressBench = CreateMetricProgressBar();
             _pbStressBench.Visibility = Visibility.Collapsed;
-            _txtStressBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0) };
+            _txtStressBenchResult = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
 
             _btnStressBench.Click += async (s, e) =>
             {
@@ -1184,7 +1210,11 @@ namespace OptiAssist.Addons.PCAssist
             stressBStack.Children.Add(_pbStressBench);
             stressBStack.Children.Add(_txtStressBenchResult);
             stressBenchCard.Child = stressBStack;
-            rootPanel.Children.Add(stressBenchCard);
+            Grid.SetRow(stressBenchCard, 1);
+            Grid.SetColumn(stressBenchCard, 1);
+            benchGrid.Children.Add(stressBenchCard);
+
+            rootPanel.Children.Add(benchGrid);
 
             sv.Content = rootPanel;
             return sv;
@@ -1387,19 +1417,19 @@ namespace OptiAssist.Addons.PCAssist
             {
                 foreach (var ctrl in inv.StorageControllers)
                 {
-                    AddDetailRow(_pnlDevicesStorageControllers, ctrl.Name + ":", string.Format("Fabricante: {0} | Status: {1}", ctrl.Manufacturer, ctrl.Status));
+                    AddDetailRow(_pnlDevicesStorageControllers, ctrl.Name + ":", string.Format("{0}: {1} | Status: {2}", T("PCAssist_Dev_Manufacturer", "Manufacturer"), ctrl.Manufacturer, ctrl.Status));
                 }
             }
             else
             {
-                AddDetailRow(_pnlDevicesStorageControllers, "Controladores:", "Nenhum controlador de armazenamento adicional reportado");
+                AddDetailRow(_pnlDevicesStorageControllers, T("PCAssist_Dev_Controllers", "Controllers:"), T("PCAssist_Dev_NoStorageCtrl", "No additional storage controllers reported"));
             }
 
             // 3. Physical Drives
             _pnlDevicesDrives.Children.Clear();
             foreach (var drv in inv.PhysicalDrives)
             {
-                AddDetailRow(_pnlDevicesDrives, drv.InterfaceType + ":", string.Format("{0} | Capacidade: {1:N0} GB | Status: {2}", drv.Model, drv.SizeGb, drv.IsHealthy ? "Saudável (OK)" : "Alerta SMART"));
+                AddDetailRow(_pnlDevicesDrives, drv.InterfaceType + ":", string.Format("{0} | {1}: {2:N0} GB | Status: {3}", drv.Model, T("PCAssist_Dev_Capacity", "Capacity"), drv.SizeGb, drv.IsHealthy ? T("PCAssist_Dev_Healthy", "Healthy (OK)") : T("PCAssist_Dev_SmartAlert", "SMART Warning")));
             }
 
             // 4. PCI Express Bridges & Root Ports
@@ -1413,7 +1443,7 @@ namespace OptiAssist.Addons.PCAssist
             }
             else
             {
-                AddDetailRow(_pnlDevicesPciBridges, "Barramentos:", "Nenhum barramento PCI adicional reportado");
+                AddDetailRow(_pnlDevicesPciBridges, T("PCAssist_Dev_Buses", "Buses:"), T("PCAssist_Dev_NoPci", "No additional PCI bridges reported"));
             }
 
             // 5. USB Controllers & Hubs
@@ -1422,22 +1452,22 @@ namespace OptiAssist.Addons.PCAssist
             {
                 foreach (var usb in inv.UsbControllers)
                 {
-                    AddDetailRow(_pnlDevicesUsb, usb.Name + ":", string.Format("Fabricante: {0} | Status: {1}", usb.Manufacturer, usb.Status));
+                    AddDetailRow(_pnlDevicesUsb, usb.Name + ":", string.Format("{0}: {1} | Status: {2}", T("PCAssist_Dev_Manufacturer", "Manufacturer"), usb.Manufacturer, usb.Status));
                 }
             }
             else
             {
-                AddDetailRow(_pnlDevicesUsb, "Controladores USB:", "Nenhum controlador USB reportado");
+                AddDetailRow(_pnlDevicesUsb, T("PCAssist_Dev_UsbCtrl", "USB Controllers:"), T("PCAssist_Dev_NoUsb", "No USB controllers reported"));
             }
 
             // 6. Displays & EDID
             _pnlDevicesDisplays.Children.Clear();
             foreach (var disp in inv.Displays)
             {
-                AddDetailRow(_pnlDevicesDisplays, disp.MonitorModel + ":", string.Format("{0}x{1} @ {2} Hz ({3} bpp) | Conexão: {4} | Adaptador: {5}", disp.Width, disp.Height, disp.RefreshRateHz, disp.BitsPerPixel, disp.ConnectionType, disp.AdapterName));
+                AddDetailRow(_pnlDevicesDisplays, disp.MonitorModel + ":", string.Format("{0}x{1} @ {2} Hz ({3} bpp) | {4}: {5} | {6}: {7}", disp.Width, disp.Height, disp.RefreshRateHz, disp.BitsPerPixel, T("PCAssist_Dev_Connection", "Connection"), disp.ConnectionType, T("PCAssist_Dev_Adapter", "Adapter"), disp.AdapterName));
             }
 
-            // 7. Audio Codecs
+            // 7. Audio Devices
             _pnlDevicesAudio.Children.Clear();
             foreach (var audio in inv.AudioCodecs)
             {
@@ -1457,7 +1487,7 @@ namespace OptiAssist.Addons.PCAssist
             for (int i = 0; i < inv.MemoryModules.Count; i++)
             {
                 var mod = inv.MemoryModules[i];
-                AddDetailRow(_pnlDevicesMemory, string.Format("Slot #{0} ({1}):", i, mod.SlotLabel), string.Format("{0:N0} GB {1} ({2} MHz) - Fabricante: {3} (PN: {4})", mod.SizeGb, mod.MemoryType, mod.SpeedMhz, mod.Manufacturer, mod.PartNumber));
+                AddDetailRow(_pnlDevicesMemory, string.Format("Slot #{0} ({1}):", i, mod.SlotLabel), string.Format("{0:N0} GB {1} ({2} MHz) - {3}: {4} (PN: {5})", mod.SizeGb, mod.MemoryType, mod.SpeedMhz, T("PCAssist_Dev_Manufacturer", "Manufacturer"), mod.Manufacturer, mod.PartNumber));
             }
 
             // 10. System Sensors
@@ -1466,12 +1496,12 @@ namespace OptiAssist.Addons.PCAssist
             {
                 foreach (var sensor in inv.SystemSensors)
                 {
-                    AddDetailRow(_pnlDevicesSensors, sensor.Name + ":", string.Format("Tipo: {0} | Status: {1}", sensor.Category, sensor.Status));
+                    AddDetailRow(_pnlDevicesSensors, sensor.Name + ":", string.Format("{0}: {1} | Status: {2}", T("PCAssist_Dev_Type", "Type"), sensor.Category, sensor.Status));
                 }
             }
             else
             {
-                AddDetailRow(_pnlDevicesSensors, "Sensores:", "Sensores DTS de CPU/GPU exigem driver em nível de kernel (Ring-0)");
+                AddDetailRow(_pnlDevicesSensors, T("PCAssist_Dev_Sensors", "Sensors:"), T("PCAssist_Dev_NoSensors", "CPU/GPU DTS sensors require a kernel-level (Ring-0) driver"));
             }
 
             // 11. Input Devices
@@ -1480,12 +1510,12 @@ namespace OptiAssist.Addons.PCAssist
             {
                 foreach (var input in inv.InputDevices)
                 {
-                    AddDetailRow(_pnlDevicesInput, input.Name + ":", string.Format("Tipo: {0} | Status: {1}", input.Category, input.Status));
+                    AddDetailRow(_pnlDevicesInput, input.Name + ":", string.Format("{0}: {1} | Status: {2}", T("PCAssist_Dev_Type", "Type"), input.Category, input.Status));
                 }
             }
             else
             {
-                AddDetailRow(_pnlDevicesInput, "Dispositivos de Entrada:", "Dispositivos padrão do sistema");
+                AddDetailRow(_pnlDevicesInput, T("PCAssist_Dev_Input", "Input Devices:"), T("PCAssist_Dev_StdInput", "Standard system devices"));
             }
         }
 
@@ -1508,23 +1538,10 @@ namespace OptiAssist.Addons.PCAssist
                         if (_txtRamUsageTop != null) _txtRamUsageTop.Text = string.Format("RAM Usage: {0:F1}% ({1:F1} / {2:F1} GB)", ramPct, snap.Ram.UsedGb, snap.Ram.TotalGb);
                         if (_pbRamUsageTop != null) _pbRamUsageTop.Value = ramPct;
 
-                        if (_txtCpuLoadLive != null) _txtCpuLoadLive.Text = string.Format("CPU Load: {0:F1}%", snap.Cpu.UsagePercent);
-                        if (_pbCpuLoadLive != null) _pbCpuLoadLive.Value = snap.Cpu.UsagePercent;
                         if (_txtCpuClockLive != null)
                         {
-                            string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : "Dinâmico";
-                            _txtCpuClockLive.Text = string.Format("Live Clock: {0}", clockStr);
-                        }
-                        if (_txtCpuTempLive != null)
-                        {
-                            if (snap.Cpu.TemperatureC.HasValue && snap.Cpu.TemperatureC.Value > 0)
-                            {
-                                _txtCpuTempLive.Text = string.Format("Temperature: {0:F1} °C", snap.Cpu.TemperatureC.Value);
-                            }
-                            else
-                            {
-                                _txtCpuTempLive.Text = "Temperature: N/A (sensor unavailable)";
-                            }
+                            string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : T("PCAssist_Dynamic", "Dynamic");
+                            _txtCpuClockLive.Text = string.Format("Clock: {0}", clockStr);
                         }
                     });
                 }
@@ -1534,6 +1551,26 @@ namespace OptiAssist.Addons.PCAssist
         #endregion
 
         #region UI Helpers
+        private ScrollViewer CreateTabScrollViewer(Visibility visibility)
+        {
+            ScrollViewer sv = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Background = Brushes.Transparent,
+                Visibility = visibility
+            };
+            sv.PreviewMouseWheel += (s, e) =>
+            {
+                if (!e.Handled && sv.ScrollableHeight > 0)
+                {
+                    e.Handled = true;
+                    sv.ScrollToVerticalOffset(sv.VerticalOffset - (e.Delta / 2.5));
+                }
+            };
+            return sv;
+        }
+
         private Border CreateCard()
         {
             return new Border

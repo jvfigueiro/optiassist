@@ -282,7 +282,8 @@ namespace OptiAssist
             {
                 AddonEntry entry = (AddonEntry)rb.Tag;
                 if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(entry.Id, "hardware-monitor", StringComparison.OrdinalIgnoreCase))
                 {
                     scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
                 }
@@ -550,11 +551,16 @@ namespace OptiAssist
             if (lblOsActivation != null) lblOsActivation.Text = LocalizationHelper.Get("Label_OsActivation", "Activation: ") + unknown;
             if (lblMachineName != null) lblMachineName.Text = unknown;
 
-            if (lblCpuDetails != null) lblCpuDetails.Text = LocalizationHelper.Get("Label_Processor", "Processor: ") + unknown;
-            if (lblRamDetails != null) lblRamDetails.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ") + unknown;
-            if (lblGpuDetails != null) lblGpuDetails.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ") + unknown;
-            if (lblMotherboard != null) lblMotherboard.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ") + unknown;
-            if (lblBiosInfo != null) lblBiosInfo.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ") + unknown;
+            if (lblCpuTag != null) lblCpuTag.Text = LocalizationHelper.Get("Label_Processor", "Processor: ");
+            if (lblCpuDetails != null) lblCpuDetails.Text = unknown;
+            if (lblRamTag != null) lblRamTag.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ");
+            if (lblRamDetails != null) lblRamDetails.Text = unknown;
+            if (lblGpuTag != null) lblGpuTag.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ");
+            if (lblGpuDetails != null) lblGpuDetails.Text = unknown;
+            if (lblMotherboardTag != null) lblMotherboardTag.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ");
+            if (lblMotherboard != null) lblMotherboard.Text = unknown;
+            if (lblBiosTag != null) lblBiosTag.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ");
+            if (lblBiosInfo != null) lblBiosInfo.Text = unknown;
             if (lblDiskDetails != null) lblDiskDetails.Text = LocalizationHelper.Get("Label_Storage", "Storage: ") + unknown;
             if (lblSerialNumber != null) lblSerialNumber.Text = unknown;
 
@@ -573,11 +579,16 @@ namespace OptiAssist
             lblOsTitle.Text = LocalizationHelper.Get("Status_Detecting", "Querying system info and WMI...");
             if (lblOsInstallDate != null) lblOsInstallDate.Text = LocalizationHelper.Get("Label_OsInstallDate", "Install Date: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
             if (lblOsActivation != null) lblOsActivation.Text = LocalizationHelper.Get("Label_OsActivation", "Activation: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
-            lblCpuDetails.Text = LocalizationHelper.Get("Label_Processor", "Processor: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
-            lblRamDetails.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
-            lblGpuDetails.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
-            lblMotherboard.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
-            lblBiosInfo.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
+            if (lblCpuTag != null) lblCpuTag.Text = LocalizationHelper.Get("Label_Processor", "Processor: ");
+            lblCpuDetails.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
+            if (lblRamTag != null) lblRamTag.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ");
+            lblRamDetails.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
+            if (lblGpuTag != null) lblGpuTag.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ");
+            lblGpuDetails.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
+            if (lblMotherboardTag != null) lblMotherboardTag.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ");
+            lblMotherboard.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
+            if (lblBiosTag != null) lblBiosTag.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ");
+            lblBiosInfo.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
             lblDiskDetails.Text = LocalizationHelper.Get("Label_Storage", "Storage: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
             lblSerialNumber.Text = "...";
 
@@ -757,16 +768,16 @@ namespace OptiAssist
                 lblSerialNumber.Text = sn;
             }
 
-            lblCpuDetails.Text = string.Format("{0}{1} ({2} Cores / {3} Threads)",
-                LocalizationHelper.Get("Label_Processor", "Processor: "), cpuText, info.CpuCores, info.CpuThreads);
-            lblRamDetails.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Ram", "RAM Memory: "), info.RamTotalGb > 0 ? info.RamTotalGb + " GB" : LocalizationHelper.Get("Status_Unknown", "Unknown"));
-            lblGpuDetails.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Gpu", "Graphics Card: "), gpuText);
-            lblMotherboard.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Motherboard", "Motherboard: "), moboText);
-            lblBiosInfo.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Bios", "BIOS: "), biosText);
+            if (lblCpuTag != null) lblCpuTag.Text = LocalizationHelper.Get("Label_Processor", "Processor: ");
+            lblCpuDetails.Text = string.Format("{0} ({1} Cores / {2} Threads)", cpuText, info.CpuCores, info.CpuThreads);
+            if (lblRamTag != null) lblRamTag.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ");
+            lblRamDetails.Text = info.RamTotalGb > 0 ? info.RamTotalGb + " GB" : LocalizationHelper.Get("Status_Unknown", "Unknown");
+            if (lblGpuTag != null) lblGpuTag.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ");
+            lblGpuDetails.Text = gpuText;
+            if (lblMotherboardTag != null) lblMotherboardTag.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ");
+            lblMotherboard.Text = moboText;
+            if (lblBiosTag != null) lblBiosTag.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ");
+            lblBiosInfo.Text = biosText;
             lblDiskDetails.Text = string.Format("{0}{1}",
                 LocalizationHelper.Get("Label_Storage", "Storage: "), diskText);
 
@@ -783,8 +794,8 @@ namespace OptiAssist
                             Text = drvStr,
                             FontSize = 11.5,
                             FontWeight = FontWeights.SemiBold,
-                            Margin = new Thickness(0, 4, 0, 0),
-                            TextWrapping = TextWrapping.Wrap
+                            Margin = new Thickness(0, 0, 18, 4),
+                            VerticalAlignment = VerticalAlignment.Center
                         };
                         tbDrive.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
                         pnlOtherDisks.Children.Add(tbDrive);
@@ -2994,7 +3005,8 @@ namespace OptiAssist
                     rb.IsChecked = true;
                     restoredActiveAddon = true;
                     if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
+                        string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(entry.Id, "hardware-monitor", StringComparison.OrdinalIgnoreCase))
                     {
                         scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
                     }
@@ -3529,11 +3541,16 @@ namespace OptiAssist
                 if (lblOsDetails != null) lblOsDetails.Text = detecting;
                 if (lblOsInstallDate != null) lblOsInstallDate.Text = LocalizationHelper.Get("Label_OsInstallDate", "Install Date: ") + detecting;
                 if (lblOsActivation != null) lblOsActivation.Text = LocalizationHelper.Get("Label_OsActivation", "Activation: ") + detecting;
-                if (lblCpuDetails != null) lblCpuDetails.Text = LocalizationHelper.Get("Label_Processor", "Processor: ") + detecting;
-                if (lblRamDetails != null) lblRamDetails.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ") + detecting;
-                if (lblGpuDetails != null) lblGpuDetails.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ") + detecting;
-                if (lblMotherboard != null) lblMotherboard.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ") + detecting;
-                if (lblBiosInfo != null) lblBiosInfo.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ") + detecting;
+                if (lblCpuTag != null) lblCpuTag.Text = LocalizationHelper.Get("Label_Processor", "Processor: ");
+                if (lblCpuDetails != null) lblCpuDetails.Text = detecting;
+                if (lblRamTag != null) lblRamTag.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ");
+                if (lblRamDetails != null) lblRamDetails.Text = detecting;
+                if (lblGpuTag != null) lblGpuTag.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ");
+                if (lblGpuDetails != null) lblGpuDetails.Text = detecting;
+                if (lblMotherboardTag != null) lblMotherboardTag.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ");
+                if (lblMotherboard != null) lblMotherboard.Text = detecting;
+                if (lblBiosTag != null) lblBiosTag.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ");
+                if (lblBiosInfo != null) lblBiosInfo.Text = detecting;
                 if (lblDiskDetails != null) lblDiskDetails.Text = LocalizationHelper.Get("Label_Storage", "Storage: ") + detecting;
                 if (lblSerialNumber != null) lblSerialNumber.Text = LocalizationHelper.Get("Status_NotDetected", "Not available");
                 if (lblMachineName != null) lblMachineName.Text = detecting;
