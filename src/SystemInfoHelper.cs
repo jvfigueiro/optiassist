@@ -50,6 +50,7 @@ namespace OptiAssist
         public double RamFreeGb { get; set; }
         public string GpuName { get; set; }
         public string PrimaryDiskInfo { get; set; }
+        public System.Collections.Generic.List<string> AllDrivesInfo { get; set; }
         public double PrimaryDiskTotalGb { get; set; }
         public double PrimaryDiskFreeGb { get; set; }
         public string PrimaryDiskMediaType { get; set; }
@@ -80,6 +81,7 @@ namespace OptiAssist
             CpuName = "Detecting CPU...";
             GpuName = "Detecting GPU...";
             PrimaryDiskInfo = "Detecting storage...";
+            AllDrivesInfo = new System.Collections.Generic.List<string>();
             PrimaryDiskTotalGb = 0;
             PrimaryDiskFreeGb = 0;
             PrimaryDiskMediaType = "";
@@ -394,6 +396,22 @@ namespace OptiAssist
                     summary.PrimaryDiskFreeGb = Math.Round(cDrive.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0), 0);
                     summary.PrimaryDiskInfo = string.Format("C: ({0} GB / {1} GB - {2})", summary.PrimaryDiskFreeGb, summary.PrimaryDiskTotalGb, cDrive.DriveFormat);
                 }
+
+                try
+                {
+                    foreach (DriveInfo drv in DriveInfo.GetDrives())
+                    {
+                        if ((drv.DriveType == DriveType.Fixed || drv.DriveType == DriveType.Removable) && drv.IsReady && drv.TotalSize > 0)
+                        {
+                            double totGb = Math.Round(drv.TotalSize / (1024.0 * 1024.0 * 1024.0), 0);
+                            double freeGb = Math.Round(drv.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0), 0);
+                            string label = drv.Name.TrimEnd('\\');
+                            string vol = string.IsNullOrWhiteSpace(drv.VolumeLabel) ? "" : " [" + drv.VolumeLabel.Trim() + "]";
+                            summary.AllDrivesInfo.Add(string.Format("{0}{1} ({2} GB / {3} GB - {4})", label, vol, freeGb, totGb, drv.DriveFormat));
+                        }
+                    }
+                }
+                catch { }
 
                 try
                 {

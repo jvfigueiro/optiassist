@@ -49,7 +49,7 @@
   "Msg_CleanerConfirmPrompt": "Tem certeza de que deseja realizar as ações de limpeza selecionadas e revisadas?",
   "Msg_CleanerConfirmDetails": "• Módulos a processar: {0}\n• Espaço estimado a ser recuperado: {1}",
   "Msg_CleanerConfirmNote": "Todos os arquivos temporários, caches e itens identificados serão excluídos permanentemente.",
-  "Msg_CleanerDangerousPrompt": "⚠️ AVISO DE ATENÇÃO\n\nOpção selecionada: {0}\n\nRiscos e Consequências:\n{1}\n\nEsta opção pode remover dados de navegação, sessões salvas ou arquivos importantes.\n\nTem certeza de que deseja marcar esta opção para limpeza mesmo assim?",
+  "Msg_CleanerDangerousPrompt": "⚠️ AVISO DE ATENÇÃO\n\nOpção selecionada: {0}\n\nRiscos e Consequências:\n{1}\n\nTem certeza de que deseja marcar esta opção para limpeza mesmo assim?",
   "Msg_CleanerDangerousTitle": "OptiAssist - Aviso de Segurança",
   "Cleaner_Btn_ViewFiles": "Ver Arquivos",
   "Cleaner_Btn_HideFiles": "Ocultar Arquivos",

@@ -68,7 +68,7 @@ namespace OptiAssist.Addons.StartupManager
         public string Id { get { return "startup-manager"; } }
         public string Name { get { return T("Nav_StartupManager", "Startup Manager"); } }
         public string Description { get { return T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications and scheduled tasks"); } }
-        public string Version { get { return "1.1.0.0"; } }
+        public string Version { get { return "1.2.S4"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🚀"; } }
 

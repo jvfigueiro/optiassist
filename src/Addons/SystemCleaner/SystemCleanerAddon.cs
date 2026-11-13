@@ -4286,29 +4286,90 @@ namespace OptiAssist.Addons.SystemCleaner
             string title = T("Msg_CleanerDangerousTitle", "OptiAssist - Caution Warning");
             string msg = string.Format(
                 T("Msg_CleanerDangerousPrompt",
-                  "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nThis option may clear active login sessions, browsing preferences, or sensitive caches.\n\nAre you sure you want to enable this option for cleaning anyway?"),
+                  "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nAre you sure you want to enable this option for cleaning anyway?"),
                 cleaner.SectionTitle + " - " + cleaner.Name, warn);
 
             Window win = new Window
             {
                 Title = title,
-                Width = 480,
+                Width = 496,
                 SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                ResizeMode = ResizeMode.NoResize
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.None
             };
             if (Application.Current != null && Application.Current.MainWindow != null)
             {
                 win.Owner = Application.Current.MainWindow;
             }
-            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
+            win.SetResourceReference(Window.BackgroundProperty, "BrushBgSidebar");
+            System.Windows.Shell.WindowChrome.SetWindowChrome(win, new System.Windows.Shell.WindowChrome
+            {
+                CaptionHeight = 38,
+                ResizeBorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(0),
+                GlassFrameThickness = new Thickness(0),
+                UseAeroCaptionButtons = false
+            });
+
+            Border outerFrame = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                SnapsToDevicePixels = true
+            };
+            outerFrame.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+            outerFrame.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            Grid shell = new Grid();
+            shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(38) });
+            shell.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            Grid titleBar = new Grid();
+            titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            TextBlock lblWinTitle = new TextBlock
+            {
+                Text = title,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(14, 0, 10, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            lblWinTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            Grid.SetColumn(lblWinTitle, 0);
+            titleBar.Children.Add(lblWinTitle);
+
+            Button btnWinClose = new Button
+            {
+                Content = "✕",
+                Width = 38,
+                Height = 38,
+                FontSize = 12,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Focusable = false
+            };
+            btnWinClose.SetResourceReference(Button.ForegroundProperty, "BrushTextSecondary");
+            System.Windows.Shell.WindowChrome.SetIsHitTestVisibleInChrome(btnWinClose, true);
+            btnWinClose.Click += (s, e) => { win.Close(); };
+            Grid.SetColumn(btnWinClose, 1);
+            titleBar.Children.Add(btnWinClose);
+
+            Grid.SetRow(titleBar, 0);
+            shell.Children.Add(titleBar);
 
             Border rootBorder = new Border
             {
-                Padding = new Thickness(20),
+                Padding = new Thickness(18),
+                Margin = new Thickness(8, 0, 8, 8),
+                CornerRadius = new CornerRadius(10),
                 BorderThickness = new Thickness(1)
             };
-            rootBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            rootBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgPrimary");
             rootBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
             StackPanel sp = new StackPanel();
@@ -4383,7 +4444,10 @@ namespace OptiAssist.Addons.SystemCleaner
             sp.Children.Add(spBtns);
 
             rootBorder.Child = sp;
-            win.Content = rootBorder;
+            Grid.SetRow(rootBorder, 1);
+            shell.Children.Add(rootBorder);
+            outerFrame.Child = shell;
+            win.Content = outerFrame;
             win.ShowDialog();
 
             if (chkSuppress.IsChecked == true && !_disableSelectionWarnings)

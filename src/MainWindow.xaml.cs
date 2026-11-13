@@ -49,6 +49,8 @@ namespace OptiAssist
                 IntPtr hwnd = new WindowInteropHelper(this).Handle;
                 int preference = 2; // DWMWCP_ROUND (Windows 11 subtle rounded corners)
                 DwmSetWindowAttribute(hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref preference, sizeof(int));
+                ModernChromeHelper.ApplyTaskbarIcon(this, hwnd);
+                ModernChromeHelper.AttachMaxWorkAreaHook(hwnd);
             }
             catch { }
         }
@@ -61,7 +63,7 @@ namespace OptiAssist
                 {
                     windowOuterBorder.BorderThickness = new Thickness(0);
                     windowOuterBorder.CornerRadius = new CornerRadius(0);
-                    windowOuterBorder.Padding = new Thickness(7);
+                    windowOuterBorder.Padding = new Thickness(0);
                 }
                 else
                 {
@@ -120,7 +122,19 @@ namespace OptiAssist
 
         private void UpdateStatusBadge(TextBlock tb, string value)
         {
-            if (string.IsNullOrEmpty(value) || value == "Indisponível/não suportado" || value == "Unavailable" || value == "Unavailable/Not supported")
+            if (string.IsNullOrWhiteSpace(value) ||
+                value.IndexOf("Detecting", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Detectando", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                tb.Text = LocalizationHelper.Get("Status_Unknown", "Unknown");
+                tb.Foreground = (SolidColorBrush)FindResource("BrushTextSecondary");
+                return;
+            }
+
+            if (value == "Indisponível/não suportado" ||
+                value.IndexOf("Unavailable", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Not supported", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Not present", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 tb.Text = LocalizationHelper.Get("Status_NotSupported", "Unavailable/Not supported");
                 tb.Foreground = (SolidColorBrush)FindResource("BrushTextSecondary");
@@ -128,19 +142,26 @@ namespace OptiAssist
             }
 
             if (value.StartsWith("Ativo", StringComparison.OrdinalIgnoreCase) ||
-                value.StartsWith("Active", StringComparison.OrdinalIgnoreCase))
+                value.StartsWith("Active", StringComparison.OrdinalIgnoreCase) ||
+                value.StartsWith("Enabled", StringComparison.OrdinalIgnoreCase) ||
+                value.StartsWith("Protected", StringComparison.OrdinalIgnoreCase) ||
+                value.StartsWith("Encrypted", StringComparison.OrdinalIgnoreCase))
             {
                 tb.Text = LocalizationHelper.Get("Status_Active", "Active");
                 tb.Foreground = (SolidColorBrush)FindResource("BrushSuccess");
             }
             else if (value.StartsWith("Inativo", StringComparison.OrdinalIgnoreCase) ||
-                     value.StartsWith("Inactive", StringComparison.OrdinalIgnoreCase))
+                     value.StartsWith("Inactive", StringComparison.OrdinalIgnoreCase) ||
+                     value.StartsWith("Disabled", StringComparison.OrdinalIgnoreCase) ||
+                     value.StartsWith("Suspended", StringComparison.OrdinalIgnoreCase) ||
+                     value.StartsWith("Off", StringComparison.OrdinalIgnoreCase))
             {
                 tb.Text = LocalizationHelper.Get("Status_Inactive", "Inactive");
                 tb.Foreground = (SolidColorBrush)FindResource("BrushDanger");
             }
             else if (value.StartsWith("Disponível", StringComparison.OrdinalIgnoreCase) ||
-                     value.StartsWith("Available", StringComparison.OrdinalIgnoreCase))
+                     value.StartsWith("Available", StringComparison.OrdinalIgnoreCase) ||
+                     value.StartsWith("Ready", StringComparison.OrdinalIgnoreCase))
             {
                 string extra = "";
                 int parenIdx = value.IndexOf('(');
@@ -260,7 +281,8 @@ namespace OptiAssist
             else if (rb.Tag is AddonEntry)
             {
                 AddonEntry entry = (AddonEntry)rb.Tag;
-                if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
                 {
                     scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
                 }
@@ -513,6 +535,35 @@ namespace OptiAssist
         #endregion
 
         #region OVERVIEW (DASHBOARD)
+        private System.Windows.Threading.DispatcherTimer _hardwareDetectTimeoutTimer;
+
+        private void ApplyHardwareDetectionUnknownFallback()
+        {
+            string unknown = LocalizationHelper.Get("Status_Unknown", "Unknown");
+            if (lblHeaderDevice != null) lblHeaderDevice.Text = unknown;
+            if (lblHeaderCpu != null) lblHeaderCpu.Text = unknown;
+            if (lblHeaderRam != null) lblHeaderRam.Text = unknown;
+
+            if (lblOsTitle != null) lblOsTitle.Text = unknown;
+            if (lblOsDetails != null) lblOsDetails.Text = unknown;
+            if (lblOsInstallDate != null) lblOsInstallDate.Text = LocalizationHelper.Get("Label_OsInstallDate", "Install Date: ") + unknown;
+            if (lblOsActivation != null) lblOsActivation.Text = LocalizationHelper.Get("Label_OsActivation", "Activation: ") + unknown;
+            if (lblMachineName != null) lblMachineName.Text = unknown;
+
+            if (lblCpuDetails != null) lblCpuDetails.Text = LocalizationHelper.Get("Label_Processor", "Processor: ") + unknown;
+            if (lblRamDetails != null) lblRamDetails.Text = LocalizationHelper.Get("Label_Ram", "RAM Memory: ") + unknown;
+            if (lblGpuDetails != null) lblGpuDetails.Text = LocalizationHelper.Get("Label_Gpu", "Graphics Card: ") + unknown;
+            if (lblMotherboard != null) lblMotherboard.Text = LocalizationHelper.Get("Label_Motherboard", "Motherboard: ") + unknown;
+            if (lblBiosInfo != null) lblBiosInfo.Text = LocalizationHelper.Get("Label_Bios", "BIOS: ") + unknown;
+            if (lblDiskDetails != null) lblDiskDetails.Text = LocalizationHelper.Get("Label_Storage", "Storage: ") + unknown;
+            if (lblSerialNumber != null) lblSerialNumber.Text = unknown;
+
+            if (txtBitLockerStatus != null) txtBitLockerStatus.Text = unknown;
+            if (txtTpmStatus != null) txtTpmStatus.Text = unknown;
+            if (txtSecureBootStatus != null) txtSecureBootStatus.Text = unknown;
+            if (txtFirmwareStatus != null) txtFirmwareStatus.Text = unknown;
+        }
+
         private void RefreshHardwareAsync()
         {
             lblHeaderDevice.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
@@ -543,6 +594,19 @@ namespace OptiAssist
             }
 
             _isRefreshingHardwareBg = true;
+            if (_hardwareDetectTimeoutTimer != null) _hardwareDetectTimeoutTimer.Stop();
+            _hardwareDetectTimeoutTimer = new System.Windows.Threading.DispatcherTimer();
+            _hardwareDetectTimeoutTimer.Interval = TimeSpan.FromSeconds(30);
+            _hardwareDetectTimeoutTimer.Tick += (ts, te) =>
+            {
+                _hardwareDetectTimeoutTimer.Stop();
+                if (_isRefreshingHardwareBg)
+                {
+                    ApplyHardwareDetectionUnknownFallback();
+                }
+            };
+            _hardwareDetectTimeoutTimer.Start();
+
             ThreadPool.QueueUserWorkItem(state =>
             {
                 try
@@ -573,6 +637,19 @@ namespace OptiAssist
             }
 
             _isRefreshingHardwareBg = true;
+            if (_hardwareDetectTimeoutTimer != null) _hardwareDetectTimeoutTimer.Stop();
+            _hardwareDetectTimeoutTimer = new System.Windows.Threading.DispatcherTimer();
+            _hardwareDetectTimeoutTimer.Interval = TimeSpan.FromSeconds(30);
+            _hardwareDetectTimeoutTimer.Tick += (ts, te) =>
+            {
+                _hardwareDetectTimeoutTimer.Stop();
+                if (_isRefreshingHardwareBg)
+                {
+                    ApplyHardwareDetectionUnknownFallback();
+                }
+            };
+            _hardwareDetectTimeoutTimer.Start();
+
             ThreadPool.QueueUserWorkItem(state =>
             {
                 try
@@ -593,9 +670,27 @@ namespace OptiAssist
             });
         }
 
+        private readonly System.Collections.Generic.HashSet<string> _dismissedRecommendations = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private string FallbackIfDetecting(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) ||
+                value.IndexOf("Detecting", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Detectando", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return LocalizationHelper.Get("Status_Unknown", "Unknown");
+            }
+            return value;
+        }
+
         public void UpdateHardwareDisplay(HardwareSummary info)
         {
-            if (info == null) return;
+            if (_hardwareDetectTimeoutTimer != null) _hardwareDetectTimeoutTimer.Stop();
+            if (info == null)
+            {
+                ApplyHardwareDetectionUnknownFallback();
+                return;
+            }
 
             // Update bottom status bar badges
             UpdateStatusBadge(txtBitLockerStatus, info.BitLockerStatus);
@@ -603,27 +698,33 @@ namespace OptiAssist
             UpdateStatusBadge(txtSecureBootStatus, info.SecureBootStatus);
             if (txtFirmwareStatus != null)
             {
-                txtFirmwareStatus.Text = string.IsNullOrEmpty(info.FirmwareMode) ? "Legacy BIOS" : info.FirmwareMode;
+                txtFirmwareStatus.Text = string.IsNullOrEmpty(info.FirmwareMode) ? "Legacy BIOS" : FallbackIfDetecting(info.FirmwareMode);
                 txtFirmwareStatus.Foreground = (SolidColorBrush)FindResource(info.IsUefi ? "BrushSuccess" : "BrushWarning");
             }
 
+            string moboText = FallbackIfDetecting(info.Motherboard);
+            string cpuText = FallbackIfDetecting(info.CpuName);
+            string gpuText = FallbackIfDetecting(info.GpuName);
+            string biosText = FallbackIfDetecting(info.BiosInfo);
+            string diskText = FallbackIfDetecting(info.PrimaryDiskInfo);
+
             // Clean Header Bar: Motherboard on line 1, CPU and RAM on line 2
-            lblHeaderDevice.Text = info.Motherboard;
+            lblHeaderDevice.Text = moboText;
             lblHeaderDevice.ToolTip = string.Format("{0}: {1}\n{2}: {3}\n{4}: {5}",
-                LocalizationHelper.Get("Label_Motherboard", "Motherboard: ").TrimEnd(':', ' '), info.Motherboard,
-                LocalizationHelper.Get("Label_Bios", "BIOS: ").TrimEnd(':', ' '), info.BiosInfo,
+                LocalizationHelper.Get("Label_Motherboard", "Motherboard: ").TrimEnd(':', ' '), moboText,
+                LocalizationHelper.Get("Label_Bios", "BIOS: ").TrimEnd(':', ' '), biosText,
                 LocalizationHelper.Get("Label_SerialNumber", "Serial Number: ").TrimEnd(':', ' '), info.SerialNumber);
 
-            lblHeaderCpu.Text = info.CpuName;
+            lblHeaderCpu.Text = cpuText;
             lblHeaderCpu.ToolTip = string.Format("{0}: {1}\n{2} Cores / {3} Threads",
-                LocalizationHelper.Get("Label_Processor", "Processor: ").TrimEnd(':', ' '), info.CpuName, info.CpuCores, info.CpuThreads);
+                LocalizationHelper.Get("Label_Processor", "Processor: ").TrimEnd(':', ' '), cpuText, info.CpuCores, info.CpuThreads);
 
-            lblHeaderRam.Text = string.Format("{0} GB RAM", info.RamTotalGb);
+            lblHeaderRam.Text = info.RamTotalGb > 0 ? string.Format("{0} GB RAM", info.RamTotalGb) : LocalizationHelper.Get("Status_Unknown", "Unknown");
             lblHeaderRam.ToolTip = string.Format("{0}: {1} GB",
                 LocalizationHelper.Get("Label_Ram", "RAM Memory: ").TrimEnd(':', ' '), info.RamTotalGb);
 
             // Operating System Card (Right)
-            lblOsTitle.Text = string.Format("{0} {1}", info.OsName, info.OsDisplayVersion);
+            lblOsTitle.Text = string.Format("{0} {1}", FallbackIfDetecting(info.OsName), info.OsDisplayVersion);
             lblOsDetails.Text = string.Format("Build: {0} ({1})",
                 info.OsBuild, info.OsArchitecture);
             if (lblOsInstallDate != null)
@@ -642,12 +743,11 @@ namespace OptiAssist
                 lblOsActivation.Text = string.Format("{0}{1}",
                     LocalizationHelper.Get("Label_OsActivation", "Activation: "), actText);
             }
-            lblMachineName.Text = info.ComputerName;
+            lblMachineName.Text = FallbackIfDetecting(info.ComputerName);
 
             // Hardware Information Card (Left - 1 per line)
             string sn = info.SerialNumber;
             string notAvailStr = LocalizationHelper.Get("Status_NotAvailable", "Not available");
-            string notInfStr = LocalizationHelper.Get("Status_NotInformed", "Not informed");
             if (string.IsNullOrEmpty(sn) || sn == "Not informed" || sn == "Não informado" || sn == "Not available" || sn == "Não disponível" || sn == "...")
             {
                 lblSerialNumber.Text = notAvailStr;
@@ -658,17 +758,39 @@ namespace OptiAssist
             }
 
             lblCpuDetails.Text = string.Format("{0}{1} ({2} Cores / {3} Threads)",
-                LocalizationHelper.Get("Label_Processor", "Processor: "), info.CpuName, info.CpuCores, info.CpuThreads);
-            lblRamDetails.Text = string.Format("{0}{1} GB",
-                LocalizationHelper.Get("Label_Ram", "RAM Memory: "), info.RamTotalGb);
+                LocalizationHelper.Get("Label_Processor", "Processor: "), cpuText, info.CpuCores, info.CpuThreads);
+            lblRamDetails.Text = string.Format("{0}{1}",
+                LocalizationHelper.Get("Label_Ram", "RAM Memory: "), info.RamTotalGb > 0 ? info.RamTotalGb + " GB" : LocalizationHelper.Get("Status_Unknown", "Unknown"));
             lblGpuDetails.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Gpu", "Graphics Card: "), info.GpuName);
+                LocalizationHelper.Get("Label_Gpu", "Graphics Card: "), gpuText);
             lblMotherboard.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Motherboard", "Motherboard: "), info.Motherboard);
+                LocalizationHelper.Get("Label_Motherboard", "Motherboard: "), moboText);
             lblBiosInfo.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Bios", "BIOS: "), info.BiosInfo);
+                LocalizationHelper.Get("Label_Bios", "BIOS: "), biosText);
             lblDiskDetails.Text = string.Format("{0}{1}",
-                LocalizationHelper.Get("Label_Storage", "Storage: "), info.PrimaryDiskInfo);
+                LocalizationHelper.Get("Label_Storage", "Storage: "), diskText);
+
+            if (pnlOtherDisks != null)
+            {
+                pnlOtherDisks.Children.Clear();
+                if (info.AllDrivesInfo != null && info.AllDrivesInfo.Count > 0)
+                {
+                    foreach (string drvStr in info.AllDrivesInfo)
+                    {
+                        if (drvStr.StartsWith("C:", StringComparison.OrdinalIgnoreCase)) continue;
+                        TextBlock tbDrive = new TextBlock
+                        {
+                            Text = drvStr,
+                            FontSize = 11.5,
+                            FontWeight = FontWeights.SemiBold,
+                            Margin = new Thickness(0, 4, 0, 0),
+                            TextWrapping = TextWrapping.Wrap
+                        };
+                        tbDrive.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                        pnlOtherDisks.Children.Add(tbDrive);
+                    }
+                }
+            }
 
             RenderRecommendations(info);
         }
@@ -680,11 +802,24 @@ namespace OptiAssist
 
             if (txtRecommendationsTitle != null)
             {
-                txtRecommendationsTitle.Text = LocalizationHelper.Get("Card_Recommendations_Title", "💡 System & Hardware Recommendations");
+                txtRecommendationsTitle.Text = LocalizationHelper.Get("Card_Recommendations_ShortTitle", "Recommendations");
             }
 
             var recs = info != null ? info.Recommendations : null;
-            if (recs == null || recs.Count == 0)
+            var visibleRecs = new System.Collections.Generic.List<HardwareRecommendation>();
+            if (recs != null)
+            {
+                foreach (var r in recs)
+                {
+                    string key = (r.ActionTag ?? "") + "|" + (r.Title ?? "");
+                    if (!_dismissedRecommendations.Contains(key))
+                    {
+                        visibleRecs.Add(r);
+                    }
+                }
+            }
+
+            if (visibleRecs.Count == 0)
             {
                 Border allGoodCard = new Border
                 {
@@ -698,7 +833,9 @@ namespace OptiAssist
                 StackPanel sp = new StackPanel();
                 TextBlock title = new TextBlock
                 {
-                    Text = "✔️ " + LocalizationHelper.Get("Rec_AllGood_Title", "Hardware & System Status Excellent"),
+                    Text = recs != null && recs.Count > 0
+                        ? "✔️ " + LocalizationHelper.Get("Rec_Dismissed_Title", "Recommendations dismissed for this session")
+                        : "✔️ " + LocalizationHelper.Get("Rec_AllGood_Title", "Hardware & System Status Excellent"),
                     FontSize = 11.5,
                     FontWeight = FontWeights.Bold
                 };
@@ -706,7 +843,9 @@ namespace OptiAssist
 
                 TextBlock desc = new TextBlock
                 {
-                    Text = LocalizationHelper.Get("Rec_AllGood_Desc", "No critical hardware bottlenecks or driver issues were detected for your system profile."),
+                    Text = recs != null && recs.Count > 0
+                        ? LocalizationHelper.Get("Rec_Dismissed_Desc", "Dismissed recommendations will reappear the next time OptiAssist is opened.")
+                        : LocalizationHelper.Get("Rec_AllGood_Desc", "No critical hardware bottlenecks or driver issues were detected for your system profile."),
                     FontSize = 10.5,
                     Margin = new Thickness(0, 2, 0, 0),
                     TextWrapping = TextWrapping.Wrap
@@ -720,7 +859,7 @@ namespace OptiAssist
                 return;
             }
 
-            foreach (var rec in recs)
+            foreach (var rec in visibleRecs)
             {
                 Border card = new Border
                 {
@@ -777,6 +916,13 @@ namespace OptiAssist
                 Grid.SetColumn(left, 0);
                 g.Children.Add(left);
 
+                StackPanel rightActions = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(10, 0, 0, 0)
+                };
+
                 if (!string.IsNullOrEmpty(rec.ActionButtonText))
                 {
                     Button btn = new Button
@@ -785,17 +931,39 @@ namespace OptiAssist
                         Height = 26,
                         FontSize = 10,
                         Padding = new Thickness(10, 0, 10, 0),
-                        Margin = new Thickness(10, 0, 0, 0),
+                        Margin = new Thickness(0, 0, 6, 0),
                         VerticalAlignment = VerticalAlignment.Center,
                         Cursor = Cursors.Hand
                     };
                     btn.SetResourceReference(Button.StyleProperty, rec.Level == RecommendationLevel.Critical ? "BtnAccent" : "BtnDefault");
                     string actionTag = rec.ActionTag;
-                    btn.Click += (s, e) => ExecuteRecommendationAction(actionTag, rec);
-
-                    Grid.SetColumn(btn, 1);
-                    g.Children.Add(btn);
+                    HardwareRecommendation capturedRec = rec;
+                    btn.Click += (s, e) => ExecuteRecommendationAction(actionTag, capturedRec);
+                    rightActions.Children.Add(btn);
                 }
+
+                Button btnDismiss = new Button
+                {
+                    Content = "✕",
+                    Width = 26,
+                    Height = 26,
+                    FontSize = 10,
+                    Padding = new Thickness(0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Cursor = Cursors.Hand,
+                    ToolTip = LocalizationHelper.Get("Rec_Btn_Dismiss", "Dismiss for this session")
+                };
+                btnDismiss.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                string dismissKey = (rec.ActionTag ?? "") + "|" + (rec.Title ?? "");
+                btnDismiss.Click += (s, e) =>
+                {
+                    _dismissedRecommendations.Add(dismissKey);
+                    RenderRecommendations(_hardware);
+                };
+                rightActions.Children.Add(btnDismiss);
+
+                Grid.SetColumn(rightActions, 1);
+                g.Children.Add(rightActions);
 
                 card.Child = g;
                 pnlRecommendationsList.Children.Add(card);
@@ -822,10 +990,10 @@ namespace OptiAssist
                         break;
                     case "dual_channel_info":
                     case "ssd_upgrade_info":
-                        MessageBox.Show(rec.Description, rec.Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                        ShowProblemDriversDialog(rec);
                         break;
                     default:
-                        MessageBox.Show(rec.Description, rec.Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                        ShowProblemDriversDialog(rec);
                         break;
                 }
             }
@@ -872,38 +1040,51 @@ namespace OptiAssist
             }
         }
 
-        private void ShowProblemDriversDialog()
+        private void ShowProblemDriversDialog(HardwareRecommendation infoRec = null)
         {
+            bool isGenericInfo = (infoRec != null);
             var probDevs = _hardware != null && _hardware.ProblemDevices != null
                 ? _hardware.ProblemDevices
                 : new System.Collections.Generic.List<ProblemDeviceEntry>();
 
             Window win = new Window
             {
-                Title = LocalizationHelper.Get("Drivers_Dialog_Title", "OptiAssist - Hardware Drivers Status"),
-                Width = 620,
-                Height = 440,
+                Title = isGenericInfo
+                    ? "OptiAssist - " + infoRec.Title
+                    : LocalizationHelper.Get("Drivers_Dialog_Title", "OptiAssist - Hardware Drivers Status"),
+                Width = isGenericInfo ? 540 : 636,
+                Height = isGenericInfo ? 340 : 480,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = this,
-                ResizeMode = ResizeMode.CanResizeWithGrip
+                ResizeMode = isGenericInfo ? ResizeMode.NoResize : ResizeMode.CanResize,
+                WindowStyle = WindowStyle.None
             };
-            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
 
-            Grid root = new Grid { Margin = new Thickness(16) };
+            Grid root = new Grid { Margin = new Thickness(18) };
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             TextBlock header = new TextBlock
             {
-                FontSize = 13,
-                FontWeight = FontWeights.SemiBold,
+                FontSize = 13.5,
+                FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 10),
                 TextWrapping = TextWrapping.Wrap
             };
             header.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
 
-            if (probDevs.Count == 0)
+            if (isGenericInfo)
+            {
+                header.Text = (infoRec.Icon ?? "💡") + "  " + infoRec.Title;
+                if (infoRec.Level == RecommendationLevel.Critical)
+                    header.SetResourceReference(TextBlock.ForegroundProperty, "BrushDanger");
+                else if (infoRec.Level == RecommendationLevel.Warning)
+                    header.SetResourceReference(TextBlock.ForegroundProperty, "BrushWarning");
+                else
+                    header.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            }
+            else if (probDevs.Count == 0)
             {
                 header.Text = "✔️ " + LocalizationHelper.Get("Drivers_Dialog_Ok", "All hardware devices and drivers are currently operating properly with no errors detected.");
                 header.SetResourceReference(TextBlock.ForegroundProperty, "BrushSuccess");
@@ -925,7 +1106,28 @@ namespace OptiAssist
             };
             StackPanel list = new StackPanel();
 
-            if (probDevs.Count == 0)
+            if (isGenericInfo)
+            {
+                Border infoCard = new Border
+                {
+                    Padding = new Thickness(16),
+                    CornerRadius = new CornerRadius(8),
+                    BorderThickness = new Thickness(1)
+                };
+                infoCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+                infoCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+                TextBlock infoDesc = new TextBlock
+                {
+                    Text = infoRec.Description ?? "",
+                    FontSize = 12,
+                    LineHeight = 18,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                infoDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                infoCard.Child = infoDesc;
+                list.Children.Add(infoCard);
+            }
+            else if (probDevs.Count == 0)
             {
                 Border okBox = new Border
                 {
@@ -1047,21 +1249,24 @@ namespace OptiAssist
             footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            Button btnDevMgmt = new Button
+            if (!isGenericInfo)
             {
-                Content = LocalizationHelper.Get("Drivers_Btn_OpenDevMgmt", "🖥️ Open Device Manager"),
-                Height = 28,
-                Padding = new Thickness(12, 0, 12, 0),
-                FontSize = 11,
-                Cursor = Cursors.Hand
-            };
-            btnDevMgmt.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnDevMgmt.Click += (s, e) =>
-            {
-                try { Process.Start("devmgmt.msc"); } catch { }
-            };
-            Grid.SetColumn(btnDevMgmt, 0);
-            footer.Children.Add(btnDevMgmt);
+                Button btnDevMgmt = new Button
+                {
+                    Content = LocalizationHelper.Get("Drivers_Btn_OpenDevMgmt", "🖥️ Open Device Manager"),
+                    Height = 28,
+                    Padding = new Thickness(12, 0, 12, 0),
+                    FontSize = 11,
+                    Cursor = Cursors.Hand
+                };
+                btnDevMgmt.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                btnDevMgmt.Click += (s, e) =>
+                {
+                    try { Process.Start("devmgmt.msc"); } catch { }
+                };
+                Grid.SetColumn(btnDevMgmt, 0);
+                footer.Children.Add(btnDevMgmt);
+            }
 
             Button btnClose = new Button
             {
@@ -1080,7 +1285,7 @@ namespace OptiAssist
             Grid.SetRow(footer, 2);
             root.Children.Add(footer);
 
-            win.Content = root;
+            ModernChromeHelper.ApplyChrome(win, root, win.Title, !isGenericInfo);
             win.ShowDialog();
         }
 
@@ -1851,17 +2056,18 @@ namespace OptiAssist
             {
                 foreach (CustomShortcutItem item in _customShortcuts)
                 {
-                    // Skip redundant theme toggle in Common Tasks (now in Dashboard header)
+                    // Skip install-pc (now in Dashboard header) and toggle-theme (now in Dashboard header)
                     if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(item.TargetValue, "toggle-theme", StringComparison.OrdinalIgnoreCase))
+                        (string.Equals(item.TargetValue, "toggle-theme", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(item.TargetValue, "install-pc", StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
 
-                    // If this item is 'install-pc' and the app is already installed on the PC, skip it
+                    // Hide Run Post-Install when running from a non-portable installed location
                     if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(item.TargetValue, "install-pc", StringComparison.OrdinalIgnoreCase) &&
-                        AppDeploymentHelper.IsAppInstalled())
+                        string.Equals(item.TargetValue, "post-install-run", StringComparison.OrdinalIgnoreCase) &&
+                        AppDeploymentHelper.IsRunningFromInstalledLocation())
                     {
                         continue;
                     }
@@ -1913,38 +2119,11 @@ namespace OptiAssist
                 }
             }
 
-            // 2. Add "Install on PC" button IF application detects that it is not installed on this system
-            if (!AppDeploymentHelper.IsAppInstalled())
+            if (btnDashboardInstallPc != null)
             {
-                bool hasInstallBtn = _customShortcuts != null && _customShortcuts.Exists(x =>
-                    string.Equals(x.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(x.TargetValue, "install-pc", StringComparison.OrdinalIgnoreCase));
-
-                if (!hasInstallBtn)
-                {
-                    Button btnInstall = new Button
-                    {
-                        Content = "📥 " + LocalizationHelper.Get("Btn_InstallOnPC", "Install on PC"),
-                        Style = (Style)FindResource("BtnAccent"),
-                        Height = 34,
-                        Margin = new Thickness(3),
-                        FontSize = 11,
-                        ToolTip = LocalizationHelper.Get("Tooltip_InstallOnPC", "Install OptiAssist on this computer with Desktop and Start Menu shortcuts")
-                    };
-                    btnInstall.Click += (s, e) =>
-                    {
-                        AppDeploymentHelper.ShowInstallDialog(this, Log);
-                        RenderCommonTasks();
-                    };
-
-                    ContextMenu cmInstall = new ContextMenu();
-                    MenuItem miCustomizeInst = new MenuItem { Header = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize...") };
-                    miCustomizeInst.Click += (s, e) => ShowCustomizeCommonTasksDialog();
-                    cmInstall.Items.Add(miCustomizeInst);
-                    btnInstall.ContextMenu = cmInstall;
-
-                    ugCommonTasks.Children.Add(btnInstall);
-                }
+                btnDashboardInstallPc.Content = "📥 " + LocalizationHelper.Get("Btn_InstallOnPC", "Install on PC");
+                btnDashboardInstallPc.ToolTip = LocalizationHelper.Get("Tooltip_InstallOnPC", "Install OptiAssist on this computer with Desktop and Start Menu shortcuts");
+                btnDashboardInstallPc.Visibility = !AppDeploymentHelper.IsAppInstalled() ? Visibility.Visible : Visibility.Collapsed;
             }
 
             if (ugCommonTasks.Children.Count == 0)
@@ -2814,7 +2993,8 @@ namespace OptiAssist
                 {
                     rb.IsChecked = true;
                     restoredActiveAddon = true;
-                    if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase))
                     {
                         scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
                     }
@@ -3106,8 +3286,14 @@ namespace OptiAssist
             // 2. Overview (Dashboard)
             if (txtDashboardTitle != null) txtDashboardTitle.Text = LocalizationHelper.Get("Dashboard_Title", "Welcome to OptiAssist!");
             if (txtDashboardSubtitle != null) txtDashboardSubtitle.Text = LocalizationHelper.Get("Dashboard_Subtitle", "The ultimate tool to keep your system in order");
-            if (txtHwCardTitle != null) txtHwCardTitle.Text = "CPU";
-            if (txtOsCardTitle != null) txtOsCardTitle.Text = "System";
+            if (txtHwCardTitle != null) txtHwCardTitle.Text = LocalizationHelper.Get("Card_Hardware_ShortTitle", "Hardware Info");
+            if (txtHwCardSubtitle != null) txtHwCardSubtitle.Text = LocalizationHelper.Get("Card_Hardware_Subtitle", "Processor, Board, RAM & GPU");
+            if (txtOsCardTitle != null) txtOsCardTitle.Text = LocalizationHelper.Get("Card_Os_ShortTitle", "Operating System");
+            if (txtOsCardSubtitle != null) txtOsCardSubtitle.Text = LocalizationHelper.Get("Card_Os_Subtitle", "OS Information");
+            if (txtStorageCardTitle != null) txtStorageCardTitle.Text = LocalizationHelper.Get("Card_Storage_ShortTitle", "Storage");
+            if (txtStorageCardSubtitle != null) txtStorageCardSubtitle.Text = LocalizationHelper.Get("Card_Storage_Subtitle", "Disk Information");
+            if (txtRecommendationsTitle != null) txtRecommendationsTitle.Text = LocalizationHelper.Get("Card_Recommendations_ShortTitle", "Recommendations");
+            if (txtRecommendationsSubtitle != null) txtRecommendationsSubtitle.Text = LocalizationHelper.Get("Card_Recommendations_Subtitle", "System & Hardware Advice");
             if (lblSerialTag != null) lblSerialTag.Text = LocalizationHelper.Get("Label_SerialNumber", "Serial Number: ");
             if (btnCopySerial != null)
             {
@@ -3911,6 +4097,12 @@ namespace OptiAssist
                 Application.Current.Resources[key] = new SolidColorBrush(col);
             }
             catch { }
+        }
+
+        private void BtnDashboardInstallPc_Click(object sender, RoutedEventArgs e)
+        {
+            AppDeploymentHelper.ShowInstallDialog(this, Log);
+            RenderCommonTasks();
         }
 
         private void BtnQuickTools_Click(object sender, RoutedEventArgs e)

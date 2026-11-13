@@ -616,22 +616,53 @@ namespace OptiAssist.Addons.PCAssist
 
         private Border CreateDenseHeader(string text, string hexAccent)
         {
-            Border b = new Border
+            string icon = "⚙️";
+            string upper = (text ?? "").ToUpperInvariant();
+            if (upper.Contains("CPU") || upper.Contains("PROCESSOR")) icon = "🧠";
+            else if (upper.Contains("RAM") || upper.Contains("MEMORY")) icon = "⚡";
+            else if (upper.Contains("MOTHERBOARD") || upper.Contains("CHIPSET")) icon = "🔌";
+            else if (upper.Contains("GRAPHICS") || upper.Contains("DISPLAY")) icon = "🎮";
+            else if (upper.Contains("DRIVE") || upper.Contains("STORAGE")) icon = "💾";
+            else if (upper.Contains("NETWORK") || upper.Contains("AUDIO")) icon = "🌐";
+
+            StackPanel headerRow = new StackPanel
             {
-                Background = (SolidColorBrush)new BrushConverter().ConvertFromString(hexAccent),
-                CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(6, 2, 6, 2),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(0, 0, 0, 4)
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 6)
             };
-            b.Child = new TextBlock
+
+            Border iconBadge = new Border
+            {
+                Width = 30,
+                Height = 30,
+                CornerRadius = new CornerRadius(8),
+                Background = (SolidColorBrush)new BrushConverter().ConvertFromString(hexAccent),
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            iconBadge.Child = new TextBlock
+            {
+                Text = icon,
+                FontSize = 14,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            headerRow.Children.Add(iconBadge);
+
+            TextBlock titleTb = new TextBlock
             {
                 Text = text,
-                FontSize = 10,
+                FontSize = 13.5,
                 FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                VerticalAlignment = VerticalAlignment.Center
             };
-            return b;
+            headerRow.Children.Add(titleTb);
+
+            return new Border
+            {
+                Child = headerRow,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
         }
 
         private Border CreateSubDivider(string title)
@@ -1510,7 +1541,7 @@ namespace OptiAssist.Addons.PCAssist
                 Background = GetResourceBrush("BrushBgCard", "#FFFFFF"),
                 BorderBrush = GetResourceBrush("BrushBorderCard", "#CBD5E1"),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(14)
             };
         }
@@ -1522,8 +1553,8 @@ namespace OptiAssist.Addons.PCAssist
                 Background = GetResourceBrush("BrushBgCard", "#FFFFFF"),
                 BorderBrush = GetResourceBrush("BrushBorderCard", "#CBD5E1"),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(10)
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(12)
             };
         }
 

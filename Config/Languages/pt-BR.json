@@ -69,7 +69,13 @@
   "Dashboard_Title": "Bem vindo ao OptiAssist!",
   "Dashboard_Subtitle": "A ferramenta suprema para manter seu equipamento em ordem",
   "Card_Hardware_Title": "🧠 Informações do hardware",
+  "Card_Hardware_ShortTitle": "Informações de Hardware",
+  "Card_Hardware_Subtitle": "Processador, Placa, RAM e Vídeo",
   "Card_Os_Title": "🖥️ Sistema Operacional",
+  "Card_Os_ShortTitle": "Sistema Operacional",
+  "Card_Os_Subtitle": "Informações do Sistema",
+  "Card_Storage_ShortTitle": "Armazenamento",
+  "Card_Storage_Subtitle": "Informações de Disco",
   "Label_Processor": "Processador: ",
   "Label_Ram": "Memória RAM: ",
   "Label_Gpu": "Placa de Vídeo: ",
@@ -92,6 +98,8 @@
   "Drivers_Btn_OpenDevMgmt": "🖥️ Abrir Gerenciador de Dispositivos",
   "Drivers_Btn_Close": "Fechar",
   "Card_Recommendations_Title": "💡 Recomendações e Sugestões Técnicas",
+  "Card_Recommendations_ShortTitle": "Recomendações",
+  "Card_Recommendations_Subtitle": "Sugestões de Sistema e Hardware",
   "Rec_AllGood_Title": "Hardware e Sistema em Ótimo Estado",
   "Rec_AllGood_Desc": "Nenhum gargalo crítico de hardware ou problema de drivers foi detectado para o perfil do seu equipamento.",
   "Rec_RamLow_Title": "Upgrade de Memória RAM Altamente Recomendado",
@@ -383,5 +391,7 @@
   "Startup_Btn_Delete": "🗑️ Excluir",
   "Startup_Confirm_Delete_Title": "Confirmar Exclusão",
   "Startup_Confirm_Delete_Msg": "Tem certeza de que deseja excluir permanentemente '{0}' da inicialização do Windows?\n\nIsso não desinstala o aplicativo, mas impedirá sua inicialização automática.",
-  "Startup_Msg_DeleteFailed": "Não foi possível excluir a entrada: {0}"
+  "Startup_Msg_DeleteFailed": "Não foi possível excluir a entrada: {0}",
+  "Wizard_Btn_Next": "Avançar →",
+  "Wizard_Btn_Back": "← Voltar"
 }

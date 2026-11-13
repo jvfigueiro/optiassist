@@ -468,21 +468,6 @@ namespace OptiAssist.Addons.Toolbox
             // Tweaks Essenciais
             presets.Add(new ToolboxCommandItem()
             {
-                id = "preset-consumer-features",
-                title = "Desativar Recursos de Consumidor e Sugestões (Consumer Features)",
-                description = "Impede a instalação automática de apps patrocinados e sugestões da Microsoft Store",
-                command = "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent\" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
                 id = "preset-delivery-optimization",
                 title = "Desativar Otimização de Entrega (Delivery Optimization)",
                 description = "Impede o Windows de usar a sua conexão para enviar atualizações a computadores na internet",
@@ -543,51 +528,6 @@ namespace OptiAssist.Addons.Toolbox
 
             presets.Add(new ToolboxCommandItem()
             {
-                id = "preset-disable-telemetry-full",
-                title = "Desativar Telemetria Completa e Coleta de Dados do Windows",
-                description = "Desativa envio de diagnósticos, ID de anúncios, experiências personalizadas e serviços DiagTrack e wermgr",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$paths = @('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo','HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy','HKCU:\\Software\\Microsoft\\Speech_OneCore\\Settings\\OnlineSpeechPrivacy','HKCU:\\Software\\Microsoft\\Input\\TIPC','HKCU:\\Software\\Microsoft\\InputPersonalization','HKCU:\\Software\\Microsoft\\Personalization\\Settings','HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection','HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection','HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced','HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System','HKCU:\\Software\\Microsoft\\Siuf\\Rules'); foreach ($p in $paths) { if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null } }; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo' -Name Enabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Speech_OneCore\\Settings\\OnlineSpeechPrivacy' -Name HasAccepted -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Input\\TIPC' -Name Enabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\InputPersonalization' -Name RestrictImplicitInkCollection -Value 1 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\InputPersonalization' -Name RestrictImplicitTextCollection -Value 1 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Personalization\\Settings' -Name AcceptedPrivacyPolicy -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection' -Name AllowTelemetry -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name AllowTelemetry -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name Start_TrackProgs -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System' -Name PublishUserActivities -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Siuf\\Rules' -Name NumberOfSIUFInPeriod -Value 0 -Type DWord -Force; Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction SilentlyContinue; Get-Service diagtrack, wermgr -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue; Stop-Service diagtrack, wermgr -Force -ErrorAction SilentlyContinue; [Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '1', 'Machine'); Write-Host 'Telemetria do Windows desativada com sucesso!'\"",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-remove-widgets",
-                title = "Remover Widgets da Barra de Tarefas (WebExperience)",
-                description = "Encerra e desinstala os pacotes de Widgets e WebExperience para liberar memória e painel da barra de tarefas",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Process *Widget* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Get-AppxPackage Microsoft.WidgetsPlatformRuntime -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxPackage MicrosoftWindows.Client.WebExperience -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Write-Host 'Widgets removidos com sucesso!'\"",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-wpbt",
-                title = "Desativar Execução WPBT (Bloatware de BIOS/OEM)",
-                description = "Bloqueia a execução automática de binários e drivers de fabricantes (OEM) injetados via tabela ACPI WPBT no boot",
-                command = "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\" /v DisableWpbtExecution /t REG_DWORD /d 1 /f",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
                 id = "preset-optimize-services-manual",
                 title = "Otimizar Serviços em Segundo Plano e Limite SvcHost",
                 description = "Configura serviços não essenciais (CscService, DiagTrack, MapsBroker, StorSvc) e ajusta SvcHostSplitThresholdInKB conforme a RAM",
@@ -599,52 +539,6 @@ namespace OptiAssist.Addons.Toolbox
                 requires_admin = true,
                 open_external_logs = true,
                 timeout_seconds = 60
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-activity-history",
-                title = "Desativar Histórico de Atividades do Usuário",
-                description = "Impede o Windows de publicar ou fazer upload do histórico de atividades de navegação e programas do usuário",
-                command = "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v PublishUserActivities /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v UploadUserActivities /t REG_DWORD /d 0 /f",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            // Tweaks Avançados
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-bg-apps",
-                title = "Desativar Aplicativos em Segundo Plano (Background Apps)",
-                description = "Desativa globalmente a execução em segundo plano para todos os aplicativos da Microsoft Store no Windows",
-                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications\" /v GlobalUserDisabled /t REG_DWORD /d 1 /f",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-windows-ai",
-                title = "Desativar e Remover Recursos de IA do Windows (Copilot / Recall)",
-                description = "Remove o Copilot, oculta componentes de IA nas Configurações, desativa o Recall e recursos de IA do Bloco de Notas",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"reg add \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\\" /v SettingsPageVisibility /t REG_SZ /d \\\"hide:aicomponents\\\" /f; reg add \\\"HKLM\\SOFTWARE\\Policies\\WindowsNotepad\\\" /v DisableAIFeatures /t REG_DWORD /d 1 /f; Get-AppxPackage -AllUsers *Copilot* -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; winget uninstall -e --name 'Copilot' --silent --force --accept-source-agreements 2>$null; Get-AppxPackage -AllUsers MicrosoftWindows.Client.CoreAI -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Set-Service -Name WSAIFabricSvc -StartupType Disabled -ErrorAction SilentlyContinue; Disable-WindowsOptionalFeature -FeatureName Recall -Online -NoRestart -ErrorAction SilentlyContinue; Write-Host 'Recursos de IA do Windows desativados com sucesso!'\"",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 120
             });
 
             presets.Add(new ToolboxCommandItem()
@@ -677,36 +571,6 @@ namespace OptiAssist.Addons.Toolbox
                 timeout_seconds = 120
             });
 
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-debloat-brave",
-                title = "Debloat do Navegador Brave (Desativar Crypto, VPN e Leo AI)",
-                description = "Aplica políticas corporativas no Brave para desativar carteira cripto, VPN integrada, IA Leo, notícias e telemetria",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$path = 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave'; if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }; @('BraveRewardsDisabled','BraveWalletDisabled','BraveVPNDisabled','BraveNewsDisabled','BraveTalkDisabled','TorDisabled') | ForEach-Object { Set-ItemProperty -Path $path -Name $_ -Value 1 -Type DWord -Force }; @('BraveAIChatEnabled','BraveStatsPingEnabled','BraveP3AEnabled','UrlKeyedAnonymizedDataCollectionEnabled','SafeBrowsingExtendedReportingEnabled','MetricsReportingEnabled') | ForEach-Object { Set-ItemProperty -Path $path -Name $_ -Value 0 -Type DWord -Force }; Write-Host 'Políticas de otimização do Brave aplicadas com sucesso!'\"",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-debloat-edge",
-                title = "Debloat do Microsoft Edge (Desativar Shopping, Telemetria e Popups)",
-                description = "Desativa assistente de compras, popups de primeiro uso, promoções, widgets e telemetria no Microsoft Edge",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$edge = 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge'; if (-not (Test-Path $edge)) { New-Item -Path $edge -Force | Out-Null }; @('PersonalizationReportingEnabled','ShowRecommendationsEnabled','UserFeedbackAllowed','AlternateErrorPagesEnabled','EdgeCollectionsEnabled','EdgeShoppingAssistantEnabled','MicrosoftEdgeInsiderPromotionEnabled','ShowMicrosoftRewards','WebWidgetAllowed','DiagnosticData','EdgeAssetDeliveryServiceEnabled','WalletDonationEnabled','DefaultBrowserSettingsCampaignEnabled') | ForEach-Object { Set-ItemProperty -Path $edge -Name $_ -Value 0 -Type DWord -Force }; @('HideFirstRunExperience','ConfigureDoNotTrack') | ForEach-Object { Set-ItemProperty -Path $edge -Name $_ -Value 1 -Type DWord -Force }; if (-not (Test-Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\EdgeUpdate')) { New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\EdgeUpdate' -Force | Out-Null }; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\EdgeUpdate' -Name CreateDesktopShortcutDefault -Value 0 -Type DWord -Force; Write-Host 'Políticas de otimização do Edge aplicadas com sucesso!'\"",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
             // Preferências e Interface
             presets.Add(new ToolboxCommandItem()
             {
@@ -719,21 +583,6 @@ namespace OptiAssist.Addons.Toolbox
                 wait_for_exit = true,
                 capture_output = true,
                 requires_admin = false,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-bing-search",
-                title = "Desativar Busca do Bing na Barra de Pesquisa do Windows",
-                description = "Desativa resultados de pesquisa na internet (Bing) no Menu Iniciar, acelerando as buscas por arquivos locais",
-                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\" /v BingSearchEnabled /t REG_DWORD /d 0 /f && reg add \"HKCU\\Software\\Policies\\Microsoft\\Windows\\Explorer\" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
                 open_external_logs = true,
                 timeout_seconds = 30
             });
@@ -782,21 +631,6 @@ namespace OptiAssist.Addons.Toolbox
                 requires_admin = true,
                 open_external_logs = true,
                 timeout_seconds = 120
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-optimize-telemetry-services",
-                title = "Desativar Serviços de Telemetria (DiagTrack / dmwappushservice)",
-                description = "Desativa serviços DiagTrack, dmwappushservice e telemetria para reduzir consumo em segundo plano",
-                command = "sc config DiagTrack start= disabled && sc stop DiagTrack && sc config dmwappushservice start= disabled && sc stop dmwappushservice && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection\" /v AllowTelemetry /t REG_DWORD /d 0 /f",
-                category = "Windows Debloat",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
             });
 
             presets.Add(new ToolboxCommandItem()

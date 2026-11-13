@@ -1,5 +1,4 @@
-[
-  {
+[\r\n  {
     "id": "preset-christitus-winutil",
     "title": "Chris Titus WinUtil (Optimization Tool)",
     "description": "Chris Titus Tech open-source utility for quick Windows adjustments, essential tweaks, and system configurations",
@@ -11,8 +10,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 0
-  },
-  {
+  },\r\n  {
     "id": "preset-sfc-scannow",
     "title": "Scan & Repair System Files (SFC /scannow)",
     "description": "Scans and repairs corrupted or missing Windows protected system files using System File Checker",
@@ -24,8 +22,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 1800
-  },
-  {
+  },\r\n  {
     "id": "preset-dism-restorehealth",
     "title": "Repair Windows Image (DISM RestoreHealth)",
     "description": "Scans and repairs corruption in the Windows Component Store (WinSxS) using DISM",
@@ -37,8 +34,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 1800
-  },
-  {
+  },\r\n  {
     "id": "preset-dism-sfc-combo",
     "title": "Complete System Repair (DISM + SFC Combo)",
     "description": "Executes DISM RestoreHealth followed by SFC /scannow for in-depth system verification and repair",
@@ -50,8 +46,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 3600
-  },
-  {
+  },\r\n  {
     "id": "preset-chkdsk-c",
     "title": "Check Disk Integrity (CHKDSK C:)",
     "description": "Performs a read-only scan for logical file system errors on volume C:",
@@ -63,8 +58,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 600
-  },
-  {
+  },\r\n  {
     "id": "preset-fix-printer-rpc",
     "title": "Fix Network Printer RPC Error (0x11b / 0x709)",
     "description": "Adjusts RpcAuthnLevelPrivacyEnabled in Spooler to restore network printer sharing after Windows updates",
@@ -76,8 +70,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
+  },\r\n  {
     "id": "preset-dualboot-clock",
     "title": "Fix Dual Boot Windows Clock (UTC / Linux)",
     "description": "Configures Windows hardware clock to UTC (RealTimeIsUniversal) to prevent time desynchronization with Linux",
@@ -89,8 +82,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-sync-internet-time",
     "title": "Synchronize Date & Time via Internet (NTP)",
     "description": "Enables and starts Windows Time service (w32time) and forces an immediate clock resynchronization with Internet NTP servers",
@@ -102,8 +94,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
+  },\r\n  {
     "id": "preset-wsreset-store",
     "title": "Repair & Reset Microsoft Store (wsreset -i)",
     "description": "Reinstalls and resets corrupted Microsoft Store components, registrations, and cache",
@@ -115,8 +106,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 0
-  },
-  {
+  },\r\n  {
     "id": "preset-reinstall-winget",
     "title": "Repair & Re-register WinGet (Package Manager)",
     "description": "Re-registers Microsoft.DesktopAppInstaller package to restore the winget package manager CLI",
@@ -128,8 +118,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 120
-  },
-  {
+  },\r\n  {
     "id": "preset-reset-windows-update",
     "title": "Reset & Repair Windows Update",
     "description": "Stops update services, clears SoftwareDistribution and Catroot2 caches, and restarts update engine",
@@ -141,8 +130,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 180
-  },
-  {
+  },\r\n  {
     "id": "preset-ipconfig-flushdns",
     "title": "Flush DNS Resolver Cache (ipconfig /flushdns)",
     "description": "Clears local DNS resolver cache to fix domain resolution errors and outdated DNS records",
@@ -154,8 +142,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-netsh-winsock-reset",
     "title": "Reset Winsock Catalog & TCP/IP Stack",
     "description": "Resets Winsock catalog and TCP/IP stack to default state to resolve broken network sockets",
@@ -167,8 +154,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
+  },\r\n  {
     "id": "preset-net-reset-full",
     "title": "Complete Network & DHCP Reset",
     "description": "Releases and renews DHCP lease, flushes DNS cache, and resets Winsock and IP configurations",
@@ -180,8 +166,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 90
-  },
-  {
+  },\r\n  {
     "id": "preset-ps-listening-ports",
     "title": "List Open TCP Listening Ports",
     "description": "Queries and lists all active TCP listening ports and their associated process IDs",
@@ -193,21 +178,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
-    "id": "preset-consumer-features",
-    "title": "Disable Windows Consumer Features & Suggestions",
-    "description": "Disables automatic installation of sponsored consumer apps, OEM promotions, and cloud suggestions",
-    "command": "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent\" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-delivery-optimization",
     "title": "Disable Windows Delivery Optimization",
     "description": "Prevents Windows Update from uploading update files to other PCs over the internet (P2P)",
@@ -219,8 +190,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-disable-bitlocker",
     "title": "Disable BitLocker Encryption (C: Drive)",
     "description": "Queries BitLocker status and disables drive encryption on volume C: via manage-bde",
@@ -232,8 +202,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
+  },\r\n  {
     "id": "preset-end-task-rightclick",
     "title": "Enable 'End Task' on Taskbar Right-Click",
     "description": "Enables developer quick 'End Task' option in the taskbar context menu for unresponsive apps",
@@ -245,8 +214,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-disable-hibernation",
     "title": "Disable Hibernation (Reclaim hiberfil.sys Space)",
     "description": "Disables system hibernation via powercfg to instantly reclaim disk space equal to RAM size",
@@ -258,47 +226,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
-    "id": "preset-disable-telemetry-full",
-    "title": "Disable Full Windows Telemetry & Diagnostics",
-    "description": "Sets diagnostic data collection to Security/Basic and disables telemetry diagnostic logging",
-    "command": "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection\" /v AllowTelemetry /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection\" /v MaxTelemetryAllowed /t REG_DWORD /d 0 /f && sc config DiagTrack start= disabled && sc stop DiagTrack",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 60
-  },
-  {
-    "id": "preset-remove-widgets",
-    "title": "Remove Taskbar Widgets (WebExperience)",
-    "description": "Disables taskbar widgets feed and stops background WebExperience WebView processes",
-    "command": "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh\" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f && reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /v TaskbarDa /t REG_DWORD /d 0 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
-    "id": "preset-disable-wpbt",
-    "title": "Disable WPBT Execution (BIOS/OEM Bloatware)",
-    "description": "Disables Windows Platform Binary Table execution to prevent BIOS firmware from injecting software",
-    "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\" /v DisableWpbtExecution /t REG_DWORD /d 1 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-optimize-services-manual",
     "title": "Optimize Background Services & SvcHost Split Threshold",
     "description": "Sets non-critical background services to manual and increases SvcHost split threshold to reduce RAM usage",
@@ -310,47 +238,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
-    "id": "preset-disable-activity-history",
-    "title": "Disable User Activity History & Cloud Sync",
-    "description": "Prevents Windows from recording timeline activities and syncing user history to cloud accounts",
-    "command": "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v EnableActivityFeed /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v PublishUserActivities /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v UploadUserActivities /t REG_DWORD /d 0 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
-    "id": "preset-disable-bg-apps",
-    "title": "Disable Background Apps (Global Policy)",
-    "description": "Restricts UWP and store apps from waking up, consuming CPU, and running in the background",
-    "command": "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications\" /v GlobalUserDisabled /t REG_DWORD /d 1 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy\" /v LetAppsRunInBackground /t REG_DWORD /d 2 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
-    "id": "preset-disable-windows-ai",
-    "title": "Disable Windows AI Features (Copilot & Recall)",
-    "description": "Disables Windows Copilot, snapshot saving, and AI Recall telemetry policies",
-    "command": "reg add \"HKCU\\Software\\Policies\\Microsoft\\Windows\\WindowsCopilot\" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot\" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f && reg add \"HKCU\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-disable-storage-sense",
     "title": "Disable Automatic Storage Sense",
     "description": "Turns off automatic Storage Sense background file cleanup and deletion routines",
@@ -362,8 +250,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-disable-reserved-storage",
     "title": "Disable Reserved Storage (Reclaim 7-10 GB)",
     "description": "Disables Windows Update reserved disk space buffer to free up system storage",
@@ -375,34 +262,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 120
-  },
-  {
-    "id": "preset-debloat-brave",
-    "title": "Debloat Brave Browser (Disable Crypto, VPN & AI)",
-    "description": "Configures policies to disable Brave Rewards, Crypto Wallet, Brave VPN, and Leo AI",
-    "command": "reg add \"HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave\" /v BraveRewardsDisabled /t REG_DWORD /d 1 /f && reg add \"HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave\" /v BraveWalletDisabled /t REG_DWORD /d 1 /f && reg add \"HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave\" /v BraveVPNDisabled /t REG_DWORD /d 1 /f && reg add \"HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave\" /v BraveAIChatEnabled /t REG_DWORD /d 0 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
-    "id": "preset-debloat-edge",
-    "title": "Debloat Microsoft Edge (Disable Shopping, Telemetry & Popups)",
-    "description": "Disables Edge shopping assistant, telemetry, sidebar promotions, and background pre-launching",
-    "command": "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge\" /v EdgeShoppingAssistantEnabled /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge\" /v DiagnosticData /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge\" /v HubsSidebarEnabled /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge\" /v StartupBoostEnabled /t REG_DWORD /d 0 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-optimize-visual-fx",
     "title": "Optimize Visual Effects for Performance",
     "description": "Tunes Windows animations, smooth scrolling, and window effects for maximum responsiveness",
@@ -414,21 +274,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
-    "id": "preset-disable-bing-search",
-    "title": "Disable Bing Search in Windows Start Menu",
-    "description": "Removes web search results and Cortana cloud queries from Start menu search",
-    "command": "reg add \"HKCU\\Software\\Policies\\Microsoft\\Windows\\Explorer\" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f && reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\" /v BingSearchEnabled /t REG_DWORD /d 0 /f && reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\" /v CortanaConsent /t REG_DWORD /d 0 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-disable-mouse-acceleration",
     "title": "Disable Mouse Acceleration (1:1 Raw Input)",
     "description": "Disables mouse pointer acceleration curve for consistent 1:1 cursor movement",
@@ -440,8 +286,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 30
-  },
-  {
+  },\r\n  {
     "id": "preset-clean-temp-files",
     "title": "Clean Temporary Files (%TEMP% & Temp)",
     "description": "Removes residual temporary files from %TEMP% and C:\\Windows\\Temp folders",
@@ -453,8 +298,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 120
-  },
-  {
+  },\r\n  {
     "id": "preset-clean-update-cache",
     "title": "Clean Windows Update Download Cache",
     "description": "Stops wuauserv and bits, purges SoftwareDistribution\\Download, and restarts update services",
@@ -466,21 +310,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 120
-  },
-  {
-    "id": "preset-optimize-telemetry-services",
-    "title": "Disable Telemetry Services (DiagTrack / dmwappushservice)",
-    "description": "Stops and disables DiagTrack and dmwappushservice background tracking services",
-    "command": "sc config DiagTrack start= disabled && sc stop DiagTrack && sc config dmwappushservice start= disabled && sc stop dmwappushservice && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection\" /v AllowTelemetry /t REG_DWORD /d 0 /f",
-    "category": "Windows Debloat",
-    "shell": "cmd",
-    "wait_for_exit": true,
-    "capture_output": true,
-    "requires_admin": true,
-    "open_external_logs": true,
-    "timeout_seconds": 60
-  },
-  {
+  },\r\n  {
     "id": "preset-compactos-query",
     "title": "Query System Compression State (CompactOS)",
     "description": "Checks if Windows operating system binaries are compressed via compact.exe",
@@ -492,8 +322,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 60
-  },
-  {
+  },\r\n  {
     "id": "preset-compactos-always",
     "title": "Compress Windows System Binaries (CompactOS)",
     "description": "Reduces Windows disk footprint by compressing OS binaries without sacrificing performance",
@@ -505,8 +334,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 1800
-  },
-  {
+  },\r\n  {
     "id": "preset-winsat-formal",
     "title": "Run System Performance Benchmark (WinSAT Formal)",
     "description": "Runs the complete Windows System Assessment Tool benchmark for CPU, memory, graphics, and storage",
@@ -518,8 +346,7 @@
     "requires_admin": true,
     "open_external_logs": true,
     "timeout_seconds": 900
-  },
-  {
+  },\r\n  {
     "id": "preset-powercfg-list",
     "title": "List Available Power Plans (PowerCfg)",
     "description": "Lists all installed power management schemes and highlights the currently active plan",
@@ -531,5 +358,4 @@
     "requires_admin": false,
     "open_external_logs": true,
     "timeout_seconds": 30
-  }
-]
+  }\r\n]

@@ -3,15 +3,287 @@ using System.IO;
 using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+using System.Windows.Shell;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace OptiAssist
 {
+    public static class ModernChromeHelper
+    {
+        private const int WM_GETMINMAXINFO = 0x0024;
+        private const int WM_SETICON = 0x0080;
+        private const int MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT { public int x; public int y; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int left; public int top; public int right; public int bottom; }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public int dwFlags;
+        }
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        private static extern uint ExtractIconEx(string szFileName, int nIconIndex, IntPtr[] phiconLarge, IntPtr[] phiconSmall, uint nIcons);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        public static void ApplyTaskbarIcon(Window win, IntPtr hwnd)
+        {
+            try
+            {
+                string exePath = System.Reflection.Assembly.GetEntryAssembly() != null
+                    ? System.Reflection.Assembly.GetEntryAssembly().Location
+                    : System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return;
+
+                IntPtr[] large = new IntPtr[1];
+                IntPtr[] small = new IntPtr[1];
+                uint count = ExtractIconEx(exePath, 0, large, small, 1);
+                if (count > 0)
+                {
+                    if (large[0] != IntPtr.Zero)
+                    {
+                        if (win != null && win.Icon == null)
+                        {
+                            try
+                            {
+                                win.Icon = Imaging.CreateBitmapSourceFromHIcon(large[0], Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                            }
+                            catch { }
+                        }
+                        if (hwnd != IntPtr.Zero) SendMessage(hwnd, WM_SETICON, new IntPtr(1), large[0]);
+                    }
+                    if (small[0] != IntPtr.Zero && hwnd != IntPtr.Zero)
+                    {
+                        SendMessage(hwnd, WM_SETICON, IntPtr.Zero, small[0]);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public static void AttachMaxWorkAreaHook(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return;
+            HwndSource src = HwndSource.FromHwnd(hwnd);
+            if (src != null)
+            {
+                src.AddHook(MaxWorkAreaWndProc);
+            }
+        }
+
+        private static IntPtr MaxWorkAreaWndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_GETMINMAXINFO)
+            {
+                try
+                {
+                    MINMAXINFO mmi = (MINMAXINFO)Marshal.PtrToStructure(lParam, typeof(MINMAXINFO));
+                    IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                    if (monitor != IntPtr.Zero)
+                    {
+                        MONITORINFO mi = new MONITORINFO();
+                        mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+                        if (GetMonitorInfo(monitor, ref mi))
+                        {
+                            RECT rcWork = mi.rcWork;
+                            RECT rcMonitor = mi.rcMonitor;
+                            mmi.ptMaxPosition.x = Math.Abs(rcWork.left - rcMonitor.left);
+                            mmi.ptMaxPosition.y = Math.Abs(rcWork.top - rcMonitor.top);
+                            mmi.ptMaxSize.x = Math.Abs(rcWork.right - rcWork.left);
+                            mmi.ptMaxSize.y = Math.Abs(rcWork.bottom - rcWork.top);
+                            Marshal.StructureToPtr(mmi, lParam, true);
+                        }
+                    }
+                }
+                catch { }
+            }
+            return IntPtr.Zero;
+        }
+
+        public static void ApplyChrome(Window win, UIElement bodyContent, string titleText, bool canMinMax = false, UIElement titleBarExtras = null, Thickness? workspaceMargin = null)
+        {
+            if (win == null) return;
+
+            win.WindowStyle = WindowStyle.None;
+            win.SetResourceReference(Window.BackgroundProperty, "BrushBgSidebar");
+
+            WindowChrome chrome = new WindowChrome
+            {
+                CaptionHeight = 40,
+                ResizeBorderThickness = canMinMax ? new Thickness(6) : new Thickness(0),
+                CornerRadius = new CornerRadius(0),
+                GlassFrameThickness = new Thickness(0),
+                UseAeroCaptionButtons = false
+            };
+            WindowChrome.SetWindowChrome(win, chrome);
+
+            win.SourceInitialized += (s, e) =>
+            {
+                try
+                {
+                    IntPtr hwnd = new WindowInteropHelper(win).Handle;
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        int cornerPref = 2; // DWMWCP_ROUND
+                        DwmSetWindowAttribute(hwnd, 33, ref cornerPref, sizeof(int));
+                        ApplyTaskbarIcon(win, hwnd);
+                        if (canMinMax) AttachMaxWorkAreaHook(hwnd);
+                    }
+                }
+                catch { }
+            };
+
+            Border outerFrame = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                SnapsToDevicePixels = true
+            };
+            outerFrame.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+            outerFrame.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            Grid shell = new Grid();
+            shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(40) });
+            shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+            Grid titleBar = new Grid();
+            titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            TextBlock lblTitle = new TextBlock
+            {
+                Text = string.IsNullOrEmpty(titleText) ? win.Title : titleText,
+                FontSize = 13,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(16, 0, 12, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            lblTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            Grid.SetColumn(lblTitle, 0);
+            titleBar.Children.Add(lblTitle);
+
+            if (titleBarExtras != null)
+            {
+                WindowChrome.SetIsHitTestVisibleInChrome(titleBarExtras, true);
+                Grid.SetColumn(titleBarExtras, 1);
+                titleBar.Children.Add(titleBarExtras);
+            }
+
+            StackPanel btnRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            WindowChrome.SetIsHitTestVisibleInChrome(btnRow, true);
+
+            if (canMinMax)
+            {
+                Button btnMin = CreateCaptionButton("─");
+                btnMin.Click += (s, e) => { win.WindowState = WindowState.Minimized; };
+                btnRow.Children.Add(btnMin);
+
+                Button btnMax = CreateCaptionButton("□");
+                btnMax.Click += (s, e) =>
+                {
+                    win.WindowState = win.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+                };
+                btnRow.Children.Add(btnMax);
+
+                win.StateChanged += (s, e) =>
+                {
+                    bool isMax = (win.WindowState == WindowState.Maximized);
+                    outerFrame.Margin = new Thickness(0);
+                    outerFrame.BorderThickness = isMax ? new Thickness(0) : new Thickness(1);
+                    outerFrame.CornerRadius = isMax ? new CornerRadius(0) : new CornerRadius(8);
+                    btnMax.Content = isMax ? "❐" : "□";
+                };
+            }
+
+            Button btnClose = CreateCaptionButton("✕");
+            btnClose.Click += (s, e) => { win.Close(); };
+            btnRow.Children.Add(btnClose);
+
+            Grid.SetColumn(btnRow, 2);
+            titleBar.Children.Add(btnRow);
+
+            Grid.SetRow(titleBar, 0);
+            shell.Children.Add(titleBar);
+
+            Border workspace = new Border
+            {
+                CornerRadius = new CornerRadius(10),
+                Margin = workspaceMargin.HasValue ? workspaceMargin.Value : new Thickness(8, 0, 8, 8),
+                BorderThickness = new Thickness(1),
+                Child = bodyContent
+            };
+            workspace.SetResourceReference(Border.BackgroundProperty, "BrushBgPrimary");
+            workspace.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            Grid.SetRow(workspace, 1);
+            shell.Children.Add(workspace);
+
+            outerFrame.Child = shell;
+            win.Content = outerFrame;
+        }
+
+        private static Button CreateCaptionButton(string glyph)
+        {
+            Button btn = new Button
+            {
+                Content = glyph,
+                Width = 40,
+                Height = 40,
+                FontSize = 12,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Focusable = false
+            };
+            btn.SetResourceReference(Button.ForegroundProperty, "BrushTextSecondary");
+            return btn;
+        }
+    }
+
     public static class ShortcutsHelper
     {
         public static string GetMaintenanceDirectory()
@@ -417,6 +689,20 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             }
         }
 
+        public static bool IsRunningFromInstalledLocation()
+        {
+            try
+            {
+                string currentDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
+                string installedDir = GetInstalledDirectory().TrimEnd('\\', '/');
+                return string.Equals(currentDir, installedDir, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static string NormalizeDirectoryPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return string.Empty;
@@ -531,13 +817,12 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             {
                 Title = LocalizationHelper.Get("LicenseWin_Title", "OptiAssist - Application License (GNU GPLv3)"),
                 Width = 560,
-                Height = 360,
+                Height = 400,
                 WindowStartupLocation = owner != null ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
                 Owner = owner,
                 ResizeMode = ResizeMode.NoResize,
-                WindowStyle = WindowStyle.SingleBorderWindow
+                WindowStyle = WindowStyle.None
             };
-            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
 
             Grid root = new Grid { Margin = new Thickness(18) };
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -598,655 +883,13 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             Grid.SetRow(bottomBar, 2);
             root.Children.Add(bottomBar);
 
-            win.Content = root;
+            ModernChromeHelper.ApplyChrome(win, root, win.Title, false);
             win.ShowDialog();
         }
 
         public static void ShowInstallDialog(Window owner, Action<string> log = null)
         {
-            Window win = new Window
-            {
-                Title = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist"),
-                Width = 640,
-                Height = 620,
-                WindowStartupLocation = owner != null ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
-                Owner = owner,
-                ResizeMode = ResizeMode.NoResize,
-                WindowStyle = WindowStyle.SingleBorderWindow
-            };
-            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
-
-            Grid root = new Grid { Margin = new Thickness(18) };
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Header
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Body Scroll
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Footer Buttons
-
-            // 1. Header (Left: Title & Subtitle | Right: Language Selector)
-            Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
-            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            StackPanel headerStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            TextBlock tbTitle = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist"),
-                FontSize = 16,
-                FontWeight = FontWeights.Bold
-            };
-            tbTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbSub = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Subtitle", "Review license terms, choose installation mode, and select target directory"),
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0),
-                TextWrapping = TextWrapping.Wrap
-            };
-            tbSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            headerStack.Children.Add(tbTitle);
-            headerStack.Children.Add(tbSub);
-            Grid.SetColumn(headerStack, 0);
-            headerGrid.Children.Add(headerStack);
-
-            StackPanel langPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(12, 0, 0, 0)
-            };
-            TextBlock lblLang = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:"),
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 6, 0)
-            };
-            lblLang.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            langPanel.Children.Add(lblLang);
-
-            ComboBox cmbLang = new ComboBox
-            {
-                Width = 145,
-                Height = 28,
-                FontSize = 11,
-                VerticalContentAlignment = VerticalAlignment.Center
-            };
-            List<string> availableLangs = LocalizationHelper.GetAvailableLanguages();
-            string currentLang = LocalizationHelper.CurrentLanguage;
-            int selectedLangIdx = 0;
-            for (int i = 0; i < availableLangs.Count; i++)
-            {
-                string code = availableLangs[i];
-                string disp = LocalizationHelper.GetLanguageDisplayName(code);
-                cmbLang.Items.Add(new ComboBoxItem { Content = disp, Tag = code });
-                if (string.Equals(code, currentLang, StringComparison.OrdinalIgnoreCase))
-                {
-                    selectedLangIdx = i;
-                }
-            }
-            if (cmbLang.Items.Count > 0) cmbLang.SelectedIndex = selectedLangIdx;
-            langPanel.Children.Add(cmbLang);
-            Grid.SetColumn(langPanel, 1);
-            headerGrid.Children.Add(langPanel);
-
-            Grid.SetRow(headerGrid, 0);
-            root.Children.Add(headerGrid);
-
-            // 2. Main Body
-            ScrollViewer bodyScroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-            StackPanel bodyStack = new StackPanel();
-
-            // Card 1 (FIRST): License Terms & Conditions of Use
-            Border licCard = new Border
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            licCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            licCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            StackPanel licStack = new StackPanel();
-            TextBlock lblLicTitle = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_License_Title", "1. License Terms & Conditions of Use (GNU GPLv3)"),
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 6)
-            };
-            lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            licStack.Children.Add(lblLicTitle);
-
-            string fullTerms = GetFullTermsAndConditionsText();
-
-            TextBox txtLicenseTerms = new TextBox
-            {
-                Text = fullTerms,
-                IsReadOnly = true,
-                TextWrapping = TextWrapping.Wrap,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Height = 115,
-                FontFamily = new FontFamily("Consolas, Lucida Console, Segoe UI"),
-                FontSize = 10.5,
-                Padding = new Thickness(8),
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            txtLicenseTerms.SetResourceReference(TextBox.BackgroundProperty, "BrushBgPrimary");
-            txtLicenseTerms.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
-            txtLicenseTerms.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
-            licStack.Children.Add(txtLicenseTerms);
-
-            CheckBox chkAcceptLicense = new CheckBox
-            {
-                Content = LocalizationHelper.Get("InstallWin_Chk_AcceptLicense", "I have read and agree to the License Terms (GNU GPLv3) and Conditions of Use"),
-                IsChecked = false,
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                Cursor = Cursors.Hand
-            };
-            chkAcceptLicense.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            licStack.Children.Add(chkAcceptLicense);
-
-            licCard.Child = licStack;
-            bodyStack.Children.Add(licCard);
-
-            // Card 2: Installation Mode (Normal vs Portable)
-            Border modeCard = new Border
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            modeCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            modeCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            StackPanel modeStack = new StackPanel();
-            TextBlock lblModeTitle = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Mode_Title", "2. Installation Mode"),
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            lblModeTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            modeStack.Children.Add(lblModeTitle);
-
-            RadioButton rbNormal = new RadioButton
-            {
-                IsChecked = true,
-                Margin = new Thickness(0, 0, 0, 8),
-                Cursor = Cursors.Hand
-            };
-            rbNormal.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
-            StackPanel rbNormalContent = new StackPanel();
-            TextBlock tbNormalHead = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Mode_Normal", "🖥️ Standard Installation (Recommended)"),
-                FontWeight = FontWeights.SemiBold,
-                FontSize = 11.5
-            };
-            tbNormalHead.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbNormalDesc = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Mode_NormalDesc", "Installs OptiAssist on this computer, creates Desktop and Start Menu shortcuts, and registers an entry in Windows Control Panel (Programs and Features)."),
-                FontSize = 10.5,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 2, 0, 0)
-            };
-            tbNormalDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            rbNormalContent.Children.Add(tbNormalHead);
-            rbNormalContent.Children.Add(tbNormalDesc);
-            rbNormal.Content = rbNormalContent;
-            modeStack.Children.Add(rbNormal);
-
-            RadioButton rbPortable = new RadioButton
-            {
-                IsChecked = false,
-                Margin = new Thickness(0, 2, 0, 0),
-                Cursor = Cursors.Hand
-            };
-            rbPortable.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
-            StackPanel rbPortableContent = new StackPanel();
-            TextBlock tbPortableHead = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Mode_Portable", "💾 Portable Installation (USB Flash Drive / External Drive)"),
-                FontWeight = FontWeights.SemiBold,
-                FontSize = 11.5
-            };
-            tbPortableHead.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbPortableDesc = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Mode_PortableDesc", "Deploys a standalone portable copy of OptiAssist to any folder, partition, or USB drive without modifying the local Windows registry or Control Panel."),
-                FontSize = 10.5,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 2, 0, 0)
-            };
-            tbPortableDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            rbPortableContent.Children.Add(tbPortableHead);
-            rbPortableContent.Children.Add(tbPortableDesc);
-            rbPortable.Content = rbPortableContent;
-            modeStack.Children.Add(rbPortable);
-
-            modeCard.Child = modeStack;
-            bodyStack.Children.Add(modeCard);
-
-            // Card 3: Modular Add-ons Selection
-            Border modCard = new Border
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            modCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            modCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            StackPanel modStack = new StackPanel();
-            TextBlock lblModTitle = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Modules_Title", "3. Module Selection (Add-ons / Plugins)"),
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-            lblModTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            modStack.Children.Add(lblModTitle);
-
-            TextBlock lblModSub = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Modules_Subtitle", "Choose which add-on modules to deploy to the destination. Toolbox is mandatory."),
-                FontSize = 10.5,
-                Margin = new Thickness(0, 0, 0, 8),
-                TextWrapping = TextWrapping.Wrap
-            };
-            lblModSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            modStack.Children.Add(lblModSub);
-
-            WrapPanel wpModules = new WrapPanel { Orientation = Orientation.Horizontal };
-            var addonCheckboxes = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
-
-            CheckBox chkToolbox = new CheckBox
-            {
-                Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)"),
-                IsChecked = true,
-                IsEnabled = false,
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 2, 16, 6)
-            };
-            chkToolbox.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            wpModules.Children.Add(chkToolbox);
-            addonCheckboxes["Toolbox"] = chkToolbox;
-
-            string[] knownAddons = new string[] { "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport" };
-            foreach (var mod in knownAddons)
-            {
-                CheckBox chk = new CheckBox
-                {
-                    Content = GetFriendlyModuleName(mod),
-                    Tag = mod,
-                    IsChecked = true,
-                    FontSize = 11,
-                    Margin = new Thickness(0, 2, 16, 6),
-                    Cursor = Cursors.Hand
-                };
-                chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-                wpModules.Children.Add(chk);
-                addonCheckboxes[mod] = chk;
-            }
-
-            try
-            {
-                string addonsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons");
-                if (Directory.Exists(addonsDir))
-                {
-                    foreach (var dir in Directory.GetDirectories(addonsDir))
-                    {
-                        string name = Path.GetFileName(dir);
-                        if (!addonCheckboxes.ContainsKey(name))
-                        {
-                            CheckBox chk = new CheckBox
-                            {
-                                Content = name,
-                                Tag = name,
-                                IsChecked = true,
-                                FontSize = 11,
-                                Margin = new Thickness(0, 2, 16, 6),
-                                Cursor = Cursors.Hand
-                            };
-                            chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-                            wpModules.Children.Add(chk);
-                            addonCheckboxes[name] = chk;
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            modStack.Children.Add(wpModules);
-            modCard.Child = modStack;
-            bodyStack.Children.Add(modCard);
-
-            // Card 4: Target Directory & Options
-            Border dirCard = new Border
-            {
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-            dirCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            dirCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            StackPanel dirStack = new StackPanel();
-            TextBlock lblDirTitle = new TextBlock
-            {
-                Text = LocalizationHelper.Get("InstallWin_Dir_Title", "4. Target Directory & Options"),
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            lblDirTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            dirStack.Children.Add(lblDirTitle);
-
-            Grid dirInputGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
-            dirInputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            dirInputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            string defaultSystemDir = GetDefaultInstallDirectory();
-            TextBox txtTargetDir = new TextBox
-            {
-                Text = defaultSystemDir,
-                Height = 30,
-                FontSize = 11.5,
-                Padding = new Thickness(8, 4, 8, 4),
-                VerticalContentAlignment = VerticalAlignment.Center
-            };
-            txtTargetDir.SetResourceReference(TextBox.BackgroundProperty, "BrushInputBg");
-            txtTargetDir.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
-            txtTargetDir.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
-            Grid.SetColumn(txtTargetDir, 0);
-            dirInputGrid.Children.Add(txtTargetDir);
-
-            Button btnBrowseDir = new Button
-            {
-                Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse..."),
-                Height = 30,
-                Padding = new Thickness(12, 0, 12, 0),
-                Margin = new Thickness(8, 0, 0, 0)
-            };
-            btnBrowseDir.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnBrowseDir.Click += (s, e) =>
-            {
-                using (var fbd = new System.Windows.Forms.FolderBrowserDialog())
-                {
-                    fbd.Description = LocalizationHelper.Get("InstallWin_Browse_Desc", "Select the destination folder or drive for OptiAssist:");
-                    fbd.SelectedPath = txtTargetDir.Text;
-                    if (fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
-                    {
-                        string selected = fbd.SelectedPath;
-                        if (!selected.EndsWith("OptiAssist", StringComparison.OrdinalIgnoreCase))
-                        {
-                            selected = Path.Combine(selected, "OptiAssist");
-                        }
-                        txtTargetDir.Text = selected;
-                    }
-                }
-            };
-            Grid.SetColumn(btnBrowseDir, 1);
-            dirInputGrid.Children.Add(btnBrowseDir);
-            dirStack.Children.Add(dirInputGrid);
-
-            CheckBox chkShortcuts = new CheckBox
-            {
-                Content = LocalizationHelper.Get("InstallWin_Chk_Shortcuts", "Create Desktop and Start Menu shortcuts & register in Control Panel"),
-                IsChecked = true,
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 4),
-                Cursor = Cursors.Hand
-            };
-            chkShortcuts.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            dirStack.Children.Add(chkShortcuts);
-
-            CheckBox chkAutorunAfterInstall = new CheckBox
-            {
-                Content = LocalizationHelper.Get("InstallWin_Chk_Autorun", "Create USB AutoRun (autorun.inf) on destination drive root"),
-                IsChecked = false,
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0),
-                Cursor = Cursors.Hand
-            };
-            chkAutorunAfterInstall.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            dirStack.Children.Add(chkAutorunAfterInstall);
-
-            rbNormal.Checked += (s, e) =>
-            {
-                if (chkShortcuts != null)
-                {
-                    chkShortcuts.IsEnabled = true;
-                    chkShortcuts.IsChecked = true;
-                }
-                if (chkAutorunAfterInstall != null)
-                {
-                    chkAutorunAfterInstall.IsChecked = false;
-                }
-                if (txtTargetDir != null && string.IsNullOrWhiteSpace(txtTargetDir.Text))
-                {
-                    txtTargetDir.Text = defaultSystemDir;
-                }
-            };
-
-            rbPortable.Checked += (s, e) =>
-            {
-                if (chkShortcuts != null)
-                {
-                    chkShortcuts.IsChecked = false;
-                    chkShortcuts.IsEnabled = false;
-                }
-                if (chkAutorunAfterInstall != null)
-                {
-                    chkAutorunAfterInstall.IsChecked = true;
-                }
-            };
-
-            dirCard.Child = dirStack;
-            bodyStack.Children.Add(dirCard);
-
-            bodyScroll.Content = bodyStack;
-            Grid.SetRow(bodyScroll, 1);
-            root.Children.Add(bodyScroll);
-
-            // 3. Footer Action Bar (Left: Create USB AutoRun | Right: Cancel, Install)
-            Grid footerGrid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            Button btnCreateAutorun = new Button
-            {
-                Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun"),
-                ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry"),
-                Height = 32,
-                Padding = new Thickness(14, 0, 14, 0),
-                HorizontalAlignment = HorizontalAlignment.Left
-            };
-            btnCreateAutorun.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnCreateAutorun.Click += (s, e) =>
-            {
-                string dirForAutorun = AppDomain.CurrentDomain.BaseDirectory;
-                if (rbPortable.IsChecked == true && !string.IsNullOrWhiteSpace(txtTargetDir.Text))
-                {
-                    dirForAutorun = txtTargetDir.Text.Trim();
-                }
-                CreateUsbAutorun(dirForAutorun, log);
-            };
-            Grid.SetColumn(btnCreateAutorun, 0);
-            footerGrid.Children.Add(btnCreateAutorun);
-
-            StackPanel rightBtns = new StackPanel { Orientation = Orientation.Horizontal };
-            Button btnCancel = new Button
-            {
-                Content = LocalizationHelper.Get("Startup_Btn_Cancel", "Cancel"),
-                Height = 32,
-                Padding = new Thickness(16, 0, 16, 0),
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-            btnCancel.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnCancel.Click += (s, e) => win.Close();
-            rightBtns.Children.Add(btnCancel);
-
-            Button btnInstallNow = new Button
-            {
-                Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now"),
-                Height = 32,
-                Padding = new Thickness(18, 0, 18, 0),
-                IsEnabled = false
-            };
-            btnInstallNow.SetResourceReference(Button.StyleProperty, "BtnAccent");
-            chkAcceptLicense.Checked += (s, e) => { btnInstallNow.IsEnabled = true; };
-            chkAcceptLicense.Unchecked += (s, e) => { btnInstallNow.IsEnabled = false; };
-
-            cmbLang.SelectionChanged += (s, e) =>
-            {
-                ComboBoxItem cbi = cmbLang.SelectedItem as ComboBoxItem;
-                if (cbi == null || cbi.Tag == null) return;
-                string newLang = cbi.Tag.ToString();
-
-                MainWindow mw = owner as MainWindow;
-                if (mw != null)
-                {
-                    mw.SetLanguage(newLang);
-                }
-                else
-                {
-                    LocalizationHelper.LoadLanguage(newLang);
-                    AppSettings st = SettingsHelper.Load();
-                    st.Language = newLang;
-                    SettingsHelper.Save(st);
-                }
-
-                // Refresh all strings in the installer dialog immediately
-                win.Title = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist");
-                tbTitle.Text = LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist");
-                tbSub.Text = LocalizationHelper.Get("InstallWin_Subtitle", "Review license terms, choose installation mode, and select target directory");
-                lblLang.Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:");
-                lblLicTitle.Text = LocalizationHelper.Get("InstallWin_License_Title", "1. License Terms & Conditions of Use (GNU GPLv3)");
-                txtLicenseTerms.Text = GetFullTermsAndConditionsText();
-                chkAcceptLicense.Content = LocalizationHelper.Get("InstallWin_Chk_AcceptLicense", "I have read and agree to the License Terms (GNU GPLv3) and Conditions of Use");
-                lblModeTitle.Text = LocalizationHelper.Get("InstallWin_Mode_Title", "2. Installation Mode");
-                tbNormalHead.Text = LocalizationHelper.Get("InstallWin_Mode_Normal", "🖥️ Standard Installation (Recommended)");
-                tbNormalDesc.Text = LocalizationHelper.Get("InstallWin_Mode_NormalDesc", "Installs OptiAssist on this computer, creates Desktop and Start Menu shortcuts, and registers an entry in Windows Control Panel (Programs and Features).");
-                tbPortableHead.Text = LocalizationHelper.Get("InstallWin_Mode_Portable", "💾 Portable Installation (USB Flash Drive / External Drive)");
-                tbPortableDesc.Text = LocalizationHelper.Get("InstallWin_Mode_PortableDesc", "Deploys a standalone portable copy of OptiAssist to any folder, partition, or USB drive without modifying the local Windows registry or Control Panel.");
-                lblModTitle.Text = LocalizationHelper.Get("InstallWin_Modules_Title", "3. Module Selection (Add-ons / Plugins)");
-                lblModSub.Text = LocalizationHelper.Get("InstallWin_Modules_Subtitle", "Choose which add-on modules to deploy to the destination. Toolbox is mandatory.");
-                chkToolbox.Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)");
-                foreach (var pair in addonCheckboxes)
-                {
-                    if (!pair.Key.Equals("Toolbox", StringComparison.OrdinalIgnoreCase))
-                    {
-                        pair.Value.Content = GetFriendlyModuleName(pair.Key);
-                    }
-                }
-                lblDirTitle.Text = LocalizationHelper.Get("InstallWin_Dir_Title", "4. Target Directory & Options");
-                btnBrowseDir.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
-                chkShortcuts.Content = LocalizationHelper.Get("InstallWin_Chk_Shortcuts", "Create Desktop and Start Menu shortcuts & register in Control Panel");
-                chkAutorunAfterInstall.Content = LocalizationHelper.Get("InstallWin_Chk_Autorun", "Create USB AutoRun (autorun.inf) on destination drive root");
-                btnCreateAutorun.Content = LocalizationHelper.Get("Btn_CreateAutorun", "💿 Create USB AutoRun");
-                btnCreateAutorun.ToolTip = LocalizationHelper.Get("Tooltip_CreateAutorun", "Create autorun.inf on drive root to display application icon and AutoPlay entry");
-                btnCancel.Content = LocalizationHelper.Get("Startup_Btn_Cancel", "Cancel");
-                btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now");
-            };
-
-            btnInstallNow.Click += async (s, e) =>
-            {
-                if (chkAcceptLicense.IsChecked != true)
-                {
-                    MessageBox.Show(
-                        LocalizationHelper.Get("InstallWin_Msg_AcceptRequired", "Please accept the License Terms and Conditions of Use before proceeding."),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                string targetDir = txtTargetDir.Text.Trim();
-                if (string.IsNullOrWhiteSpace(targetDir))
-                {
-                    MessageBox.Show(
-                        LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory."),
-                        "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                bool isPortable = (rbPortable.IsChecked == true);
-                bool createShortcutsAndRegistry = !isPortable && (chkShortcuts.IsChecked == true);
-                bool createAutorun = (chkAutorunAfterInstall.IsChecked == true);
-
-                var selectedMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                selectedMods.Add("Toolbox");
-                foreach (var pair in addonCheckboxes)
-                {
-                    if (pair.Value.IsChecked == true)
-                    {
-                        selectedMods.Add(pair.Key);
-                    }
-                }
-
-                btnInstallNow.IsEnabled = false;
-                btnCancel.IsEnabled = false;
-                btnCreateAutorun.IsEnabled = false;
-                btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_Installing", "⏳ Installing...");
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                bool installSuccess = false;
-                string errorMessage = null;
-
-                try
-                {
-                    installSuccess = await Task.Run(() =>
-                    {
-                        return ExecuteInstallationInternal(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, selectedMods, log, out errorMessage);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    errorMessage = ex.Message;
-                    installSuccess = false;
-                }
-                finally
-                {
-                    Mouse.OverrideCursor = null;
-                    btnInstallNow.IsEnabled = true;
-                    btnCancel.IsEnabled = true;
-                    btnCreateAutorun.IsEnabled = true;
-                    btnInstallNow.Content = LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now");
-                }
-
-                if (installSuccess)
-                {
-                    string normTarget = NormalizeDirectoryPath(targetDir);
-                    string successMsg = isPortable
-                        ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), normTarget)
-                        : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), normTarget);
-
-                    MessageBox.Show(win, successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
-                    win.DialogResult = true;
-                    win.Close();
-                }
-                else if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    MessageBox.Show(win, errorMessage, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-            };
-            rightBtns.Children.Add(btnInstallNow);
-            Grid.SetColumn(rightBtns, 1);
-            footerGrid.Children.Add(rightBtns);
-
-            Grid.SetRow(footerGrid, 2);
-            root.Children.Add(footerGrid);
-
-            win.Content = root;
-            win.ShowDialog();
+            ShowSetupWizardCore(owner, SettingsHelper.Load(), false, log);
         }
 
         public static bool ExecuteInstallation(string targetDir, bool isPortable, bool createShortcutsAndRegistry, bool createAutorun, Action<string> log = null)
@@ -1770,47 +1413,77 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
         public static bool ShowWelcomeWizard(Window owner, AppSettings settings, Action<string> log = null)
         {
+            return ShowSetupWizardCore(owner, settings, true, log);
+        }
+
+        private static bool ShowSetupWizardCore(Window owner, AppSettings settings, bool isFirstLaunch, Action<string> log = null)
+        {
             string curLang = settings != null && !string.IsNullOrEmpty(settings.Language) ? settings.Language : LocalizationHelper.CurrentLanguage;
             LocalizationHelper.LoadLanguage(curLang);
 
             Window win = new Window
             {
-                Title = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist"),
+                Title = isFirstLaunch
+                    ? LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist")
+                    : LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist"),
                 Width = 700,
-                Height = 670,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                Height = 560,
+                WindowStartupLocation = (!isFirstLaunch && owner != null) ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
+                Owner = (!isFirstLaunch && owner != null) ? owner : null,
                 ResizeMode = ResizeMode.NoResize,
-                WindowStyle = WindowStyle.SingleBorderWindow
+                WindowStyle = WindowStyle.None
             };
-            win.SetResourceReference(Window.BackgroundProperty, "BrushBgPrimary");
 
-            Grid root = new Grid { Margin = new Thickness(18) };
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Header
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Body Scroll
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Footer Buttons
+            Grid root = new Grid { Margin = new Thickness(20) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Header + Step Progress
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Step Content Host
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Wizard Footer Navigation
 
-            // Header (Title, Subtitle, Language ComboBox)
-            Grid headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            // Header (Title, Subtitle, Step Badge, Language ComboBox)
+            StackPanel headerOuter = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+            Grid headerGrid = new Grid();
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             StackPanel headerStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            StackPanel titleRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             TextBlock tbTitle = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist"),
-                FontSize = 17,
-                FontWeight = FontWeights.Bold
+                FontSize = 18,
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
             };
             tbTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            titleRow.Children.Add(tbTitle);
+
+            Border stepBadge = new Border
+            {
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(8, 2, 8, 2),
+                Margin = new Thickness(10, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Background = new SolidColorBrush(Color.FromArgb(40, 56, 189, 248))
+            };
+            TextBlock lblStepBadge = new TextBlock
+            {
+                Text = "1 / 3",
+                FontSize = 10.5,
+                FontWeight = FontWeights.Bold
+            };
+            lblStepBadge.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            stepBadge.Child = lblStepBadge;
+            titleRow.Children.Add(stepBadge);
+            headerStack.Children.Add(titleRow);
+
             TextBlock tbSub = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_Subtitle", "Modular System Maintenance, Diagnostic, and Post-Install Assistant"),
                 FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0),
+                Margin = new Thickness(0, 3, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             };
             tbSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            headerStack.Children.Add(tbTitle);
             headerStack.Children.Add(tbSub);
             Grid.SetColumn(headerStack, 0);
             headerGrid.Children.Add(headerStack);
@@ -1834,7 +1507,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
             ComboBox cmbLang = new ComboBox
             {
-                Width = 150,
+                Width = 145,
                 Height = 28,
                 FontSize = 11,
                 VerticalContentAlignment = VerticalAlignment.Center
@@ -1854,20 +1527,45 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             langPanel.Children.Add(cmbLang);
             Grid.SetColumn(langPanel, 1);
             headerGrid.Children.Add(langPanel);
+            headerOuter.Children.Add(headerGrid);
 
-            Grid.SetRow(headerGrid, 0);
-            root.Children.Add(headerGrid);
+            // 3-Segment Step Progress Bar
+            Grid stepBarGrid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+            stepBarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            stepBarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
+            stepBarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            stepBarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
+            stepBarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            // Body Scroll
-            ScrollViewer bodyScroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-            StackPanel bodyStack = new StackPanel();
+            Border seg1 = new Border { Height = 4, CornerRadius = new CornerRadius(2) };
+            Border seg2 = new Border { Height = 4, CornerRadius = new CornerRadius(2) };
+            Border seg3 = new Border { Height = 4, CornerRadius = new CornerRadius(2) };
+            Grid.SetColumn(seg1, 0);
+            Grid.SetColumn(seg2, 2);
+            Grid.SetColumn(seg3, 4);
+            stepBarGrid.Children.Add(seg1);
+            stepBarGrid.Children.Add(seg2);
+            stepBarGrid.Children.Add(seg3);
+            headerOuter.Children.Add(stepBarGrid);
 
-            // Card 1: Risk & Administrative Warning
+            Grid.SetRow(headerOuter, 0);
+            root.Children.Add(headerOuter);
+
+            // Step Host
+            Grid stepHost = new Grid();
+            Grid.SetRow(stepHost, 1);
+            root.Children.Add(stepHost);
+
+            // ================================================================
+            // STEP 1: SAFETY WARNING & LICENSE (GNU GPLv3)
+            // ================================================================
+            StackPanel step1Panel = new StackPanel();
+
             Border warnCard = new Border
             {
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14),
                 Margin = new Thickness(0, 0, 0, 10)
             };
             warnCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
@@ -1876,7 +1574,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             TextBlock lblWarnTitle = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_Notice_Title", "1. Safety Warning & System Operation Risks"),
-                FontSize = 12,
+                FontSize = 12.5,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 6)
             };
@@ -1892,15 +1590,13 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             tbWarnText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             warnStack.Children.Add(tbWarnText);
             warnCard.Child = warnStack;
-            bodyStack.Children.Add(warnCard);
+            step1Panel.Children.Add(warnCard);
 
-            // Card 2: License Terms & Conditions of Use (GNU GPLv3)
             Border licCard = new Border
             {
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10)
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14)
             };
             licCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             licCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
@@ -1908,26 +1604,24 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             TextBlock lblLicTitle = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_License_Title", "2. Terms of Use & Software License (GNU GPLv3)"),
-                FontSize = 12,
+                FontSize = 12.5,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 6)
             };
             lblLicTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
             licStack.Children.Add(lblLicTitle);
 
-            string fullTerms = GetFullTermsAndConditionsText();
-
             TextBox txtTerms = new TextBox
             {
-                Text = fullTerms,
+                Text = GetFullTermsAndConditionsText(),
                 IsReadOnly = true,
                 TextWrapping = TextWrapping.Wrap,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Height = 95,
+                Height = 135,
                 FontFamily = new FontFamily("Consolas, Lucida Console, Segoe UI"),
-                FontSize = 10,
-                Padding = new Thickness(8),
-                Margin = new Thickness(0, 0, 0, 8)
+                FontSize = 10.5,
+                Padding = new Thickness(10),
+                Margin = new Thickness(0, 0, 0, 10)
             };
             txtTerms.SetResourceReference(TextBox.BackgroundProperty, "BrushBgPrimary");
             txtTerms.SetResourceReference(TextBox.ForegroundProperty, "BrushTextSecondary");
@@ -1938,81 +1632,90 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             {
                 Content = LocalizationHelper.Get("Welcome_License_Chk", "I have read and agree to the Terms of Use and Software License (GNU GPLv3)"),
                 IsChecked = false,
-                FontSize = 11,
+                FontSize = 11.5,
                 FontWeight = FontWeights.SemiBold,
                 Cursor = Cursors.Hand
             };
             chkAccept.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
             licStack.Children.Add(chkAccept);
             licCard.Child = licStack;
-            bodyStack.Children.Add(licCard);
+            step1Panel.Children.Add(licCard);
+            stepHost.Children.Add(step1Panel);
 
-            // Card 3: Execution / Installation Mode
-            Border modeCard = new Border
+            // ================================================================
+            // STEP 2: EXECUTION / INSTALLATION MODE
+            // ================================================================
+            Border step2Card = new Border
             {
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10)
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(16),
+                VerticalAlignment = VerticalAlignment.Top,
+                Visibility = Visibility.Collapsed
             };
-            modeCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            modeCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            step2Card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            step2Card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
             StackPanel modeStack = new StackPanel();
             TextBlock lblModeTitle = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_Mode_Title", "3. How would you like to use OptiAssist?"),
-                FontSize = 12,
+                FontSize = 13.5,
                 FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 8)
+                Margin = new Thickness(0, 0, 0, 14)
             };
             lblModeTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
             modeStack.Children.Add(lblModeTitle);
 
-            RadioButton rbRunAsIs = new RadioButton { IsChecked = true, Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand };
+            RadioButton rbRunAsIs = new RadioButton
+            {
+                IsChecked = isFirstLaunch,
+                Visibility = isFirstLaunch ? Visibility.Visible : Visibility.Collapsed,
+                Margin = new Thickness(0, 0, 0, 14),
+                Cursor = Cursors.Hand
+            };
             rbRunAsIs.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
             StackPanel spRunAsIs = new StackPanel();
-            TextBlock tbHeadRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 };
+            TextBlock tbHeadRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)"), FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
             tbHeadRun.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbDescRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs the application directly from the current folder without moving files or registering system shortcuts."), FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            TextBlock tbDescRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs the application directly from the current folder without moving files or registering system shortcuts."), FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
             tbDescRun.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             spRunAsIs.Children.Add(tbHeadRun);
             spRunAsIs.Children.Add(tbDescRun);
             rbRunAsIs.Content = spRunAsIs;
             modeStack.Children.Add(rbRunAsIs);
 
-            RadioButton rbInstallPC = new RadioButton { IsChecked = false, Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand };
+            RadioButton rbInstallPC = new RadioButton { IsChecked = !isFirstLaunch, Margin = new Thickness(0, 0, 0, 14), Cursor = Cursors.Hand };
             rbInstallPC.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
             StackPanel spInstallPC = new StackPanel();
-            TextBlock tbHeadPC = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_InstallPC", "Install on this PC (Recommended for daily use)"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 };
+            TextBlock tbHeadPC = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_InstallPC", "Install on this PC (Recommended for daily use)"), FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
             tbHeadPC.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbDescPC = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_InstallPCDesc", "Installs OptiAssist to local drive (C:\\Program Files\\OptiAssist), creates Desktop and Start Menu shortcuts, and registers in Control Panel."), FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            TextBlock tbDescPC = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_InstallPCDesc", "Installs OptiAssist to local drive (C:\\Program Files\\OptiAssist), creates Desktop and Start Menu shortcuts, and registers in Control Panel."), FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
             tbDescPC.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             spInstallPC.Children.Add(tbHeadPC);
             spInstallPC.Children.Add(tbDescPC);
             rbInstallPC.Content = spInstallPC;
             modeStack.Children.Add(rbInstallPC);
 
-            RadioButton rbInstallUsb = new RadioButton { IsChecked = false, Margin = new Thickness(0, 0, 0, 4), Cursor = Cursors.Hand };
+            RadioButton rbInstallUsb = new RadioButton { IsChecked = false, Margin = new Thickness(0, 0, 0, 6), Cursor = Cursors.Hand };
             rbInstallUsb.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
             StackPanel spInstallUsb = new StackPanel();
-            TextBlock tbHeadUsb = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_Usb", "Install to USB drive / External media"), FontWeight = FontWeights.SemiBold, FontSize = 11.5 };
+            TextBlock tbHeadUsb = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_Usb", "Install to USB drive / External media"), FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
             tbHeadUsb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbDescUsb = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_UsbDesc", "Deploys a custom standalone copy to any chosen USB drive or partition."), FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            TextBlock tbDescUsb = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_UsbDesc", "Deploys a custom standalone copy to any chosen USB drive or partition."), FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
             tbDescUsb.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             spInstallUsb.Children.Add(tbHeadUsb);
             spInstallUsb.Children.Add(tbDescUsb);
             rbInstallUsb.Content = spInstallUsb;
             modeStack.Children.Add(rbInstallUsb);
 
-            // Sub-panel for Target Path (visible when USB is selected)
-            StackPanel spTargetDir = new StackPanel { Margin = new Thickness(24, 6, 0, 0), Visibility = Visibility.Collapsed };
+            StackPanel spTargetDir = new StackPanel { Margin = new Thickness(24, 8, 0, 0), Visibility = Visibility.Collapsed };
             Grid gdDir = new Grid();
             gdDir.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             gdDir.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             TextBox txtUsbDir = new TextBox { Height = 28, FontSize = 11, Padding = new Thickness(6, 2, 6, 2), VerticalContentAlignment = VerticalAlignment.Center };
-            txtUsbDir.SetResourceReference(TextBox.BackgroundProperty, "BrushInputBg");
+            txtUsbDir.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
             txtUsbDir.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
-            txtUsbDir.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
+            txtUsbDir.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
             Grid.SetColumn(txtUsbDir, 0);
             gdDir.Children.Add(txtUsbDir);
             Button btnBrowseUsb = new Button { Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse..."), Height = 28, Padding = new Thickness(10, 0, 10, 0), Margin = new Thickness(6, 0, 0, 0) };
@@ -2034,6 +1737,18 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             Grid.SetColumn(btnBrowseUsb, 1);
             gdDir.Children.Add(btnBrowseUsb);
             spTargetDir.Children.Add(gdDir);
+
+            CheckBox chkAutorun = new CheckBox
+            {
+                Content = LocalizationHelper.Get("InstallWin_Chk_Autorun", "Create USB AutoRun (autorun.inf) on destination drive root"),
+                IsChecked = true,
+                FontSize = 11,
+                Margin = new Thickness(0, 8, 0, 0),
+                Cursor = Cursors.Hand
+            };
+            chkAutorun.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            spTargetDir.Children.Add(chkAutorun);
+
             modeStack.Children.Add(spTargetDir);
 
             rbRunAsIs.Checked += (s, e) => { spTargetDir.Visibility = Visibility.Collapsed; };
@@ -2047,40 +1762,43 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 }
             };
 
-            modeCard.Child = modeStack;
-            bodyStack.Children.Add(modeCard);
+            step2Card.Child = modeStack;
+            stepHost.Children.Add(step2Card);
 
-            // Card 4: Module Selection (Add-ons / Plugins)
-            Border modCard = new Border
+            // ================================================================
+            // STEP 3: MODULE SELECTION (ADD-ONS / PLUGINS)
+            // ================================================================
+            Border step3Card = new Border
             {
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 4)
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(16),
+                VerticalAlignment = VerticalAlignment.Top,
+                Visibility = Visibility.Collapsed
             };
-            modCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            modCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            step3Card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            step3Card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
             StackPanel modStack = new StackPanel();
             TextBlock lblModTitle = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_Modules_Title", "4. Module Selection (Add-ons / Plugins)"),
-                FontSize = 12,
+                FontSize = 13.5,
                 FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 4)
+                Margin = new Thickness(0, 0, 0, 6)
             };
             lblModTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
             modStack.Children.Add(lblModTitle);
             TextBlock lblModSub = new TextBlock
             {
                 Text = LocalizationHelper.Get("Welcome_Modules_Subtitle", "Choose which add-on modules to include. The Toolbox module is mandatory as the system core."),
-                FontSize = 10.5,
-                Margin = new Thickness(0, 0, 0, 8),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 0, 14),
                 TextWrapping = TextWrapping.Wrap
             };
             lblModSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             modStack.Children.Add(lblModSub);
 
-            WrapPanel wpModules = new WrapPanel { Orientation = Orientation.Horizontal };
+            StackPanel spModulesList = new StackPanel();
             var addonCheckboxes = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
 
             CheckBox chkToolbox = new CheckBox
@@ -2088,12 +1806,12 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 Content = LocalizationHelper.Get("Module_Toolbox_Required", "Toolbox (Mandatory Core Utility)"),
                 IsChecked = true,
                 IsEnabled = false,
-                FontSize = 11,
+                FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 2, 16, 6)
+                Margin = new Thickness(0, 4, 0, 10)
             };
             chkToolbox.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-            wpModules.Children.Add(chkToolbox);
+            spModulesList.Children.Add(chkToolbox);
             addonCheckboxes["Toolbox"] = chkToolbox;
 
             string[] knownAddons = new string[] { "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport" };
@@ -2103,13 +1821,13 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 {
                     Content = GetFriendlyModuleName(mod),
                     Tag = mod,
-                    IsChecked = true,
-                    FontSize = 11,
-                    Margin = new Thickness(0, 2, 16, 6),
+                    IsChecked = !string.Equals(mod, "MaintenanceReport", StringComparison.OrdinalIgnoreCase),
+                    FontSize = 12,
+                    Margin = new Thickness(0, 4, 0, 10),
                     Cursor = Cursors.Hand
                 };
                 chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-                wpModules.Children.Add(chk);
+                spModulesList.Children.Add(chk);
                 addonCheckboxes[mod] = chk;
             }
 
@@ -2128,12 +1846,12 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                                 Content = name,
                                 Tag = name,
                                 IsChecked = true,
-                                FontSize = 11,
-                                Margin = new Thickness(0, 2, 16, 6),
+                                FontSize = 12,
+                                Margin = new Thickness(0, 4, 0, 10),
                                 Cursor = Cursors.Hand
                             };
                             chk.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-                            wpModules.Children.Add(chk);
+                            spModulesList.Children.Add(chk);
                             addonCheckboxes[name] = chk;
                         }
                     }
@@ -2141,46 +1859,96 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             }
             catch { }
 
-            modStack.Children.Add(wpModules);
-            modCard.Child = modStack;
-            bodyStack.Children.Add(modCard);
+            modStack.Children.Add(spModulesList);
+            step3Card.Child = modStack;
+            stepHost.Children.Add(step3Card);
 
-            bodyScroll.Content = bodyStack;
-            Grid.SetRow(bodyScroll, 1);
-            root.Children.Add(bodyScroll);
-
-            // Footer
-            Grid footerGrid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+            // ================================================================
+            // WIZARD FOOTER NAVIGATION
+            // ================================================================
+            Grid footerGrid = new Grid { Margin = new Thickness(0, 14, 0, 0) };
             footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            Button btnDecline = new Button
+            Button btnDeclineOrBack = new Button
             {
                 Content = LocalizationHelper.Get("Welcome_Btn_Decline", "Decline & Exit"),
                 Height = 32,
                 Padding = new Thickness(16, 0, 16, 0),
                 HorizontalAlignment = HorizontalAlignment.Left
             };
-            btnDecline.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnDecline.Click += (s, e) =>
-            {
-                win.DialogResult = false;
-                win.Close();
-                Application.Current.Shutdown();
-            };
-            Grid.SetColumn(btnDecline, 0);
-            footerGrid.Children.Add(btnDecline);
+            btnDeclineOrBack.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            Grid.SetColumn(btnDeclineOrBack, 0);
+            footerGrid.Children.Add(btnDeclineOrBack);
 
-            Button btnContinue = new Button
+            Button btnNextOrFinish = new Button
             {
-                Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch"),
+                Content = LocalizationHelper.Get("Wizard_Btn_Next", "Next →"),
                 Height = 32,
                 Padding = new Thickness(20, 0, 20, 0),
                 IsEnabled = false
             };
-            btnContinue.SetResourceReference(Button.StyleProperty, "BtnAccent");
-            chkAccept.Checked += (s, e) => { btnContinue.IsEnabled = true; };
-            chkAccept.Unchecked += (s, e) => { btnContinue.IsEnabled = false; };
+            btnNextOrFinish.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            Grid.SetColumn(btnNextOrFinish, 1);
+            footerGrid.Children.Add(btnNextOrFinish);
+
+            Grid.SetRow(footerGrid, 2);
+            root.Children.Add(footerGrid);
+
+            int currentStep = 1;
+            Action updateWizardUi = () =>
+            {
+                step1Panel.Visibility = (currentStep == 1) ? Visibility.Visible : Visibility.Collapsed;
+                step2Card.Visibility = (currentStep == 2) ? Visibility.Visible : Visibility.Collapsed;
+                step3Card.Visibility = (currentStep == 3) ? Visibility.Visible : Visibility.Collapsed;
+
+                lblStepBadge.Text = string.Format("{0} / 3", currentStep);
+                seg1.SetResourceReference(Border.BackgroundProperty, currentStep >= 1 ? "BrushAccent" : "BrushBorderCard");
+                seg2.SetResourceReference(Border.BackgroundProperty, currentStep >= 2 ? "BrushAccent" : "BrushBorderCard");
+                seg3.SetResourceReference(Border.BackgroundProperty, currentStep >= 3 ? "BrushAccent" : "BrushBorderCard");
+
+                if (currentStep == 1)
+                {
+                    btnDeclineOrBack.Content = isFirstLaunch
+                        ? LocalizationHelper.Get("Welcome_Btn_Decline", "Decline & Exit")
+                        : LocalizationHelper.Get("Startup_Btn_Cancel", "Cancel");
+                    btnNextOrFinish.Content = LocalizationHelper.Get("Wizard_Btn_Next", "Next →");
+                    btnNextOrFinish.IsEnabled = (chkAccept.IsChecked == true);
+                }
+                else if (currentStep == 2)
+                {
+                    btnDeclineOrBack.Content = LocalizationHelper.Get("Wizard_Btn_Back", "← Back");
+                    btnNextOrFinish.Content = LocalizationHelper.Get("Wizard_Btn_Next", "Next →");
+                    btnNextOrFinish.IsEnabled = true;
+                }
+                else
+                {
+                    btnDeclineOrBack.Content = LocalizationHelper.Get("Wizard_Btn_Back", "← Back");
+                    btnNextOrFinish.Content = isFirstLaunch
+                        ? LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch")
+                        : LocalizationHelper.Get("InstallWin_Btn_InstallNow", "📥 Install Now");
+                    btnNextOrFinish.IsEnabled = true;
+                }
+            };
+            updateWizardUi();
+
+            chkAccept.Checked += (s, e) => { if (currentStep == 1) btnNextOrFinish.IsEnabled = true; };
+            chkAccept.Unchecked += (s, e) => { if (currentStep == 1) btnNextOrFinish.IsEnabled = false; };
+
+            btnDeclineOrBack.Click += (s, e) =>
+            {
+                if (currentStep == 1)
+                {
+                    win.DialogResult = false;
+                    win.Close();
+                    if (isFirstLaunch) Application.Current.Shutdown();
+                }
+                else
+                {
+                    currentStep--;
+                    updateWizardUi();
+                }
+            };
 
             cmbLang.SelectionChanged += (s, e) =>
             {
@@ -2223,14 +1991,33 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     }
                 }
                 btnBrowseUsb.Content = LocalizationHelper.Get("Btn_SelectLocal", "📁 Browse...");
-                btnDecline.Content = LocalizationHelper.Get("Welcome_Btn_Decline", "Decline & Exit");
-                btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch");
+                chkAutorun.Content = LocalizationHelper.Get("InstallWin_Chk_Autorun", "Create USB AutoRun (autorun.inf) on destination drive root");
+                updateWizardUi();
             };
 
             bool success = false;
-            btnContinue.Click += async (s, e) =>
+            btnNextOrFinish.Click += async (s, e) =>
             {
-                if (chkAccept.IsChecked != true) return;
+                if (currentStep == 1)
+                {
+                    if (chkAccept.IsChecked != true) return;
+                    currentStep = 2;
+                    updateWizardUi();
+                    return;
+                }
+                if (currentStep == 2)
+                {
+                    if (rbInstallUsb.IsChecked == true && string.IsNullOrWhiteSpace(txtUsbDir.Text))
+                    {
+                        MessageBox.Show(win,
+                            LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory."),
+                            "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    currentStep = 3;
+                    updateWizardUi();
+                    return;
+                }
 
                 var selectedMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 selectedMods.Add("Toolbox");
@@ -2246,12 +2033,14 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                         if (settings.DisabledAddons == null) settings.DisabledAddons = new List<string>();
                         foreach (var pair in addonCheckboxes)
                         {
+                            string addonKey = string.Equals(pair.Key, "MaintenanceReport", StringComparison.OrdinalIgnoreCase) ? "maintenance-report" : pair.Key;
                             if (pair.Value.IsChecked != true)
                             {
-                                if (!settings.DisabledAddons.Contains(pair.Key)) settings.DisabledAddons.Add(pair.Key);
+                                if (!settings.DisabledAddons.Contains(addonKey)) settings.DisabledAddons.Add(addonKey);
                             }
                             else
                             {
+                                settings.DisabledAddons.Remove(addonKey);
                                 settings.DisabledAddons.Remove(pair.Key);
                             }
                         }
@@ -2275,9 +2064,9 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                         return;
                     }
 
-                    btnContinue.IsEnabled = false;
-                    btnDecline.IsEnabled = false;
-                    btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Installing", "⏳ Installing...");
+                    btnNextOrFinish.IsEnabled = false;
+                    btnDeclineOrBack.IsEnabled = false;
+                    btnNextOrFinish.Content = LocalizationHelper.Get("Welcome_Btn_Installing", "⏳ Installing...");
                     Mouse.OverrideCursor = Cursors.Wait;
 
                     bool installSuccess = false;
@@ -2287,7 +2076,8 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     {
                         installSuccess = await Task.Run(() =>
                         {
-                            return ExecuteInstallationInternal(targetDir, isPortable, !isPortable, isPortable, selectedMods, log, out errorMessage);
+                            bool createAutorun = isPortable && (chkAutorun.IsChecked == true);
+                            return ExecuteInstallationInternal(targetDir, isPortable, !isPortable, createAutorun, selectedMods, log, out errorMessage);
                         });
                     }
                     catch (Exception ex)
@@ -2298,9 +2088,9 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     finally
                     {
                         Mouse.OverrideCursor = null;
-                        btnContinue.IsEnabled = true;
-                        btnDecline.IsEnabled = true;
-                        btnContinue.Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch");
+                        btnNextOrFinish.IsEnabled = true;
+                        btnDeclineOrBack.IsEnabled = true;
+                        btnNextOrFinish.Content = LocalizationHelper.Get("Welcome_Btn_Continue", "Finish & Launch");
                     }
 
                     if (installSuccess)
@@ -2328,21 +2118,16 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     }
                 }
             };
-            Grid.SetColumn(btnContinue, 1);
-            footerGrid.Children.Add(btnContinue);
-
-            Grid.SetRow(footerGrid, 2);
-            root.Children.Add(footerGrid);
 
             win.Closing += (s, e) =>
             {
-                if (!success && win.DialogResult != true)
+                if (isFirstLaunch && !success && win.DialogResult != true)
                 {
                     Application.Current.Shutdown();
                 }
             };
 
-            win.Content = root;
+            ModernChromeHelper.ApplyChrome(win, root, win.Title, false);
             bool? res = win.ShowDialog();
             return success || (res == true);
         }

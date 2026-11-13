@@ -24,6 +24,16 @@ namespace OptiAssist.Addons.Toolbox
         private List<ToolboxCommandItem> _commands;
         private ToolboxCommandItem _editingItem;
 
+        // Navigation Tabs (Toolbox | Windows Debloater)
+        private Border _tabToolboxBorder;
+        private TextBlock _tabToolboxText;
+        private Border _tabDebloaterBorder;
+        private TextBlock _tabDebloaterText;
+        private Grid _pnlMainToolboxView;
+        private ScrollViewer _pnlDebloaterView;
+        private List<KeyValuePair<CheckBox, ToolboxCommandItem>> _toolboxChecks = new List<KeyValuePair<CheckBox, ToolboxCommandItem>>();
+        private List<KeyValuePair<CheckBox, ToolboxCommandItem>> _debloatChecks = new List<KeyValuePair<CheckBox, ToolboxCommandItem>>();
+
         // Top Header & Toolbar controls
         private TextBlock _txtTitle;
         private TextBlock _txtSubtitle;
@@ -83,7 +93,7 @@ namespace OptiAssist.Addons.Toolbox
         public string Id { get { return "toolbox"; } }
         public string Name { get { return T("Nav_Toolbox", "Toolbox"); } }
         public string Description { get { return T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist"); } }
-        public string Version { get { return "1.1.0.0"; } }
+        public string Version { get { return "1.2.S4"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🧰"; } }
 
@@ -120,11 +130,8 @@ namespace OptiAssist.Addons.Toolbox
 
             Grid rootGrid = new Grid();
             rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 0: Top Header
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: Search Toolbar
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 2: Options Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 3: Category Manager Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 4: CRUD Form Modal/Panel
-            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 5: Categories Accordion
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: Navigation Tabs
+            rootGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 2: Active Tab Content
 
             // =====================================================================
             // ROW 0: TOP HEADER (Harmonized layout across all OptiAssist modules)
@@ -186,17 +193,60 @@ namespace OptiAssist.Addons.Toolbox
             rootGrid.Children.Add(headerGrid);
 
             // =====================================================================
-            // ROW 1: SEARCH & FILTER TOOLBAR
+            // ROW 1: NAVIGATION TABS (Toolbox | Windows Debloater)
+            // =====================================================================
+            Border tabsBar = new Border()
+            {
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            tabsBar.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            tabsBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel tabsPanel = new StackPanel() { Orientation = Orientation.Horizontal };
+            _tabToolboxBorder = CreateTabButton("🛠️  " + T("Toolbox_Tab_Main", "Toolbox"), true, out _tabToolboxText);
+            _tabToolboxBorder.MouseLeftButtonDown += (s, e) => SwitchToolboxTab(true);
+            tabsPanel.Children.Add(_tabToolboxBorder);
+
+            _tabDebloaterBorder = CreateTabButton("🧹  " + T("Toolbox_Tab_Debloater", "Windows Debloater"), false, out _tabDebloaterText);
+            _tabDebloaterBorder.MouseLeftButtonDown += (s, e) => SwitchToolboxTab(false);
+            tabsPanel.Children.Add(_tabDebloaterBorder);
+
+            tabsBar.Child = tabsPanel;
+            Grid.SetRow(tabsBar, 1);
+            rootGrid.Children.Add(tabsBar);
+
+            // =====================================================================
+            // ROW 2: TAB CONTENTS (Toolbox Main + Windows Debloater)
+            // =====================================================================
+            Grid tabHost = new Grid();
+            Grid.SetRow(tabHost, 2);
+
+            _pnlMainToolboxView = new Grid();
+            _pnlMainToolboxView.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 0: Search Toolbar
+            _pnlMainToolboxView.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 1: Options Panel
+            _pnlMainToolboxView.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 2: Category Manager Panel
+            _pnlMainToolboxView.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // 3: CRUD Form Modal/Panel
+            _pnlMainToolboxView.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // 4: Categories Accordion
+
+            // =====================================================================
+            // MAIN TOOLBOX ROW 0: SEARCH & BATCH TOOLBAR (Windows Debloater Style)
             // =====================================================================
             Border toolbarCard = new Border()
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(12, 8, 12, 8),
-                Margin = new Thickness(0, 0, 0, 12)
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 10)
             };
-            toolbarCard.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+            toolbarCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             toolbarCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            Grid toolbarGrid = new Grid();
+            toolbarGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            toolbarGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
 
             Grid searchInputGrid = new Grid();
             _txtSearch = new TextBox()
@@ -232,50 +282,111 @@ namespace OptiAssist.Addons.Toolbox
 
             searchInputGrid.Children.Add(_txtSearch);
             searchInputGrid.Children.Add(_txtSearchWatermark);
+            Grid.SetColumn(searchInputGrid, 0);
+            toolbarGrid.Children.Add(searchInputGrid);
 
-            toolbarCard.Child = searchInputGrid;
-            Grid.SetRow(toolbarCard, 1);
-            rootGrid.Children.Add(toolbarCard);
+            StackPanel toolboxBatchPanel = new StackPanel()
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0)
+            };
+            Button btnToolboxSelectAll = new Button() { Content = T("Btn_SelectAll", "Select All"), Height = 28, Padding = new Thickness(10, 0, 10, 0), FontSize = 11, Margin = new Thickness(0, 0, 6, 0) };
+            btnToolboxSelectAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnToolboxSelectAll.Click += (s, e) => { foreach (var kv in _toolboxChecks) kv.Key.IsChecked = true; };
+
+            Button btnToolboxClearAll = new Button() { Content = T("Btn_ClearAll", "Clear"), Height = 28, Padding = new Thickness(10, 0, 10, 0), FontSize = 11, Margin = new Thickness(0, 0, 6, 0) };
+            btnToolboxClearAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnToolboxClearAll.Click += (s, e) => { foreach (var kv in _toolboxChecks) kv.Key.IsChecked = false; };
+
+            Button btnToolboxRunSelected = new Button() { Content = "🚀 " + T("Toolbox_RunSelected", "Run Selected"), Height = 28, Padding = new Thickness(14, 0, 14, 0), FontSize = 11, FontWeight = FontWeights.Bold };
+            btnToolboxRunSelected.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            btnToolboxRunSelected.Click += (s, e) =>
+            {
+                List<ToolboxCommandItem> selected = new List<ToolboxCommandItem>();
+                foreach (var kv in _toolboxChecks)
+                {
+                    if (kv.Key.IsChecked == true) selected.Add(kv.Value);
+                }
+                if (selected.Count == 0)
+                {
+                    MessageBox.Show(T("Toolbox_NoneSelected", "Select at least one task to run."), "OptiAssist - Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var confirm = MessageBox.Show(
+                    string.Format(T("Toolbox_ConfirmSelected", "Execute {0} selected Toolbox tasks sequentially?"), selected.Count),
+                    "OptiAssist - Toolbox",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (confirm != MessageBoxResult.Yes) return;
+                ExecuteBatchItems(selected, 0, btnToolboxRunSelected, btnToolboxRunSelected.Content);
+            };
+
+            toolboxBatchPanel.Children.Add(btnToolboxSelectAll);
+            toolboxBatchPanel.Children.Add(btnToolboxClearAll);
+            toolboxBatchPanel.Children.Add(btnToolboxRunSelected);
+            Grid.SetColumn(toolboxBatchPanel, 1);
+            toolbarGrid.Children.Add(toolboxBatchPanel);
+
+            toolbarCard.Child = toolbarGrid;
+            Grid.SetRow(toolbarCard, 0);
+            _pnlMainToolboxView.Children.Add(toolbarCard);
 
             // =====================================================================
             // ROW 2: OPTIONS PANEL
             // =====================================================================
             _borderOptionsCard = BuildOptionsCard();
             _borderOptionsCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderOptionsCard, 2);
-            rootGrid.Children.Add(_borderOptionsCard);
+            Grid.SetRow(_borderOptionsCard, 1);
+            _pnlMainToolboxView.Children.Add(_borderOptionsCard);
 
             // =====================================================================
-            // ROW 3: CATEGORY MANAGER PANEL
+            // MAIN TOOLBOX ROW 2: CATEGORY MANAGER PANEL
             // =====================================================================
             _borderCategoryManagerCard = BuildCategoryManagerCard();
             _borderCategoryManagerCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderCategoryManagerCard, 3);
-            rootGrid.Children.Add(_borderCategoryManagerCard);
+            Grid.SetRow(_borderCategoryManagerCard, 2);
+            _pnlMainToolboxView.Children.Add(_borderCategoryManagerCard);
 
             // =====================================================================
-            // ROW 4: CRUD ADD / EDIT FORM MODAL PANEL (COLLAPSIBLE)
+            // MAIN TOOLBOX ROW 3: CRUD ADD / EDIT FORM MODAL PANEL (COLLAPSIBLE)
             // =====================================================================
             _borderEditorCard = BuildCrudEditorCard();
             _borderEditorCard.Visibility = Visibility.Collapsed;
-            Grid.SetRow(_borderEditorCard, 4);
-            rootGrid.Children.Add(_borderEditorCard);
+            Grid.SetRow(_borderEditorCard, 3);
+            _pnlMainToolboxView.Children.Add(_borderEditorCard);
 
             // =====================================================================
-            // ROW 5: DYNAMIC CATEGORIES ACCORDION VIEW
+            // MAIN TOOLBOX ROW 4: DYNAMIC CATEGORIES ACCORDION VIEW
             // =====================================================================
             ScrollViewer svCategories = new ScrollViewer()
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Background = Brushes.Transparent,
                 Margin = new Thickness(0, 0, 0, 0)
+            };
+            svCategories.PreviewMouseWheel += (s, e) =>
+            {
+                if (!e.Handled && svCategories.ScrollableHeight > 0)
+                {
+                    e.Handled = true;
+                    svCategories.ScrollToVerticalOffset(svCategories.VerticalOffset - (e.Delta / 2.5));
+                }
             };
 
             _spCategoriesHost = new StackPanel();
             svCategories.Content = _spCategoriesHost;
 
-            Grid.SetRow(svCategories, 5);
-            rootGrid.Children.Add(svCategories);
+            Grid.SetRow(svCategories, 4);
+            _pnlMainToolboxView.Children.Add(svCategories);
+
+            _pnlDebloaterView = BuildDebloaterTab();
+            _pnlDebloaterView.Visibility = Visibility.Collapsed;
+
+            tabHost.Children.Add(_pnlMainToolboxView);
+            tabHost.Children.Add(_pnlDebloaterView);
+            rootGrid.Children.Add(tabHost);
 
             RebuildCategoriesAccordion();
             return rootGrid;
@@ -869,6 +980,7 @@ namespace OptiAssist.Addons.Toolbox
         {
             if (_spCategoriesHost == null) return;
             _spCategoriesHost.Children.Clear();
+            _toolboxChecks.Clear();
 
             string filter = (_txtSearch != null && _txtSearch.Text != null)
                 ? _txtSearch.Text.Trim()
@@ -939,27 +1051,22 @@ namespace OptiAssist.Addons.Toolbox
 
         private Border BuildCategoryExpanderCard(string categoryName, List<ToolboxCommandItem> items)
         {
-            Border outerBorder = new Border()
+            Border sectionContainer = new Border()
             {
-                CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(1),
-                Margin = new Thickness(0, 0, 0, 10),
-                Padding = new Thickness(10, 6, 10, 8)
-            };
-            outerBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            outerBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            Expander expander = new Expander()
-            {
-                IsExpanded = true,
-                HorizontalAlignment = HorizontalAlignment.Stretch
+                Margin = new Thickness(0, 0, 0, 12)
             };
 
-            // Expander Header: Category Icon + Name + Count Badge
-            StackPanel spHeader = new StackPanel()
+            StackPanel sectionStack = new StackPanel();
+
+            // Category Section Header: Icon + Name + Count Badge + Batch Run All
+            Grid headerGrid = new Grid() { Margin = new Thickness(2, 2, 2, 8) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            StackPanel spHeaderLeft = new StackPanel()
             {
                 Orientation = Orientation.Horizontal,
-                Margin = new Thickness(4, 4, 4, 4)
+                VerticalAlignment = VerticalAlignment.Center
             };
 
             TextBlock txtCatName = new TextBlock()
@@ -970,7 +1077,7 @@ namespace OptiAssist.Addons.Toolbox
                 VerticalAlignment = VerticalAlignment.Center
             };
             txtCatName.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            spHeader.Children.Add(txtCatName);
+            spHeaderLeft.Children.Add(txtCatName);
 
             Border badgeCount = new Border()
             {
@@ -988,38 +1095,74 @@ namespace OptiAssist.Addons.Toolbox
             };
             txtCount.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
             badgeCount.Child = txtCount;
-            spHeader.Children.Add(badgeCount);
+            spHeaderLeft.Children.Add(badgeCount);
 
-            expander.Header = spHeader;
+            Grid.SetColumn(spHeaderLeft, 0);
+            headerGrid.Children.Add(spHeaderLeft);
 
-            StackPanel spItems = new StackPanel() { Margin = new Thickness(0, 6, 0, 0) };
+            List<ToolboxCommandItem> batchList = new List<ToolboxCommandItem>(items);
+            Button btnRunCategoryBatch = new Button()
+            {
+                Content = "▶  " + T("Btn_Toolbox_RunCategory", "Run All"),
+                Height = 26,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = T("Tooltip_Toolbox_RunCategory", "Execute all commands in this category sequentially")
+            };
+            btnRunCategoryBatch.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnRunCategoryBatch.Click += (s, e) =>
+            {
+                if (batchList.Count == 0) return;
+                var res = MessageBox.Show(
+                    string.Format(T("Msg_Toolbox_ConfirmBatch", "Execute all {0} tasks in category '{1}' sequentially?"), batchList.Count, categoryName),
+                    "OptiAssist - Toolbox",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (res != MessageBoxResult.Yes) return;
+                ExecuteBatchItems(batchList, 0, btnRunCategoryBatch, btnRunCategoryBatch.Content);
+            };
+            Grid.SetColumn(btnRunCategoryBatch, 1);
+            headerGrid.Children.Add(btnRunCategoryBatch);
+
+            sectionStack.Children.Add(headerGrid);
+
             foreach (ToolboxCommandItem item in items)
             {
-                spItems.Children.Add(BuildCommandItemCard(item));
+                sectionStack.Children.Add(BuildCommandItemCard(item));
             }
 
-            expander.Content = spItems;
-            outerBorder.Child = expander;
-            return outerBorder;
+            sectionContainer.Child = sectionStack;
+            return sectionContainer;
         }
 
         private Border BuildCommandItemCard(ToolboxCommandItem item)
         {
             Border itemCard = new Border()
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(12, 10, 12, 10),
                 Margin = new Thickness(0, 0, 0, 6)
             };
-            itemCard.SetResourceReference(Border.BackgroundProperty, "BrushBgWindow");
+            itemCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             itemCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
             Grid g = new Grid();
+            g.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
             g.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             g.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
 
-            // Left: Title + Description only (Clean integrated native look, no technical badges or raw command preview)
+            CheckBox chk = new CheckBox()
+            {
+                IsChecked = false,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 12, 0)
+            };
+            Grid.SetColumn(chk, 0);
+            g.Children.Add(chk);
+            _toolboxChecks.Add(new KeyValuePair<CheckBox, ToolboxCommandItem>(chk, item));
+
             StackPanel spLeft = new StackPanel()
             {
                 Margin = new Thickness(0, 0, 12, 0),
@@ -1029,10 +1172,10 @@ namespace OptiAssist.Addons.Toolbox
             TextBlock txtItemTitle = new TextBlock()
             {
                 Text = item.title,
-                FontSize = 13.5,
+                FontSize = 12.5,
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis
+                TextWrapping = TextWrapping.Wrap
             };
             txtItemTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
             spLeft.Children.Add(txtItemTitle);
@@ -1042,18 +1185,17 @@ namespace OptiAssist.Addons.Toolbox
                 TextBlock txtDesc = new TextBlock()
                 {
                     Text = item.description,
-                    FontSize = 11.5,
-                    Margin = new Thickness(0, 3, 0, 0),
+                    FontSize = 11,
+                    Margin = new Thickness(0, 2, 0, 0),
                     TextWrapping = TextWrapping.Wrap
                 };
                 txtDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
                 spLeft.Children.Add(txtDesc);
             }
 
-            Grid.SetColumn(spLeft, 0);
+            Grid.SetColumn(spLeft, 1);
             g.Children.Add(spLeft);
 
-            // Right: Execute and Edit Buttons Only
             StackPanel spActions = new StackPanel()
             {
                 Orientation = Orientation.Horizontal,
@@ -1065,23 +1207,22 @@ namespace OptiAssist.Addons.Toolbox
             Button btnRun = new Button()
             {
                 Content = T("Btn_ToolboxRun", "▶ Run"),
-                Height = 30,
-                Padding = new Thickness(14, 0, 14, 0),
-                FontSize = 11.5,
-                FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 0, 6, 0),
+                Height = 28,
+                Padding = new Thickness(12, 0, 12, 0),
+                FontSize = 11,
                 ToolTip = T("Tooltip_ToolboxRun", "Execute this action")
             };
-            btnRun.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            btnRun.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnRun.Click += (s, e) => ExecuteCommandItem(capturedItem, btnRun);
             spActions.Children.Add(btnRun);
 
             Button btnEdit = new Button()
             {
                 Content = "✏️",
-                Width = 32,
-                Height = 30,
+                Width = 30,
+                Height = 28,
                 FontSize = 12,
+                Margin = new Thickness(6, 0, 0, 0),
                 ToolTip = T("Tooltip_Edit", "Edit"),
                 Visibility = _isEditModeEnabled ? Visibility.Visible : Visibility.Collapsed
             };
@@ -1089,7 +1230,7 @@ namespace OptiAssist.Addons.Toolbox
             btnEdit.Click += (s, e) => OpenEditorForItem(capturedItem);
             spActions.Children.Add(btnEdit);
 
-            Grid.SetColumn(spActions, 1);
+            Grid.SetColumn(spActions, 2);
             g.Children.Add(spActions);
 
             itemCard.Child = g;
@@ -1347,6 +1488,513 @@ namespace OptiAssist.Addons.Toolbox
 
         #endregion
 
+        private Border CreateTabButton(string text, bool isActive, out TextBlock lbl)
+        {
+            Border b = new Border()
+            {
+                Padding = new Thickness(14, 10, 14, 10),
+                Margin = new Thickness(0, 0, 6, 0),
+                BorderThickness = new Thickness(0, 0, 0, 2.5),
+                Cursor = Cursors.Hand,
+                Background = Brushes.Transparent
+            };
+            lbl = new TextBlock()
+            {
+                Text = text,
+                FontSize = 12,
+                FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold
+            };
+            if (isActive)
+            {
+                b.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+                lbl.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            }
+            else
+            {
+                b.BorderBrush = Brushes.Transparent;
+                lbl.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            }
+            b.Child = lbl;
+            return b;
+        }
+
+        private void SwitchToolboxTab(bool isMainToolbox)
+        {
+            if (_pnlMainToolboxView != null) _pnlMainToolboxView.Visibility = isMainToolbox ? Visibility.Visible : Visibility.Collapsed;
+            if (_pnlDebloaterView != null) _pnlDebloaterView.Visibility = isMainToolbox ? Visibility.Collapsed : Visibility.Visible;
+            if (_btnOptions != null) _btnOptions.Visibility = isMainToolbox ? Visibility.Visible : Visibility.Collapsed;
+
+            if (_tabToolboxBorder != null && _tabToolboxText != null)
+            {
+                if (isMainToolbox)
+                {
+                    _tabToolboxBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+                    _tabToolboxText.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                    _tabToolboxText.FontWeight = FontWeights.Bold;
+                }
+                else
+                {
+                    _tabToolboxBorder.BorderBrush = Brushes.Transparent;
+                    _tabToolboxText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                    _tabToolboxText.FontWeight = FontWeights.SemiBold;
+                }
+            }
+
+            if (_tabDebloaterBorder != null && _tabDebloaterText != null)
+            {
+                if (!isMainToolbox)
+                {
+                    _tabDebloaterBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+                    _tabDebloaterText.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                    _tabDebloaterText.FontWeight = FontWeights.Bold;
+                }
+                else
+                {
+                    _tabDebloaterBorder.BorderBrush = Brushes.Transparent;
+                    _tabDebloaterText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                    _tabDebloaterText.FontWeight = FontWeights.SemiBold;
+                }
+            }
+        }
+
+        private ScrollViewer BuildDebloaterTab()
+        {
+            _debloatChecks.Clear();
+            ScrollViewer sv = new ScrollViewer()
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Background = Brushes.Transparent
+            };
+            sv.PreviewMouseWheel += (s, e) =>
+            {
+                if (!e.Handled && sv.ScrollableHeight > 0)
+                {
+                    e.Handled = true;
+                    sv.ScrollToVerticalOffset(sv.VerticalOffset - (e.Delta / 2.5));
+                }
+            };
+
+            StackPanel root = new StackPanel() { Margin = new Thickness(0, 0, 0, 8) };
+
+            // Header Card with Batch Controls
+            Border topCard = new Border()
+            {
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            topCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            topCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            Grid topGrid = new Grid();
+            topGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            topGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            StackPanel infoStack = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
+            TextBlock lblTitle = new TextBlock()
+            {
+                Text = "🧹 " + T("Debloater_Title", "Windows Debloater"),
+                FontSize = 13.5,
+                FontWeight = FontWeights.Bold
+            };
+            lblTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+            TextBlock lblSub = new TextBlock()
+            {
+                Text = T("Debloater_Subtitle", "Select telemetry, bloatware, AI, and browser tweaks built directly into the module and apply them individually or in batch."),
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 0),
+                TextWrapping = TextWrapping.Wrap
+            };
+            lblSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            infoStack.Children.Add(lblTitle);
+            infoStack.Children.Add(lblSub);
+            Grid.SetColumn(infoStack, 0);
+            topGrid.Children.Add(infoStack);
+
+            StackPanel btnPanel = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
+            Button btnSelectAll = new Button() { Content = T("Btn_SelectAll", "Select All"), Height = 28, Padding = new Thickness(10, 0, 10, 0), FontSize = 11, Margin = new Thickness(0, 0, 6, 0) };
+            btnSelectAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnSelectAll.Click += (s, e) => { foreach (var kv in _debloatChecks) kv.Key.IsChecked = true; };
+
+            Button btnClearAll = new Button() { Content = T("Btn_ClearAll", "Clear"), Height = 28, Padding = new Thickness(10, 0, 10, 0), FontSize = 11, Margin = new Thickness(0, 0, 6, 0) };
+            btnClearAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnClearAll.Click += (s, e) => { foreach (var kv in _debloatChecks) kv.Key.IsChecked = false; };
+
+            Button btnApplySelected = new Button() { Content = "🚀 " + T("Debloater_ApplySelected", "Apply Selected"), Height = 28, Padding = new Thickness(14, 0, 14, 0), FontSize = 11, FontWeight = FontWeights.Bold };
+            btnApplySelected.SetResourceReference(Button.StyleProperty, "BtnAccent");
+            btnApplySelected.Click += (s, e) =>
+            {
+                List<ToolboxCommandItem> selected = new List<ToolboxCommandItem>();
+                foreach (var kv in _debloatChecks)
+                {
+                    if (kv.Key.IsChecked == true) selected.Add(kv.Value);
+                }
+                if (selected.Count == 0)
+                {
+                    MessageBox.Show(T("Debloater_NoneSelected", "Select at least one debloat tweak to apply."), "OptiAssist - Windows Debloater", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                var confirm = MessageBox.Show(
+                    string.Format(T("Debloater_ConfirmBatch", "Apply {0} selected Windows Debloater tweaks sequentially?"), selected.Count),
+                    "OptiAssist - Windows Debloater",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (confirm != MessageBoxResult.Yes) return;
+                ExecuteBatchItems(selected, 0, btnApplySelected, btnApplySelected.Content);
+            };
+
+            btnPanel.Children.Add(btnSelectAll);
+            btnPanel.Children.Add(btnClearAll);
+            btnPanel.Children.Add(btnApplySelected);
+            Grid.SetColumn(btnPanel, 1);
+            topGrid.Children.Add(btnPanel);
+
+            StackPanel topCardStack = new StackPanel();
+            topCardStack.Children.Add(topGrid);
+
+            WrapPanel presetBar = new WrapPanel()
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+            TextBlock lblPresets = new TextBlock()
+            {
+                Text = T("Debloater_Presets_Label", "Presets:"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            lblPresets.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            presetBar.Children.Add(lblPresets);
+
+            Button btnPresetLaptop = new Button()
+            {
+                Content = "💻 " + T("Debloater_Preset_Laptop", "Laptop de Entrada"),
+                Height = 26,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            btnPresetLaptop.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnPresetLaptop.Click += (s, e) => ApplyDebloaterPreset(new string[]
+            {
+                "dll-debloat-consumer-features",
+                "dll-debloat-telemetry",
+                "dll-debloat-widgets",
+                "dll-debloat-wpbt",
+                "dll-debloat-activity-history",
+                "dll-debloat-bg-apps",
+                "dll-debloat-windows-ai",
+                "dll-debloat-bing-search"
+            });
+            presetBar.Children.Add(btnPresetLaptop);
+
+            Button btnPresetGaming = new Button()
+            {
+                Content = "🎮 " + T("Debloater_Preset_Gaming", "PC Gamer"),
+                Height = 26,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            btnPresetGaming.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnPresetGaming.Click += (s, e) => ApplyDebloaterPreset(new string[]
+            {
+                "dll-debloat-consumer-features",
+                "dll-debloat-telemetry",
+                "dll-debloat-widgets",
+                "dll-debloat-wpbt",
+                "dll-debloat-bg-apps",
+                "dll-debloat-windows-ai",
+                "dll-debloat-bing-search",
+                "dll-debloat-edge"
+            });
+            presetBar.Children.Add(btnPresetGaming);
+
+            Button btnPresetConventional = new Button()
+            {
+                Content = "🖥️ " + T("Debloater_Preset_Conventional", "Convencional"),
+                Height = 26,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11
+            };
+            btnPresetConventional.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnPresetConventional.Click += (s, e) => ApplyDebloaterPreset(new string[]
+            {
+                "dll-debloat-consumer-features",
+                "dll-debloat-telemetry",
+                "dll-debloat-widgets",
+                "dll-debloat-activity-history",
+                "dll-debloat-bing-search",
+                "dll-debloat-edge"
+            });
+            presetBar.Children.Add(btnPresetConventional);
+
+            topCardStack.Children.Add(presetBar);
+            topCard.Child = topCardStack;
+            root.Children.Add(topCard);
+
+            // Built-in Windows Debloater Tweaks (directly in Toolbox.dll)
+            List<ToolboxCommandItem> builtInTweaks = GetBuiltInDebloatTweaks();
+            foreach (ToolboxCommandItem tweak in builtInTweaks)
+            {
+                Border card = new Border()
+                {
+                    CornerRadius = new CornerRadius(8),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(12, 10, 12, 10),
+                    Margin = new Thickness(0, 0, 0, 6)
+                };
+                card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+                card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                Grid row = new Grid();
+                row.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+                CheckBox chk = new CheckBox()
+                {
+                    IsChecked = false,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 12, 0)
+                };
+                Grid.SetColumn(chk, 0);
+                row.Children.Add(chk);
+
+                StackPanel textCol = new StackPanel() { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+                TextBlock titleTxt = new TextBlock() { Text = tweak.title, FontSize = 12.5, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+                titleTxt.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                TextBlock descTxt = new TextBlock() { Text = tweak.description, FontSize = 11, Margin = new Thickness(0, 2, 0, 0), TextWrapping = TextWrapping.Wrap };
+                descTxt.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                textCol.Children.Add(titleTxt);
+                textCol.Children.Add(descTxt);
+                Grid.SetColumn(textCol, 1);
+                row.Children.Add(textCol);
+
+                Button btnApplyOne = new Button()
+                {
+                    Content = "▶ " + T("Btn_Apply", "Apply"),
+                    Height = 28,
+                    Padding = new Thickness(12, 0, 12, 0),
+                    FontSize = 11,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                btnApplyOne.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                ToolboxCommandItem captured = tweak;
+                btnApplyOne.Click += (s, e) => ExecuteCommandItem(captured, btnApplyOne);
+                Grid.SetColumn(btnApplyOne, 2);
+                row.Children.Add(btnApplyOne);
+
+                card.Child = row;
+                root.Children.Add(card);
+                _debloatChecks.Add(new KeyValuePair<CheckBox, ToolboxCommandItem>(chk, tweak));
+            }
+
+            sv.Content = root;
+            return sv;
+        }
+
+        private void ApplyDebloaterPreset(string[] targetIds)
+        {
+            HashSet<string> set = new HashSet<string>(targetIds, StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in _debloatChecks)
+            {
+                kv.Key.IsChecked = (kv.Value != null && set.Contains(kv.Value.id));
+            }
+        }
+
+        private List<ToolboxCommandItem> GetBuiltInDebloatTweaks()
+        {
+            var list = new List<ToolboxCommandItem>();
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-consumer-features",
+                title = T("Debloat_ConsumerFeatures_Title", "Disable Consumer Features & Store Suggestions"),
+                description = T("Debloat_ConsumerFeatures_Desc", "Prevents automatic installation of sponsored apps and Microsoft Store suggestions"),
+                command = "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent\" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-telemetry",
+                title = T("Debloat_Telemetry_Title", "Disable Full Windows Telemetry & Data Collection"),
+                description = T("Debloat_Telemetry_Desc", "Disables diagnostic reporting, advertising ID, tailored experiences, and DiagTrack/wermgr services"),
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$paths = @('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo','HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy','HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection','HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection','HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System'); foreach ($p in $paths) { if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null } }; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo' -Name Enabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection' -Name AllowTelemetry -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name AllowTelemetry -Value 0 -Type DWord -Force; Get-Service diagtrack, wermgr -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue; Stop-Service diagtrack, wermgr -Force -ErrorAction SilentlyContinue; Write-Host 'Telemetry disabled!'\"",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 60
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-widgets",
+                title = T("Debloat_Widgets_Title", "Remove Taskbar Widgets (WebExperience)"),
+                description = T("Debloat_Widgets_Desc", "Terminates and uninstalls Widgets and WebExperience packages to free up RAM"),
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Process *Widget* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Get-AppxPackage Microsoft.WidgetsPlatformRuntime -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxPackage MicrosoftWindows.Client.WebExperience -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Write-Host 'Widgets removed!'\"",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 60
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-wpbt",
+                title = T("Debloat_Wpbt_Title", "Disable WPBT Execution (BIOS/OEM Bloatware)"),
+                description = T("Debloat_Wpbt_Desc", "Blocks automatic execution of OEM binaries and drivers injected via ACPI WPBT table at boot"),
+                command = "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\" /v DisableWpbtExecution /t REG_DWORD /d 1 /f",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-activity-history",
+                title = T("Debloat_ActivityHistory_Title", "Disable User Activity History"),
+                description = T("Debloat_ActivityHistory_Desc", "Prevents Windows from publishing or uploading user activity history"),
+                command = "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v PublishUserActivities /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v UploadUserActivities /t REG_DWORD /d 0 /f",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-bg-apps",
+                title = T("Debloat_BgApps_Title", "Disable Background Apps"),
+                description = T("Debloat_BgApps_Desc", "Globally disables background execution for Microsoft Store applications"),
+                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications\" /v GlobalUserDisabled /t REG_DWORD /d 1 /f",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-windows-ai",
+                title = T("Debloat_WindowsAI_Title", "Disable & Remove Windows AI Features (Copilot / Recall)"),
+                description = T("Debloat_WindowsAI_Desc", "Removes Copilot, hides AI components in Settings, disables Recall and Notepad AI features"),
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"reg add \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\\" /v SettingsPageVisibility /t REG_SZ /d \\\"hide:aicomponents\\\" /f; reg add \\\"HKLM\\SOFTWARE\\Policies\\WindowsNotepad\\\" /v DisableAIFeatures /t REG_DWORD /d 1 /f; Get-AppxPackage -AllUsers *Copilot* -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Disable-WindowsOptionalFeature -FeatureName Recall -Online -NoRestart -ErrorAction SilentlyContinue; Write-Host 'AI features disabled!'\"",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 120
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-bing-search",
+                title = T("Debloat_BingSearch_Title", "Disable Bing Web Search in Windows Search Bar"),
+                description = T("Debloat_BingSearch_Desc", "Removes Bing web results from the Start Menu, speeding up local file searches"),
+                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\" /v BingSearchEnabled /t REG_DWORD /d 0 /f && reg add \"HKCU\\Software\\Policies\\Microsoft\\Windows\\Explorer\" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f",
+                shell = ToolboxShellType.Cmd,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-edge",
+                title = T("Debloat_Edge_Title", "Debloat Microsoft Edge (Shopping, Telemetry & Popups)"),
+                description = T("Debloat_Edge_Desc", "Disables shopping assistant, first-run popups, promotions, widgets, and telemetry in Edge"),
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$edge = 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge'; if (-not (Test-Path $edge)) { New-Item -Path $edge -Force | Out-Null }; @('PersonalizationReportingEnabled','ShowRecommendationsEnabled','UserFeedbackAllowed','AlternateErrorPagesEnabled','EdgeCollectionsEnabled','EdgeShoppingAssistantEnabled','MicrosoftEdgeInsiderPromotionEnabled','ShowMicrosoftRewards','WebWidgetAllowed','DiagnosticData') | ForEach-Object { Set-ItemProperty -Path $edge -Name $_ -Value 0 -Type DWord -Force }; @('HideFirstRunExperience','ConfigureDoNotTrack') | ForEach-Object { Set-ItemProperty -Path $edge -Name $_ -Value 1 -Type DWord -Force }; Write-Host 'Edge debloat applied!'\"",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            list.Add(new ToolboxCommandItem
+            {
+                id = "dll-debloat-brave",
+                title = T("Debloat_Brave_Title", "Debloat Brave Browser (Crypto, VPN & Leo AI)"),
+                description = T("Debloat_Brave_Desc", "Applies corporate policies in Brave to disable crypto wallet, VPN, Leo AI, and telemetry"),
+                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$path = 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave'; if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }; @('BraveRewardsDisabled','BraveWalletDisabled','BraveVPNDisabled','BraveNewsDisabled','BraveTalkDisabled','TorDisabled') | ForEach-Object { Set-ItemProperty -Path $path -Name $_ -Value 1 -Type DWord -Force }; @('BraveAIChatEnabled','BraveStatsPingEnabled','BraveP3AEnabled','MetricsReportingEnabled') | ForEach-Object { Set-ItemProperty -Path $path -Name $_ -Value 0 -Type DWord -Force }; Write-Host 'Brave debloat applied!'\"",
+                shell = ToolboxShellType.PowerShell,
+                wait_for_exit = true,
+                capture_output = true,
+                requires_admin = true,
+                open_external_logs = true,
+                timeout_seconds = 30
+            });
+            return list;
+        }
+
+        private void ExecuteBatchItems(List<ToolboxCommandItem> queue, int index, Button triggerBtn, object originalContent)
+        {
+            if (queue == null || index >= queue.Count)
+            {
+                if (triggerBtn != null)
+                {
+                    triggerBtn.IsEnabled = true;
+                    triggerBtn.Content = originalContent;
+                }
+                HostLog("[TOOLBOX BATCH] ✔️ Batch execution completed.");
+                return;
+            }
+
+            if (index == 0)
+            {
+                if (_runner != null && _runner.IsRunning)
+                {
+                    MessageBox.Show(T("Msg_ToolboxBusy", "A Toolbox action is already running in background. Please wait for it to complete."), "OptiAssist - Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                if (_host != null) _host.OpenLogWindow();
+                if (triggerBtn != null) triggerBtn.IsEnabled = false;
+            }
+
+            ToolboxCommandItem item = queue[index];
+            if (triggerBtn != null)
+            {
+                triggerBtn.Content = string.Format("⏳ {0}/{1}", index + 1, queue.Count);
+            }
+            HostLog(string.Format("[TOOLBOX BATCH {0}/{1}] Starting '{2}'...", index + 1, queue.Count, item.title));
+
+            _runner.RunAsync(
+                item,
+                (line, isErr) =>
+                {
+                    if (item.capture_output)
+                    {
+                        HostLog(isErr ? "[TOOLBOX:STDERR] " + line : "[TOOLBOX] " + line);
+                    }
+                },
+                (result) =>
+                {
+                    Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        HostLog(result.Success
+                            ? string.Format("[TOOLBOX BATCH {0}/{1}] ✔️ '{2}' OK ({3} ms).", index + 1, queue.Count, item.title, result.ElapsedMilliseconds)
+                            : string.Format("[TOOLBOX BATCH {0}/{1}] ⚠️ '{2}' Exit Code {3}.", index + 1, queue.Count, item.title, result.ExitCode));
+                        ExecuteBatchItems(queue, index + 1, triggerBtn, originalContent);
+                    }));
+                });
+        }
+
         #region COMMAND EXECUTION
 
         private void ExecuteCommandItem(ToolboxCommandItem item, Button runButton)
@@ -1454,6 +2102,13 @@ namespace OptiAssist.Addons.Toolbox
             if (_btnCancelEdit != null) _btnCancelEdit.Content = T("Btn_Cancel", "✕ Cancel");
 
             RebuildCategoriesAccordion();
+            if (_tabToolboxText != null) _tabToolboxText.Text = "🧰  " + T("Toolbox_Tab_Main", "Toolbox");
+            if (_tabDebloaterText != null) _tabDebloaterText.Text = "🧹  " + T("Toolbox_Tab_Debloater", "Windows Debloater");
+            if (_pnlDebloaterView != null)
+            {
+                ScrollViewer refreshed = BuildDebloaterTab();
+                _pnlDebloaterView.Content = refreshed.Content;
+            }
         }
     }
 }

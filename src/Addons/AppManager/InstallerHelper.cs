@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.Win32;
 
 namespace OptiAssist.Addons.AppManager
 {
@@ -977,6 +978,227 @@ namespace OptiAssist.Addons.AppManager
             AvailableVersion = available ?? "";
             Selected = true;
             Status = "Available";
+        }
+    }
+
+    public class WingetInstalledAppItem
+    {
+        public string Name { get; set; }
+        public string Id { get; set; }
+        public string Version { get; set; }
+        public string Source { get; set; }
+        public long SizeKb { get; set; }
+        public string DiskSizeDisplay
+        {
+            get
+            {
+                if (SizeKb <= 0) return "—";
+                if (SizeKb >= 1024 * 1024) return string.Format("{0:F2} GB", SizeKb / (1024.0 * 1024.0));
+                if (SizeKb >= 1024) return string.Format("{0:F1} MB", SizeKb / 1024.0);
+                return string.Format("{0} KB", SizeKb);
+            }
+        }
+
+        public WingetInstalledAppItem(string name, string id, string version, string source, long sizeKb)
+        {
+            Name = name ?? "";
+            Id = id ?? "";
+            Version = version ?? "";
+            Source = source ?? "";
+            SizeKb = sizeKb;
+        }
+    }
+
+    public static class WingetInstalledHelper
+    {
+        private static Dictionary<string, long> BuildRegistrySizeMap()
+        {
+            var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            RegistryKey[] roots = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
+            string[] subPaths = new string[]
+            {
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            };
+
+            foreach (RegistryKey root in roots)
+            {
+                foreach (string subPath in subPaths)
+                {
+                    try
+                    {
+                        using (RegistryKey rk = root.OpenSubKey(subPath))
+                        {
+                            if (rk == null) continue;
+                            foreach (string keyName in rk.GetSubKeyNames())
+                            {
+                                try
+                                {
+                                    using (RegistryKey appKey = rk.OpenSubKey(keyName))
+                                    {
+                                        if (appKey == null) continue;
+                                        string dispName = appKey.GetValue("DisplayName") as string;
+                                        object estSize = appKey.GetValue("EstimatedSize");
+                                        if (!string.IsNullOrWhiteSpace(dispName) && estSize != null)
+                                        {
+                                            long kb = Convert.ToInt64(estSize);
+                                            if (kb > 0 && !map.ContainsKey(dispName.Trim()))
+                                            {
+                                                map[dispName.Trim()] = kb;
+                                            }
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            return map;
+        }
+
+        private static long LookupSizeKb(string name, Dictionary<string, long> map)
+        {
+            if (string.IsNullOrWhiteSpace(name) || map == null || map.Count == 0) return 0;
+            string clean = name.Trim();
+            long exact;
+            if (map.TryGetValue(clean, out exact)) return exact;
+
+            foreach (var kv in map)
+            {
+                if (kv.Key.IndexOf(clean, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    clean.IndexOf(kv.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return kv.Value;
+                }
+            }
+            return 0;
+        }
+
+        public static List<WingetInstalledAppItem> GetInstalledApps(Action<string> logger)
+        {
+            var result = new List<WingetInstalledAppItem>();
+            try
+            {
+                var sizeMap = BuildRegistrySizeMap();
+                ProcessStartInfo psi = new ProcessStartInfo("winget", "list --accept-source-agreements")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                };
+
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit(45000);
+
+                    string[] lines = output.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                    int sepIndex = -1;
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string trimmed = lines[i].Trim();
+                        if (trimmed.Length >= 10 && trimmed.StartsWith("---"))
+                        {
+                            sepIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (sepIndex > 0)
+                    {
+                        string header = lines[sepIndex - 1];
+                        int idStart = header.IndexOf("Id", StringComparison.OrdinalIgnoreCase);
+                        int verStart = header.IndexOf("Version", StringComparison.OrdinalIgnoreCase);
+                        if (verStart < 0) verStart = header.IndexOf("Versão", StringComparison.OrdinalIgnoreCase);
+                        int availStart = header.IndexOf("Available", StringComparison.OrdinalIgnoreCase);
+                        if (availStart < 0) availStart = header.IndexOf("Disponível", StringComparison.OrdinalIgnoreCase);
+                        int srcStart = header.IndexOf("Source", StringComparison.OrdinalIgnoreCase);
+                        if (srcStart < 0) srcStart = header.IndexOf("Origem", StringComparison.OrdinalIgnoreCase);
+
+                        for (int i = sepIndex + 1; i < lines.Length; i++)
+                        {
+                            string line = lines[i];
+                            if (string.IsNullOrWhiteSpace(line) || line.Length < 10) continue;
+                            if (idStart <= 0 || idStart >= line.Length) continue;
+
+                            string name = line.Substring(0, Math.Min(idStart, line.Length)).Trim();
+                            if (string.IsNullOrEmpty(name)) continue;
+
+                            int idEnd = (verStart > idStart) ? Math.Min(verStart, line.Length) : line.Length;
+                            string id = (idStart < line.Length) ? line.Substring(idStart, idEnd - idStart).Trim() : "";
+
+                            string version = "";
+                            if (verStart > 0 && verStart < line.Length)
+                            {
+                                int verEnd = line.Length;
+                                if (availStart > verStart && availStart < verEnd) verEnd = availStart;
+                                else if (srcStart > verStart && srcStart < verEnd) verEnd = srcStart;
+                                version = line.Substring(verStart, verEnd - verStart).Trim();
+                            }
+
+                            string source = "";
+                            if (srcStart > 0 && srcStart < line.Length)
+                            {
+                                source = line.Substring(srcStart).Trim();
+                            }
+
+                            long kb = LookupSizeKb(name, sizeMap);
+                            result.Add(new WingetInstalledAppItem(name, id, version, source, kb));
+                        }
+                    }
+                }
+
+                result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception ex)
+            {
+                if (logger != null) logger("[APP MANAGER] winget list error: " + ex.Message);
+            }
+            return result;
+        }
+
+        public static bool UninstallPackage(string id, string name, Action<string> logger)
+        {
+            try
+            {
+                string args = !string.IsNullOrWhiteSpace(id) && !id.Contains("…") && !id.EndsWith("...")
+                    ? string.Format("uninstall --id \"{0}\" --exact --silent --accept-source-agreements", id)
+                    : string.Format("uninstall --name \"{0}\" --silent --accept-source-agreements", name);
+
+                if (logger != null) logger("[WINGET UNINSTALL] winget " + args);
+
+                ProcessStartInfo psi = new ProcessStartInfo("winget", args)
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                };
+
+                using (Process p = Process.Start(psi))
+                {
+                    string stdout = p.StandardOutput.ReadToEnd();
+                    string stderr = p.StandardError.ReadToEnd();
+                    p.WaitForExit(180000);
+                    if (logger != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(stdout)) logger(stdout.Trim());
+                        if (!string.IsNullOrWhiteSpace(stderr)) logger("[STDERR] " + stderr.Trim());
+                    }
+                    return p.ExitCode == 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (logger != null) logger("[WINGET UNINSTALL ERROR] " + ex.Message);
+                return false;
+            }
         }
     }
 }

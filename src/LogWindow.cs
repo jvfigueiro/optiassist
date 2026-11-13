@@ -15,8 +15,6 @@ namespace OptiAssist
     {
         private readonly MainWindow _parent;
         private TextBox _txtConsole;
-        private TextBlock _txtTitle;
-        private TextBlock _txtSubtitle;
         private Button _btnExport;
         private Button _btnCopy;
         private Button _btnClear;
@@ -26,11 +24,11 @@ namespace OptiAssist
         {
             _parent = parent;
 
-            this.Title = "OptiAssist - Logs";
-            this.Width = 850;
-            this.Height = 550;
-            this.MinWidth = 500;
-            this.MinHeight = 350;
+            this.Title = LocalizationHelper.Get("Logs_Title", "Logs") + " - OptiAssist";
+            this.Width = 940;
+            this.Height = 620;
+            this.MinWidth = 560;
+            this.MinHeight = 380;
             this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             // Inherit application styles and colors
@@ -46,50 +44,20 @@ namespace OptiAssist
             }
             catch { }
 
-            Grid mainGrid = new Grid() { Margin = new Thickness(14) };
-            mainGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto }); // Header
-            mainGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) }); // Console
-
-            // Top Header: Title + Action Buttons
-            Grid headerGrid = new Grid() { Margin = new Thickness(0, 0, 0, 10) };
-            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-
-            StackPanel spTitle = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
-            _txtTitle = new TextBlock()
-            {
-                Text = LocalizationHelper.Get("Logs_Title", "📜 Logs"),
-                FontSize = 16,
-                FontWeight = FontWeights.Bold
-            };
-            _txtTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            spTitle.Children.Add(_txtTitle);
-
-            _txtSubtitle = new TextBlock()
-            {
-                Text = LocalizationHelper.Get("Logs_Subtitle", "Real-time log of diagnostics, scripts, and system executions"),
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0)
-            };
-            _txtSubtitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            spTitle.Children.Add(_txtSubtitle);
-
-            Grid.SetColumn(spTitle, 0);
-            headerGrid.Children.Add(spTitle);
-
             StackPanel spButtons = new StackPanel()
             {
                 Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0)
             };
 
             _btnExport = new Button()
             {
                 Content = LocalizationHelper.Get("Btn_ExportLog", "💾 Export Log"),
-                Height = 28,
+                Height = 26,
                 Padding = new Thickness(10, 0, 10, 0),
                 Margin = new Thickness(0, 0, 6, 0),
-                FontSize = 11.5
+                FontSize = 11
             };
             _btnExport.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnExport.Click += BtnExport_Click;
@@ -98,10 +66,10 @@ namespace OptiAssist
             _btnCopy = new Button()
             {
                 Content = LocalizationHelper.Get("Btn_CopyAll", "📋 Copy All"),
-                Height = 28,
+                Height = 26,
                 Padding = new Thickness(10, 0, 10, 0),
                 Margin = new Thickness(0, 0, 6, 0),
-                FontSize = 11.5
+                FontSize = 11
             };
             _btnCopy.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnCopy.Click += BtnCopy_Click;
@@ -110,25 +78,20 @@ namespace OptiAssist
             _btnClear = new Button()
             {
                 Content = LocalizationHelper.Get("Btn_ClearLog", "🗑️ Clear Console"),
-                Height = 28,
+                Height = 26,
                 Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11.5
+                FontSize = 11
             };
             _btnClear.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnClear.Click += BtnClear_Click;
             spButtons.Children.Add(_btnClear);
 
-            Grid.SetColumn(spButtons, 1);
-            headerGrid.Children.Add(spButtons);
-
-            Grid.SetRow(headerGrid, 0);
-            mainGrid.Children.Add(headerGrid);
-
-            // Center: Monospace Console / Terminal Window
+            // Full-size Monospace Console / Terminal Area
             _borderConsole = new Border()
             {
-                CornerRadius = new CornerRadius(6),
-                BorderThickness = new Thickness(1)
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(0),
+                Margin = new Thickness(4)
             };
             _borderConsole.SetResourceReference(Border.BackgroundProperty, "BrushConsoleBg");
             _borderConsole.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
@@ -149,10 +112,7 @@ namespace OptiAssist
             _txtConsole.SetResourceReference(TextBox.ForegroundProperty, "BrushConsoleText");
             _borderConsole.Child = _txtConsole;
 
-            Grid.SetRow(_borderConsole, 1);
-            mainGrid.Children.Add(_borderConsole);
-
-            this.Content = mainGrid;
+            ModernChromeHelper.ApplyChrome(this, _borderConsole, this.Title, true, spButtons, new Thickness(6, 0, 6, 6));
             this.Closed += LogWindow_Closed;
 
             try
@@ -180,11 +140,9 @@ namespace OptiAssist
             Brush consoleBg = TryGetBrush("BrushConsoleBg", isDark ? "#0C0C0F" : "#0F172A");
             Brush consoleText = TryGetBrush("BrushConsoleText", isDark ? "#E2E8F0" : "#F8FAFC");
 
-            this.Background = bg;
+            this.Background = TryGetBrush("BrushBgSidebar", isDark ? "#0D1117" : "#E2E8F0");
             this.Foreground = textPrimary;
 
-            if (_txtTitle != null) _txtTitle.Foreground = textPrimary;
-            if (_txtSubtitle != null) _txtSubtitle.Foreground = textSecondary;
             if (_borderConsole != null)
             {
                 _borderConsole.Background = consoleBg;

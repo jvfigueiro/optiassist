@@ -49,7 +49,7 @@
   "Msg_CleanerConfirmPrompt": "Are you sure you want to perform the selected and reviewed cleaning actions?",
   "Msg_CleanerConfirmDetails": "• Modules to process: {0}\n• Estimated space to reclaim: {1}",
   "Msg_CleanerConfirmNote": "All identified temporary files, caches, and items will be permanently removed.",
-  "Msg_CleanerDangerousPrompt": "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nThis option may clear active login sessions, browsing preferences, or sensitive caches.\n\nAre you sure you want to enable this option for cleaning anyway?",
+  "Msg_CleanerDangerousPrompt": "⚠️ CAUTION WARNING\n\nSelected item: {0}\n\nRisks and Implications:\n{1}\n\nAre you sure you want to enable this option for cleaning anyway?",
   "Msg_CleanerDangerousTitle": "OptiAssist - Caution Warning",
   "Cleaner_Btn_ViewFiles": "View Files",
   "Cleaner_Btn_HideFiles": "Hide Files",

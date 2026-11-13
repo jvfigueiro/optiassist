@@ -69,7 +69,13 @@
   "Dashboard_Title": "Welcome to OptiAssist!",
   "Dashboard_Subtitle": "The ultimate tool to keep your system in order",
   "Card_Hardware_Title": "🧠 Hardware Information",
+  "Card_Hardware_ShortTitle": "Hardware Info",
+  "Card_Hardware_Subtitle": "Processor, Board, RAM & GPU",
   "Card_Os_Title": "🖥️ Operating System",
+  "Card_Os_ShortTitle": "Operating System",
+  "Card_Os_Subtitle": "OS Information",
+  "Card_Storage_ShortTitle": "Storage",
+  "Card_Storage_Subtitle": "Disk Information",
   "Label_Processor": "Processor: ",
   "Label_Ram": "RAM Memory: ",
   "Label_Gpu": "Graphics Card: ",
@@ -92,6 +98,8 @@
   "Drivers_Btn_OpenDevMgmt": "🖥️ Open Device Manager",
   "Drivers_Btn_Close": "Close",
   "Card_Recommendations_Title": "💡 System & Hardware Recommendations",
+  "Card_Recommendations_ShortTitle": "Recommendations",
+  "Card_Recommendations_Subtitle": "System & Hardware Advice",
   "Rec_AllGood_Title": "Hardware & System Status Excellent",
   "Rec_AllGood_Desc": "No critical hardware bottlenecks or driver issues were detected for your system profile.",
   "Rec_RamLow_Title": "RAM Upgrade Strongly Recommended",
@@ -382,5 +390,7 @@
   "Startup_Btn_Delete": "🗑️ Delete",
   "Startup_Confirm_Delete_Title": "Confirm Deletion",
   "Startup_Confirm_Delete_Msg": "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically.",
-  "Startup_Msg_DeleteFailed": "Could not delete startup entry: {0}"
+  "Startup_Msg_DeleteFailed": "Could not delete startup entry: {0}",
+  "Wizard_Btn_Next": "Next →",
+  "Wizard_Btn_Back": "← Back"
 }

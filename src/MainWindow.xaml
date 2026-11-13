@@ -140,18 +140,6 @@
                                Foreground="{DynamicResource BrushTextPrimary}"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"/>
-                    <Border Background="{DynamicResource BrushBgCard}"
-                            BorderBrush="{DynamicResource BrushBorderCard}"
-                            BorderThickness="1"
-                            CornerRadius="10"
-                            Padding="8,2"
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center">
-                        <TextBlock Text="1.2.S4"
-                                   FontSize="10.5"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource BrushTextSecondary}"/>
-                    </Border>
                 </StackPanel>
 
                 <!-- Top Right: Preserved Hardware Specifications (Visible on All Screens) -->
@@ -281,14 +269,27 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Subtle Sidebar Footer (OptiAssist shown only when custom app name is set) -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,10">
+                    <!-- Subtle Sidebar Footer (Version Pill + Custom App Name fallback) -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,10">
                         <TextBlock x:Name="lblFooterStoreName"
                                    Text="OptiAssist"
                                    FontSize="11"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource BrushTextSecondary}"
+                                   Margin="0,0,8,0"
+                                   VerticalAlignment="Center"
                                    Visibility="Collapsed"/>
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="10,2"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="1.2.S4"
+                                       FontSize="10.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextSecondary}"/>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -339,27 +340,38 @@
                                            Margin="0,3,0,0"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <Button x:Name="btnDashboardThemeToggle"
-                                    Grid.Column="1"
-                                    Style="{StaticResource BtnDefault}"
-                                    Width="34"
-                                    Height="34"
-                                    Padding="0"
-                                    VerticalAlignment="Center"
-                                    ToolTip="Toggle Dark / Light Mode"
-                                    Click="BtnToggleTheme_Click">
-                                <TextBlock x:Name="txtDashboardThemeIcon"
-                                           Text="🌙"
-                                           FontSize="15"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Button>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="btnDashboardInstallPc"
+                                        Content="📥 Install on PC"
+                                        Style="{StaticResource BtnAccent}"
+                                        Height="34"
+                                        Padding="12,0"
+                                        FontSize="11"
+                                        Margin="0,0,8,0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="Install OptiAssist on this computer with Desktop and Start Menu shortcuts"
+                                        Visibility="Collapsed"
+                                        Click="BtnDashboardInstallPc_Click"/>
+                                <Button x:Name="btnDashboardThemeToggle"
+                                        Style="{StaticResource BtnDefault}"
+                                        Width="34"
+                                        Height="34"
+                                        Padding="0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="Toggle Dark / Light Mode"
+                                        Click="BtnToggleTheme_Click">
+                                    <TextBlock x:Name="txtDashboardThemeIcon"
+                                               Text="🌙"
+                                               FontSize="15"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
                         </Grid>
 
-                        <!-- 3x2 Sparkle-inspired Bento Grid -->
+                        <!-- 2x2 Sparkle-inspired Bento Grid -->
                         <Grid Margin="0,0,0,10" HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
@@ -368,7 +380,7 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <!-- Card 1: CPU -->
+                            <!-- Card 1 (Row 0, Col 0): Hardware Info -->
                             <Border Grid.Row="0" Grid.Column="0"
                                     Background="{DynamicResource BrushBgCard}"
                                     BorderBrush="{DynamicResource BrushBorderCard}"
@@ -376,172 +388,57 @@
                                     CornerRadius="10"
                                     Padding="14"
                                     Margin="0,0,6,10">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Border Width="34" Height="34" CornerRadius="8" Background="#1E3A8A" Margin="0,0,10,0">
-                                            <TextBlock Text="🧠" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock x:Name="txtHwCardTitle" Text="CPU" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Processor Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <Border Width="34" Height="34" CornerRadius="8" Background="#1E3A8A" Margin="0,0,10,0">
+                                                <TextBlock Text="🧠" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock x:Name="txtHwCardTitle" Text="Hardware Info" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                <TextBlock x:Name="txtHwCardSubtitle" Text="Processor, Board, RAM &amp; GPU" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                    </StackPanel>
-                                    <TextBlock x:Name="lblCpuDetails"
-                                               Text="Processor: Detecting..."
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextPrimary}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Card 2: GPU -->
-                            <Border Grid.Row="0" Grid.Column="1"
-                                    Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="10"
-                                    Padding="14"
-                                    Margin="4,0,4,10">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Border Width="34" Height="34" CornerRadius="8" Background="#115E59" Margin="0,0,10,0">
-                                            <TextBlock Text="🎮" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="GPU" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Graphics Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <TextBlock x:Name="lblGpuDetails"
-                                               Text="Graphics Card: Detecting..."
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextPrimary}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Card 3: Memory -->
-                            <Border Grid.Row="0" Grid.Column="2"
-                                    Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="10"
-                                    Padding="14"
-                                    Margin="6,0,0,10">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Border Width="34" Height="34" CornerRadius="8" Background="#5B21B6" Margin="0,0,10,0">
-                                            <TextBlock Text="⚡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Memory" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                            <TextBlock Text="RAM Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <TextBlock x:Name="lblRamDetails"
-                                               Text="RAM Memory: Detecting..."
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextPrimary}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Card 4: System / OS -->
-                            <Border Grid.Row="1" Grid.Column="0"
-                                    Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="10"
-                                    Padding="14"
-                                    Margin="0,0,6,0">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Border Width="34" Height="34" CornerRadius="8" Background="#991B1B" Margin="0,0,10,0">
-                                            <TextBlock Text="🪟" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock x:Name="txtOsCardTitle" Text="System" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                            <TextBlock Text="OS Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <TextBlock x:Name="lblOsTitle"
-                                               Text="Detecting Windows..."
-                                               FontWeight="SemiBold"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource BrushTextPrimary}"
-                                               Margin="0,0,0,4"
-                                               TextWrapping="Wrap"/>
-                                    <TextBlock x:Name="lblOsDetails"
-                                               Text="OS build and version..."
-                                               Foreground="{DynamicResource BrushTextSecondary}"
-                                               FontSize="11"
-                                               Margin="0,0,0,3"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock x:Name="lblOsInstallDate"
-                                               Text="Install Date: Detecting..."
-                                               Foreground="{DynamicResource BrushTextSecondary}"
-                                               FontSize="11"
-                                               Margin="0,0,0,3"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock x:Name="lblOsActivation"
-                                               Text="Activation: Detecting..."
-                                               Foreground="{DynamicResource BrushTextSecondary}"
-                                               FontSize="11"
-                                               Margin="0,0,0,4"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock x:Name="lblMachineNameTag"
-                                                   Text="Device Name: "
+                                        <TextBlock x:Name="lblCpuDetails"
+                                                   Text="Processor: Detecting..."
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,3"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="lblMotherboard"
+                                                   Text="Motherboard: Detecting..."
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,3"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="lblBiosInfo"
+                                                   Text="BIOS: Detecting..."
                                                    FontSize="11"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
-                                                   Margin="0,0,5,0"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBlock x:Name="lblMachineName"
-                                                   Text="Detecting..."
-                                                   FontSize="11"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource BrushAccent}"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   Margin="0,0,0,3"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="lblRamDetails"
+                                                   Text="RAM Memory: Detecting..."
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,3"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="lblGpuDetails"
+                                                   Text="Graphics Card: Detecting..."
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,6"
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Card 5: Motherboard & BIOS (Swapped with Storage) -->
-                            <Border Grid.Row="1" Grid.Column="1"
-                                    Background="{DynamicResource BrushBgCard}"
-                                    BorderBrush="{DynamicResource BrushBorderCard}"
-                                    BorderThickness="1"
-                                    CornerRadius="10"
-                                    Padding="14"
-                                    Margin="4,0,4,0">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Border Width="34" Height="34" CornerRadius="8" Background="#065F46" Margin="0,0,10,0">
-                                            <TextBlock Text="🔌" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Motherboard" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Board &amp; Firmware" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <TextBlock x:Name="lblMotherboard"
-                                               Text="Motherboard: Detecting..."
-                                               FontSize="11.5"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextPrimary}"
-                                               Margin="0,0,0,4"
-                                               TextWrapping="Wrap"/>
-                                    <TextBlock x:Name="lblBiosInfo"
-                                               Text="BIOS: Detecting..."
-                                               FontSize="11"
-                                               Foreground="{DynamicResource BrushTextSecondary}"
-                                               Margin="0,0,0,6"
-                                               TextWrapping="Wrap"/>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Height="22">
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Height="22">
                                         <TextBlock x:Name="lblSerialTag"
                                                    Text="Serial: "
                                                    FontSize="11"
@@ -564,25 +461,92 @@
                                                 Padding="8,0"
                                                 Click="BtnCopySerial_Click"/>
                                     </StackPanel>
-                                </StackPanel>
+                                </Grid>
                             </Border>
 
-                            <!-- Card 6: Storage (Swapped with Motherboard) -->
-                            <Border Grid.Row="1" Grid.Column="2"
+                            <!-- Card 2 (Row 0, Col 1): Operating System -->
+                            <Border Grid.Row="0" Grid.Column="1"
                                     Background="{DynamicResource BrushBgCard}"
                                     BorderBrush="{DynamicResource BrushBorderCard}"
                                     BorderThickness="1"
                                     CornerRadius="10"
                                     Padding="14"
-                                    Margin="6,0,0,0">
+                                    Margin="6,0,0,10">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <Border Width="34" Height="34" CornerRadius="8" Background="#991B1B" Margin="0,0,10,0">
+                                                <TextBlock Text="🪟" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock x:Name="txtOsCardTitle" Text="Operating System" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                <TextBlock x:Name="txtOsCardSubtitle" Text="OS Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <TextBlock x:Name="lblOsTitle"
+                                                   Text="Detecting Windows..."
+                                                   FontWeight="SemiBold"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Margin="0,0,0,4"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="lblOsDetails"
+                                                   Text="OS build and version..."
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="0,0,0,3"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="lblOsInstallDate"
+                                                   Text="Install Date: Detecting..."
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="0,0,0,3"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="lblOsActivation"
+                                                   Text="Activation: Detecting..."
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="0,0,0,6"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Height="22">
+                                        <TextBlock x:Name="lblMachineNameTag"
+                                                   Text="Device Name: "
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,0,5,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="lblMachineName"
+                                                   Text="Detecting..."
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrushAccent}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Card 3 (Row 1, Col 0): Storage -->
+                            <Border Grid.Row="1" Grid.Column="0"
+                                    Background="{DynamicResource BrushBgCard}"
+                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="14"
+                                    Margin="0,0,6,0">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                         <Border Width="34" Height="34" CornerRadius="8" Background="#92400E" Margin="0,0,10,0">
                                             <TextBlock Text="💾" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Storage" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Disk Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                            <TextBlock x:Name="txtStorageCardTitle" Text="Storage" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            <TextBlock x:Name="txtStorageCardSubtitle" Text="Disk Information" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
                                         </StackPanel>
                                     </StackPanel>
                                     <TextBlock x:Name="lblDiskDetails"
@@ -591,6 +555,32 @@
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                TextWrapping="Wrap"/>
+                                    <StackPanel x:Name="pnlOtherDisks" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card 4 (Row 1, Col 1): Recommendations -->
+                            <Border x:Name="borderRecommendations"
+                                    Grid.Row="1" Grid.Column="1"
+                                    Background="{DynamicResource BrushBgCard}"
+                                    BorderBrush="{DynamicResource BrushBorderCard}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="14"
+                                    Margin="6,0,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                        <Border Width="34" Height="34" CornerRadius="8" Background="#065F46" Margin="0,0,10,0">
+                                            <TextBlock Text="💡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock x:Name="txtRecommendationsTitle" Text="Recommendations" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            <TextBlock x:Name="txtRecommendationsSubtitle" Text="System &amp; Hardware Advice" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="220">
+                                        <StackPanel x:Name="pnlRecommendationsList" />
+                                    </ScrollViewer>
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -601,7 +591,7 @@
                                 BorderThickness="1"
                                 CornerRadius="10"
                                 Padding="14"
-                                Margin="0,0,0,10"
+                                Margin="0,0,0,8"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
                                 <Grid Margin="0,0,0,8">
@@ -635,27 +625,6 @@
                                            TextWrapping="Wrap"
                                            Visibility="Collapsed"/>
                                 <UniformGrid x:Name="ugCommonTasks" Columns="3" HorizontalAlignment="Stretch"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Recommendations Block (Below Common Tasks) -->
-                        <Border x:Name="borderRecommendations"
-                                Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="14"
-                                Margin="0,0,0,8"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel>
-                                <TextBlock x:Name="txtRecommendationsTitle"
-                                           Text="💡 System &amp; Hardware Recommendations"
-                                           FontWeight="Bold"
-                                           FontSize="12.5"
-                                           Foreground="{DynamicResource BrushAccent}"
-                                           Margin="0,0,0,8"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <StackPanel x:Name="pnlRecommendationsList" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -1514,7 +1483,7 @@
 
         <!-- ======================================================== -->
         <!-- ROW 2: BOTTOM STATUS BAR (Always Visible, Centered)      -->
-        <!-- BitLocker | TPM | Secure Boot | Firmware                 -->
+        <!-- Firmware | Secure Boot | TPM | BitLocker                 -->
         <!-- ======================================================== -->
         <Border Grid.Row="2"
             Background="{DynamicResource BrushBgSidebar}"
@@ -1523,26 +1492,20 @@
             VerticalAlignment="Stretch">
         <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <!-- 1. BitLocker (Clickable) -->
+                <!-- 1. Firmware (UEFI / Legacy BIOS) -->
                 <Border Background="{DynamicResource BrushBgCard}"
                         BorderBrush="{DynamicResource BrushBorderCard}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="8,2"
                         Margin="0,0,8,0">
-                    <StackPanel x:Name="pnlBitLockerStatus"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                Cursor="Hand"
-                                ToolTip="Click to open BitLocker / Device Encryption settings"
-                                MouseLeftButtonDown="PnlBitLockerStatus_MouseLeftButtonDown">
-                        <TextBlock x:Name="txtBitLockerLabel"
-                                   Text="🔒 BitLocker: "
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="txtFirmwareLabel"
+                                   Text="⚙️ Firmware: "
                                    FontSize="11"
                                    Foreground="{DynamicResource BrushTextSecondary}"
                                    VerticalAlignment="Center"/>
-                        <TextBlock x:Name="txtBitLockerStatus"
+                        <TextBlock x:Name="txtFirmwareStatus"
                                    Text="Querying..."
                                    FontSize="11"
                                    FontWeight="Bold"
@@ -1551,7 +1514,29 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 2. TPM (Clickable) -->
+                <!-- 2. Secure Boot -->
+                <Border Background="{DynamicResource BrushBgCard}"
+                        BorderBrush="{DynamicResource BrushBorderCard}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="8,2"
+                        Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="txtSecureBootLabel"
+                                   Text="⚡ Secure Boot: "
+                                   FontSize="11"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="txtSecureBootStatus"
+                                   Text="Querying..."
+                                   FontSize="11"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource BrushWarning}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. TPM (Clickable) -->
                 <Border Background="{DynamicResource BrushBgCard}"
                         BorderBrush="{DynamicResource BrushBorderCard}"
                         BorderThickness="1"
@@ -1579,41 +1564,25 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 3. Secure Boot -->
-                <Border Background="{DynamicResource BrushBgCard}"
-                        BorderBrush="{DynamicResource BrushBorderCard}"
-                        BorderThickness="1"
-                        CornerRadius="6"
-                        Padding="8,2"
-                        Margin="0,0,8,0">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="txtSecureBootLabel"
-                                   Text="⚡ Secure Boot: "
-                                   FontSize="11"
-                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                   VerticalAlignment="Center"/>
-                        <TextBlock x:Name="txtSecureBootStatus"
-                                   Text="Querying..."
-                                   FontSize="11"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource BrushWarning}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- 4. Firmware (UEFI / Legacy BIOS) -->
+                <!-- 4. BitLocker (Clickable) -->
                 <Border Background="{DynamicResource BrushBgCard}"
                         BorderBrush="{DynamicResource BrushBorderCard}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="8,2">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="txtFirmwareLabel"
-                                   Text="⚙️ Firmware: "
+                    <StackPanel x:Name="pnlBitLockerStatus"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                Cursor="Hand"
+                                ToolTip="Click to open BitLocker / Device Encryption settings"
+                                MouseLeftButtonDown="PnlBitLockerStatus_MouseLeftButtonDown">
+                        <TextBlock x:Name="txtBitLockerLabel"
+                                   Text="🔒 BitLocker: "
                                    FontSize="11"
                                    Foreground="{DynamicResource BrushTextSecondary}"
                                    VerticalAlignment="Center"/>
-                        <TextBlock x:Name="txtFirmwareStatus"
+                        <TextBlock x:Name="txtBitLockerStatus"
                                    Text="Querying..."
                                    FontSize="11"
                                    FontWeight="Bold"

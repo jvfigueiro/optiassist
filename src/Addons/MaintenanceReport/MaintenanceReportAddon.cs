@@ -406,7 +406,7 @@ namespace OptiAssist.Addons.MaintenanceReport
 
         public string Version
         {
-            get { return "1.1.0.0"; }
+            get { return "1.2.S4"; }
         }
 
         public string Author

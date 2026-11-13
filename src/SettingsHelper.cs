@@ -39,7 +39,7 @@ namespace OptiAssist
             EnableMaintenanceReport = false;
             OpenExternalLogsByDefault = false;
             AlwaysOnTop = false;
-            DisabledAddons = new List<string>();
+            DisabledAddons = new List<string> { "maintenance-report" };
             ModuleOrder = new List<string>();
             CustomLogoPath = "";
             FreshStart = "true";
