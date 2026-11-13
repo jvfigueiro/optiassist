@@ -63,6 +63,8 @@ namespace OptiAssist
         public bool SecureBootActive { get; set; }
         public string BitLockerStatus { get; set; }
         public bool BitLockerActive { get; set; }
+        public string FirmwareMode { get; set; }
+        public bool IsUefi { get; set; }
         public System.Collections.Generic.List<ProblemDeviceEntry> ProblemDevices { get; set; }
         public System.Collections.Generic.List<HardwareRecommendation> Recommendations { get; set; }
 
@@ -88,6 +90,7 @@ namespace OptiAssist
             TpmStatus = "Detecting TPM...";
             SecureBootStatus = "Detecting Secure Boot...";
             BitLockerStatus = "Detecting BitLocker...";
+            FirmwareMode = "Detecting...";
             ProblemDevices = new System.Collections.Generic.List<ProblemDeviceEntry>();
             Recommendations = new System.Collections.Generic.List<HardwareRecommendation>();
         }
@@ -458,6 +461,35 @@ namespace OptiAssist
             {
                 summary.SecureBootStatus = "Unavailable / Not supported";
                 summary.SecureBootActive = false;
+            }
+
+            // 8b. Firmware Mode (UEFI vs Legacy BIOS)
+            try
+            {
+                bool isUefi = false;
+                string fwEnv = Environment.GetEnvironmentVariable("firmware_type");
+                if (string.Equals(fwEnv, "UEFI", StringComparison.OrdinalIgnoreCase))
+                {
+                    isUefi = true;
+                }
+                else
+                {
+                    using (RegistryKey rkCtrl = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control"))
+                    {
+                        if (rkCtrl != null)
+                        {
+                            object peVal = rkCtrl.GetValue("PEFirmwareType");
+                            if (peVal != null && Convert.ToInt32(peVal) == 2) isUefi = true;
+                        }
+                    }
+                    if (!isUefi && summary.SecureBootActive) isUefi = true;
+                }
+                summary.IsUefi = isUefi;
+                summary.FirmwareMode = isUefi ? "UEFI" : "Legacy BIOS";
+            }
+            catch
+            {
+                summary.FirmwareMode = "Legacy BIOS";
             }
 
             // 9. TPM

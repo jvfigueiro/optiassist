@@ -243,8 +243,21 @@ namespace OptiAssist
             }
         }
 
+        public IOptiAssistHost Host { get; set; }
+        public bool IsInitialized { get; set; }
+
+        public void EnsureInitialized()
+        {
+            if (!IsInitialized && Instance != null && Host != null)
+            {
+                Instance.Initialize(Host);
+                IsInitialized = true;
+            }
+        }
+
         public FrameworkElement GetOrCreateView()
         {
+            EnsureInitialized();
             if (CachedView == null && Instance != null)
             {
                 CachedView = Instance.CreateView();
@@ -364,6 +377,22 @@ namespace OptiAssist
             entry.Author = entry.AssemblyCompany;
         }
 
+        public static int GetModuleSortOrder(string addonId, List<string> customOrder)
+        {
+            if (customOrder != null && customOrder.Count > 0 && !string.IsNullOrEmpty(addonId))
+            {
+                for (int i = 0; i < customOrder.Count; i++)
+                {
+                    if (string.Equals(customOrder[i], addonId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return i;
+                    }
+                }
+                return 1000 + GetModuleSortOrder(addonId);
+            }
+            return GetModuleSortOrder(addonId);
+        }
+
         public static int GetModuleSortOrder(string addonId)
         {
             if (string.IsNullOrEmpty(addonId)) return 100;
@@ -454,10 +483,6 @@ namespace OptiAssist
                         if (typeof(IOptiAssistAddon).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
                         {
                             IOptiAssistAddon addon = (IOptiAssistAddon)Activator.CreateInstance(t);
-                            if (host != null)
-                            {
-                                addon.Initialize(host);
-                            }
 
                             string relPath = dllPath;
                             if (dllPath.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase))
@@ -474,6 +499,8 @@ namespace OptiAssist
                             }
 
                             AddonEntry entry = new AddonEntry();
+                            entry.Host = host;
+                            entry.IsInitialized = false;
                             entry.Instance = addon;
                             entry.Id = addon.Id;
                             entry.Name = addon.Name;

@@ -50,12 +50,18 @@ namespace OptiAssist.Addons.PCAssist
         private Button _btnToggleMonitor;
 
         // Tab 1: Summary Controls (HWiNFO-style 3 columns)
+        private TextBlock _txtCpuUsageTop;
+        private ProgressBar _pbCpuUsageTop;
+        private TextBlock _txtRamUsageTop;
+        private ProgressBar _pbRamUsageTop;
+
         private TextBlock _txtCpuNameSum;
         private TextBlock _txtCpuSocketSum;
         private TextBlock _txtCpuCoresSum;
         private TextBlock _txtCpuCacheSum;
         private WrapPanel _pnlCpuInstructions;
         private TextBlock _txtCpuClockLive;
+        private TextBlock _txtCpuTempLive;
         private TextBlock _txtCpuLoadLive;
         private ProgressBar _pbCpuLoadLive;
 
@@ -152,33 +158,25 @@ namespace OptiAssist.Addons.PCAssist
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Tab bar
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Content
 
-            // 1. Header
-            Border headerBorder = new Border
-            {
-                Background = GetResourceBrush("BrushBgCard", "#FFFFFF"),
-                BorderBrush = GetResourceBrush("BrushBorderCard", "#CBD5E1"),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-                Padding = new Thickness(24, 14, 24, 14)
-            };
-
-            Grid headerGrid = new Grid();
+            // 1. Header (Standardized to match other OptiAssist modules)
+            Grid headerGrid = new Grid { Margin = new Thickness(4, 2, 4, 10) };
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            StackPanel titlePanel = new StackPanel();
+            StackPanel titlePanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _txtTitle = new TextBlock
             {
                 Text = "⚡ " + T("Nav_HardwareMonitor", "Hardware Monitor"),
-                FontSize = 18,
+                FontSize = 15,
                 FontWeight = FontWeights.Bold,
                 Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A")
             };
             _txtSubtitle = new TextBlock
             {
                 Text = T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"),
-                FontSize = 12,
+                FontSize = 11,
                 Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
-                Margin = new Thickness(0, 3, 0, 0)
+                Margin = new Thickness(0, 2, 0, 0)
             };
             titlePanel.Children.Add(_txtTitle);
             titlePanel.Children.Add(_txtSubtitle);
@@ -195,17 +193,18 @@ namespace OptiAssist.Addons.PCAssist
             Grid.SetColumn(_btnToggleMonitor, 1);
             headerGrid.Children.Add(_btnToggleMonitor);
 
-            headerBorder.Child = headerGrid;
-            Grid.SetRow(headerBorder, 0);
-            root.Children.Add(headerBorder);
+            Grid.SetRow(headerGrid, 0);
+            root.Children.Add(headerGrid);
 
             // 2. Tabs Navigation Bar
             Border tabsBar = new Border
             {
                 Background = GetResourceBrush("BrushBgCard", "#FFFFFF"),
                 BorderBrush = GetResourceBrush("BrushBorderCard", "#CBD5E1"),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-                Padding = new Thickness(24, 0, 24, 0)
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Margin = new Thickness(4, 0, 4, 10),
+                Padding = new Thickness(8, 0, 8, 0)
             };
 
             StackPanel tabsPanel = new StackPanel { Orientation = Orientation.Horizontal };
@@ -223,7 +222,7 @@ namespace OptiAssist.Addons.PCAssist
             _tabBatteryBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Battery);
             tabsPanel.Children.Add(_tabBatteryBorder);
 
-            _tabBenchBorder = CreateTabButton("🚀 " + T("PCAssist_Tab_Bench", "Bench Diagnostics"), false, out _tabBenchText);
+            _tabBenchBorder = CreateTabButton("🚀 " + T("PCAssist_Tab_Bench", "Benchmark & Stress Test"), false, out _tabBenchText);
             _tabBenchBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Bench);
             tabsPanel.Children.Add(_tabBenchBorder);
 
@@ -311,27 +310,91 @@ namespace OptiAssist.Addons.PCAssist
         private ScrollViewer BuildSummaryTab()
         {
             ScrollViewer sv = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Visibility = Visibility.Visible };
-            StackPanel rootPanel = new StackPanel { Margin = new Thickness(16, 12, 16, 16) };
+            StackPanel rootPanel = new StackPanel { Margin = new Thickness(4, 0, 4, 8) };
+
+            // ==================== TOP LIVE USAGE BARS (CPU & RAM) ====================
+            Grid topUsageGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            topUsageGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            topUsageGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            Border cpuTopCard = CreateCard();
+            cpuTopCard.Margin = new Thickness(0, 0, 6, 0);
+            StackPanel cpuTopStack = new StackPanel();
+            _txtCpuUsageTop = new TextBlock
+            {
+                Text = "CPU Usage: 0.0%",
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            _pbCpuUsageTop = new ProgressBar
+            {
+                Height = 8,
+                Minimum = 0,
+                Maximum = 100,
+                Foreground = GetResourceBrush("BrushAccent", "#0EA5E9")
+            };
+            cpuTopStack.Children.Add(_txtCpuUsageTop);
+            cpuTopStack.Children.Add(_pbCpuUsageTop);
+            cpuTopCard.Child = cpuTopStack;
+            Grid.SetColumn(cpuTopCard, 0);
+            topUsageGrid.Children.Add(cpuTopCard);
+
+            Border ramTopCard = CreateCard();
+            ramTopCard.Margin = new Thickness(6, 0, 0, 0);
+            StackPanel ramTopStack = new StackPanel();
+            _txtRamUsageTop = new TextBlock
+            {
+                Text = "RAM Usage: 0.0%",
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            _pbRamUsageTop = new ProgressBar
+            {
+                Height = 8,
+                Minimum = 0,
+                Maximum = 100,
+                Foreground = (SolidColorBrush)new BrushConverter().ConvertFromString("#8B5CF6")
+            };
+            ramTopStack.Children.Add(_txtRamUsageTop);
+            ramTopStack.Children.Add(_pbRamUsageTop);
+            ramTopCard.Child = ramTopStack;
+            Grid.SetColumn(ramTopCard, 1);
+            topUsageGrid.Children.Add(ramTopCard);
+
+            rootPanel.Children.Add(topUsageGrid);
 
             Grid grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // ==================== COLUMN 1: CPU ====================
-            Border col1Card = CreateDenseCard();
-            col1Card.Margin = new Thickness(0, 0, 6, 0);
-            StackPanel col1 = new StackPanel();
+            // ==================== ROW 0, COL 0: PROCESSOR (CPU) ====================
+            Border cpuCard = CreateCard();
+            cpuCard.Margin = new Thickness(0, 0, 6, 12);
+            StackPanel cpuPanel = new StackPanel();
 
-            col1.Children.Add(CreateDenseHeader("CPU", "#0EA5E9"));
-            _txtCpuNameSum = new TextBlock { FontSize = 13.5, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 4), TextTrimming = TextTrimming.CharacterEllipsis };
-            col1.Children.Add(_txtCpuNameSum);
+            cpuPanel.Children.Add(CreateDenseHeader("PROCESSOR (CPU)", "#0EA5E9"));
+            _txtCpuNameSum = new TextBlock
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 8, 0, 6),
+                TextWrapping = TextWrapping.Wrap
+            };
+            cpuPanel.Children.Add(_txtCpuNameSum);
 
-            Grid cpuDetails = new Grid { Margin = new Thickness(0, 2, 0, 6) };
+            Grid cpuDetails = new Grid { Margin = new Thickness(0, 2, 0, 8) };
             cpuDetails.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             cpuDetails.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            StackPanel cpuDLeft = new StackPanel();
+            StackPanel cpuDLeft = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
             _txtCpuSocketSum = AddMiniParam(cpuDLeft, "Platform:", "Detecting...");
             _txtCpuCoresSum = AddMiniParam(cpuDLeft, "Cores/Threads:", "Detecting...");
 
@@ -343,91 +406,191 @@ namespace OptiAssist.Addons.PCAssist
             Grid.SetColumn(cpuDRight, 1);
             cpuDetails.Children.Add(cpuDLeft);
             cpuDetails.Children.Add(cpuDRight);
-            col1.Children.Add(cpuDetails);
+            cpuPanel.Children.Add(cpuDetails);
 
-            col1.Children.Add(CreateSubDivider("INSTRUCTION SET FEATURES"));
-            _pnlCpuInstructions = new WrapPanel { Margin = new Thickness(0, 4, 0, 8) };
-            col1.Children.Add(_pnlCpuInstructions);
+            cpuPanel.Children.Add(CreateSubDivider("OPERATING CLOCKS & LOAD"));
+            _txtCpuClockLive = new TextBlock
+            {
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 6, 0, 2),
+                Text = "Live Clock: Detecting..."
+            };
+            _txtCpuTempLive = new TextBlock
+            {
+                FontSize = 11.5,
+                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
+                Margin = new Thickness(0, 0, 0, 2),
+                Text = "Temperature: Detecting..."
+            };
+            _txtCpuLoadLive = new TextBlock
+            {
+                FontSize = 11.5,
+                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
+                Text = "CPU Load: 0.0%"
+            };
+            _pbCpuLoadLive = new ProgressBar
+            {
+                Height = 6,
+                Minimum = 0,
+                Maximum = 100,
+                Margin = new Thickness(0, 6, 0, 10),
+                Foreground = GetResourceBrush("BrushAccent", "#0EA5E9")
+            };
+            cpuPanel.Children.Add(_txtCpuClockLive);
+            cpuPanel.Children.Add(_txtCpuTempLive);
+            cpuPanel.Children.Add(_txtCpuLoadLive);
+            cpuPanel.Children.Add(_pbCpuLoadLive);
 
-            col1.Children.Add(CreateSubDivider("OPERATING CLOCKS & LOAD"));
-            _txtCpuClockLive = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2), Text = "Clock: Detecting..." };
-            _txtCpuLoadLive = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushTextSecondary", "#475569"), Text = "CPU Load: 0.0%" };
-            _pbCpuLoadLive = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 4, 0, 4), Foreground = GetResourceBrush("BrushAccent", "#0EA5E9") };
+            cpuPanel.Children.Add(CreateSubDivider("INSTRUCTION SET FEATURES"));
+            _pnlCpuInstructions = new WrapPanel { Margin = new Thickness(0, 6, 0, 2) };
+            cpuPanel.Children.Add(_pnlCpuInstructions);
 
-            col1.Children.Add(_txtCpuClockLive);
-            col1.Children.Add(_txtCpuLoadLive);
-            col1.Children.Add(_pbCpuLoadLive);
+            cpuCard.Child = cpuPanel;
+            Grid.SetRow(cpuCard, 0);
+            Grid.SetColumn(cpuCard, 0);
+            grid.Children.Add(cpuCard);
 
-            col1Card.Child = col1;
-            Grid.SetColumn(col1Card, 0);
-            grid.Children.Add(col1Card);
+            // ==================== ROW 0, COL 1: MEMORY (RAM) ====================
+            Border ramCard = CreateCard();
+            ramCard.Margin = new Thickness(6, 0, 0, 12);
+            StackPanel ramPanel = new StackPanel();
 
-            // ==================== COLUMN 2: MOTHERBOARD & MEMORY ====================
-            Border col2Card = CreateDenseCard();
-            col2Card.Margin = new Thickness(4, 0, 4, 0);
-            StackPanel col2 = new StackPanel();
+            ramPanel.Children.Add(CreateDenseHeader("MEMORY (RAM)", "#3B82F6"));
+            _txtRamTotalSum = new TextBlock
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 8, 0, 2)
+            };
+            _txtRamModeSum = new TextBlock
+            {
+                FontSize = 11.5,
+                Foreground = GetResourceBrush("BrushAccent", "#0EA5E9"),
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            ramPanel.Children.Add(_txtRamTotalSum);
+            ramPanel.Children.Add(_txtRamModeSum);
 
-            col2.Children.Add(CreateDenseHeader("MOTHERBOARD & CHIPSET", "#10B981"));
-            _txtMoboNameSum = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2), TextTrimming = TextTrimming.CharacterEllipsis };
-            col2.Children.Add(_txtMoboNameSum);
+            ramPanel.Children.Add(CreateSubDivider("INSTALLED MODULES (PER SLOT)"));
+            _pnlRamModulesSum = new StackPanel { Margin = new Thickness(0, 6, 0, 2) };
+            ramPanel.Children.Add(_pnlRamModulesSum);
 
-            _txtChipsetNameSum = AddMiniParam(col2, "Chipset:", "Detecting...");
-            Grid biosGrid = new Grid();
+            ramCard.Child = ramPanel;
+            Grid.SetRow(ramCard, 0);
+            Grid.SetColumn(ramCard, 1);
+            grid.Children.Add(ramCard);
+
+            // ==================== ROW 1, COL 0: MOTHERBOARD & BIOS ====================
+            Border moboCard = CreateCard();
+            moboCard.Margin = new Thickness(0, 0, 6, 12);
+            StackPanel moboPanel = new StackPanel();
+
+            moboPanel.Children.Add(CreateDenseHeader("MOTHERBOARD & CHIPSET", "#10B981"));
+            _txtMoboNameSum = new TextBlock
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 8, 0, 6),
+                TextWrapping = TextWrapping.Wrap
+            };
+            moboPanel.Children.Add(_txtMoboNameSum);
+
+            _txtChipsetNameSum = AddMiniParam(moboPanel, "Chipset:", "Detecting...");
+
+            Grid biosGrid = new Grid { Margin = new Thickness(0, 6, 0, 2) };
             biosGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             biosGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            _txtBiosInfoSum = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushTextSecondary", "#475569"), Text = "BIOS: Detecting..." };
+            _txtBiosInfoSum = new TextBlock
+            {
+                FontSize = 11.5,
+                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
+                Text = "BIOS: Detecting...",
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap
+            };
             _badgeUefiSum = CreateBadge("UEFI", "#10B981");
             Grid.SetColumn(_txtBiosInfoSum, 0);
             Grid.SetColumn(_badgeUefiSum, 1);
             biosGrid.Children.Add(_txtBiosInfoSum);
             biosGrid.Children.Add(_badgeUefiSum);
-            col2.Children.Add(biosGrid);
+            moboPanel.Children.Add(biosGrid);
 
-            col2.Children.Add(CreateSubDivider("MEMORY"));
-            _txtRamTotalSum = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2) };
-            _txtRamModeSum = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushAccent", "#0EA5E9"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
-            col2.Children.Add(_txtRamTotalSum);
-            col2.Children.Add(_txtRamModeSum);
+            moboCard.Child = moboPanel;
+            Grid.SetRow(moboCard, 1);
+            Grid.SetColumn(moboCard, 0);
+            grid.Children.Add(moboCard);
 
-            col2.Children.Add(CreateSubDivider("INSTALLED MODULES (PER SLOT)"));
-            _pnlRamModulesSum = new StackPanel { Margin = new Thickness(0, 4, 0, 8) };
-            col2.Children.Add(_pnlRamModulesSum);
+            // ==================== ROW 1, COL 1: GRAPHICS & DISPLAYS ====================
+            Border gpuCard = CreateCard();
+            gpuCard.Margin = new Thickness(6, 0, 0, 12);
+            StackPanel gpuPanel = new StackPanel();
 
-            col2.Children.Add(CreateSubDivider("NETWORK INTERFACES"));
-            _pnlNetworkSummary = new StackPanel { Margin = new Thickness(0, 4, 0, 4) };
-            col2.Children.Add(_pnlNetworkSummary);
+            gpuPanel.Children.Add(CreateDenseHeader("GRAPHICS & DISPLAYS", "#8B5CF6"));
+            _txtGpuNameSum = new TextBlock
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 8, 0, 6),
+                TextWrapping = TextWrapping.Wrap
+            };
+            gpuPanel.Children.Add(_txtGpuNameSum);
 
-            col2Card.Child = col2;
-            Grid.SetColumn(col2Card, 1);
-            grid.Children.Add(col2Card);
+            _txtGpuVramSum = AddMiniParam(gpuPanel, "Memory:", "Detecting...");
+            _txtGpuBusSum = AddMiniParam(gpuPanel, "Interface:", "PCIe x16");
 
-            // ==================== COLUMN 3: GPU, DISPLAYS, DRIVES ====================
-            Border col3Card = CreateDenseCard();
-            col3Card.Margin = new Thickness(6, 0, 0, 0);
-            StackPanel col3 = new StackPanel();
+            gpuPanel.Children.Add(CreateSubDivider("ACTIVE DISPLAYS & MONITORS"));
+            _pnlDisplaysSummary = new StackPanel { Margin = new Thickness(0, 6, 0, 2) };
+            gpuPanel.Children.Add(_pnlDisplaysSummary);
 
-            col3.Children.Add(CreateDenseHeader("GRAPHICS (GPU)", "#8B5CF6"));
-            _txtGpuNameSum = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 2), TextTrimming = TextTrimming.CharacterEllipsis };
-            col3.Children.Add(_txtGpuNameSum);
+            gpuCard.Child = gpuPanel;
+            Grid.SetRow(gpuCard, 1);
+            Grid.SetColumn(gpuCard, 1);
+            grid.Children.Add(gpuCard);
 
-            _txtGpuVramSum = AddMiniParam(col3, "Memory:", "Detecting...");
-            _txtGpuBusSum = AddMiniParam(col3, "Interface:", "PCIe x16");
+            // ==================== ROW 2, COL 0: PHYSICAL DRIVES ====================
+            Border drivesCard = CreateCard();
+            drivesCard.Margin = new Thickness(0, 0, 6, 0);
+            StackPanel drivesPanel = new StackPanel();
 
-            col3.Children.Add(CreateSubDivider("ACTIVE DISPLAYS & MONITORS"));
-            _pnlDisplaysSummary = new StackPanel { Margin = new Thickness(0, 4, 0, 8) };
-            col3.Children.Add(_pnlDisplaysSummary);
+            drivesPanel.Children.Add(CreateDenseHeader("PHYSICAL DRIVES", "#F59E0B"));
+            _pnlDrivesSummary = new StackPanel { Margin = new Thickness(0, 8, 0, 2) };
+            drivesPanel.Children.Add(_pnlDrivesSummary);
 
-            col3.Children.Add(CreateSubDivider("AUDIO CODECS"));
-            _txtAudioSummary = new TextBlock { FontSize = 11, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), Margin = new Thickness(0, 4, 0, 8), TextWrapping = TextWrapping.Wrap };
-            col3.Children.Add(_txtAudioSummary);
+            drivesCard.Child = drivesPanel;
+            Grid.SetRow(drivesCard, 2);
+            Grid.SetColumn(drivesCard, 0);
+            grid.Children.Add(drivesCard);
 
-            col3.Children.Add(CreateSubDivider("PHYSICAL DRIVES"));
-            _pnlDrivesSummary = new StackPanel { Margin = new Thickness(0, 4, 0, 4) };
-            col3.Children.Add(_pnlDrivesSummary);
+            // ==================== ROW 2, COL 1: NETWORK & AUDIO ====================
+            Border netAudioCard = CreateCard();
+            netAudioCard.Margin = new Thickness(6, 0, 0, 0);
+            StackPanel netAudioPanel = new StackPanel();
 
-            col3Card.Child = col3;
-            Grid.SetColumn(col3Card, 2);
-            grid.Children.Add(col3Card);
+            netAudioPanel.Children.Add(CreateDenseHeader("NETWORK & AUDIO", "#EC4899"));
+            netAudioPanel.Children.Add(CreateSubDivider("NETWORK INTERFACES"));
+            _pnlNetworkSummary = new StackPanel { Margin = new Thickness(0, 6, 0, 10) };
+            netAudioPanel.Children.Add(_pnlNetworkSummary);
+
+            netAudioPanel.Children.Add(CreateSubDivider("AUDIO CODECS"));
+            _txtAudioSummary = new TextBlock
+            {
+                FontSize = 11.5,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                Margin = new Thickness(0, 6, 0, 2),
+                TextWrapping = TextWrapping.Wrap
+            };
+            netAudioPanel.Children.Add(_txtAudioSummary);
+
+            netAudioCard.Child = netAudioPanel;
+            Grid.SetRow(netAudioCard, 2);
+            Grid.SetColumn(netAudioCard, 1);
+            grid.Children.Add(netAudioCard);
 
             rootPanel.Children.Add(grid);
             sv.Content = rootPanel;
@@ -437,10 +600,10 @@ namespace OptiAssist.Addons.PCAssist
         private TextBlock AddMiniParam(StackPanel parent, string label, string value)
         {
             Grid g = new Grid { Margin = new Thickness(0, 2, 0, 2) };
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(95) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            TextBlock lbl = new TextBlock { Text = label, FontSize = 11, Foreground = GetResourceBrush("BrushTextSecondary", "#475569") };
+            TextBlock lbl = new TextBlock { Text = label, FontSize = 11, Foreground = GetResourceBrush("BrushTextSecondary", "#475569"), Margin = new Thickness(0, 0, 8, 0) };
             TextBlock val = new TextBlock { Text = value, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"), TextTrimming = TextTrimming.CharacterEllipsis };
 
             Grid.SetColumn(lbl, 0);
@@ -1307,19 +1470,29 @@ namespace OptiAssist.Addons.PCAssist
                     var snap = _monitorService.CaptureSnapshot();
                     Application.Current.Dispatcher.Invoke(() =>
                     {
+                        if (_txtCpuUsageTop != null) _txtCpuUsageTop.Text = string.Format("CPU Usage: {0:F1}%", snap.Cpu.UsagePercent);
+                        if (_pbCpuUsageTop != null) _pbCpuUsageTop.Value = snap.Cpu.UsagePercent;
+
+                        double ramPct = snap.Ram.TotalGb > 0 ? Math.Round((snap.Ram.UsedGb / snap.Ram.TotalGb) * 100.0, 1) : 0;
+                        if (_txtRamUsageTop != null) _txtRamUsageTop.Text = string.Format("RAM Usage: {0:F1}% ({1:F1} / {2:F1} GB)", ramPct, snap.Ram.UsedGb, snap.Ram.TotalGb);
+                        if (_pbRamUsageTop != null) _pbRamUsageTop.Value = ramPct;
+
                         if (_txtCpuLoadLive != null) _txtCpuLoadLive.Text = string.Format("CPU Load: {0:F1}%", snap.Cpu.UsagePercent);
                         if (_pbCpuLoadLive != null) _pbCpuLoadLive.Value = snap.Cpu.UsagePercent;
                         if (_txtCpuClockLive != null)
                         {
-                            string pulseIcon = (_tickCount % 2 == 0) ? "⚡" : "•";
                             string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : "Dinâmico";
+                            _txtCpuClockLive.Text = string.Format("Live Clock: {0}", clockStr);
+                        }
+                        if (_txtCpuTempLive != null)
+                        {
                             if (snap.Cpu.TemperatureC.HasValue && snap.Cpu.TemperatureC.Value > 0)
                             {
-                                _txtCpuClockLive.Text = string.Format("{0} Live Clock: {1}  |  Temp: {2:F1} °C", pulseIcon, clockStr, snap.Cpu.TemperatureC.Value);
+                                _txtCpuTempLive.Text = string.Format("Temperature: {0:F1} °C", snap.Cpu.TemperatureC.Value);
                             }
                             else
                             {
-                                _txtCpuClockLive.Text = string.Format("{0} Live Clock: {1}", pulseIcon, clockStr);
+                                _txtCpuTempLive.Text = "Temperature: N/A (sensor unavailable)";
                             }
                         }
                     });
@@ -1421,7 +1594,7 @@ namespace OptiAssist.Addons.PCAssist
             if (_tabSummaryText != null) _tabSummaryText.Text = "🖥️ " + T("PCAssist_Tab_Summary", "System Summary");
             if (_tabDevicesText != null) _tabDevicesText.Text = "🔌 " + T("PCAssist_Tab_Devices", "Devices & Peripherals");
             if (_tabBatteryText != null) _tabBatteryText.Text = "🔋 " + T("PCAssist_Tab_Battery", "Battery & Power");
-            if (_tabBenchText != null) _tabBenchText.Text = "🚀 " + T("PCAssist_Tab_Bench", "Bench Diagnostics");
+            if (_tabBenchText != null) _tabBenchText.Text = "🚀 " + T("PCAssist_Tab_Bench", "Benchmark & Stress Test");
 
             if (_txtDesktopNoticeTitle != null) _txtDesktopNoticeTitle.Text = "🖥️ " + T("PCAssist_Battery_Desktop", "Desktop PC (No Battery)");
             if (_txtDesktopNoticeDesc != null) _txtDesktopNoticeDesc.Text = T("PCAssist_Battery_DesktopDesc", "This PC is connected directly to mains AC power with no integrated battery.");

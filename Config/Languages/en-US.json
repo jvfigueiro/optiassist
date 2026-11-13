@@ -23,7 +23,7 @@
   "PCAssist_Tab_Devices": "Devices & Peripherals",
   "PCAssist_Tab_Monitor": "Hardware Monitor",
   "PCAssist_Tab_Battery": "Battery & Power",
-  "PCAssist_Tab_Bench": "Bench Diagnostics",
+  "PCAssist_Tab_Bench": "Benchmark & Stress Test",
   "PCAssist_Header_Cpu": "PROCESSOR (CPU)",
   "PCAssist_Header_Mobo": "MOTHERBOARD & MEMORY",
   "PCAssist_Header_Gpu": "GRAPHICS & SYSTEM",

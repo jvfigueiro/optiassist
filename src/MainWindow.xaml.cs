@@ -11,6 +11,8 @@ using System.Security.Principal;
 using System.Windows.Input;
 using System.Text;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace OptiAssist
 {
@@ -28,11 +30,65 @@ namespace OptiAssist
         {
             InitializeComponent();
             Loaded += MainWindow_Loaded;
+            StateChanged += MainWindow_StateChanged;
             if (btnToggleSidebar != null)
             {
                 btnToggleSidebar.MouseEnter += BtnToggleSidebar_MouseEnter;
                 btnToggleSidebar.MouseLeave += BtnToggleSidebar_MouseLeave;
             }
+        }
+
+        [DllImport("dwmapi.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+        private static extern void DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int pvAttribute, int cbAttribute);
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            try
+            {
+                IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                int preference = 2; // DWMWCP_ROUND (Windows 11 subtle rounded corners)
+                DwmSetWindowAttribute(hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref preference, sizeof(int));
+            }
+            catch { }
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            if (windowOuterBorder != null)
+            {
+                if (WindowState == WindowState.Maximized)
+                {
+                    windowOuterBorder.BorderThickness = new Thickness(0);
+                    windowOuterBorder.CornerRadius = new CornerRadius(0);
+                    windowOuterBorder.Padding = new Thickness(7);
+                }
+                else
+                {
+                    windowOuterBorder.BorderThickness = new Thickness(1);
+                    windowOuterBorder.CornerRadius = new CornerRadius(8);
+                    windowOuterBorder.Padding = new Thickness(0);
+                }
+            }
+            if (btnMaximizeWindow != null)
+            {
+                btnMaximizeWindow.Content = (WindowState == WindowState.Maximized) ? "❐" : "□";
+            }
+        }
+
+        private void BtnMinimizeWindow_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void BtnMaximizeWindow_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
+        }
+
+        private void BtnCloseWindow_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -216,10 +272,45 @@ namespace OptiAssist
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelAddonHost.Visibility = Visibility.Visible;
                 panelAddonHost.Children.Clear();
-                UIElement view = entry.GetOrCreateView();
-                if (view != null)
+
+                if (!entry.IsInitialized)
                 {
-                    panelAddonHost.Children.Add(view);
+                    if (txtAddonLoadingTitle != null)
+                    {
+                        txtAddonLoadingTitle.Text = string.Format("⏳ {0}...", entry.Name);
+                    }
+                    if (pnlAddonLoadingOverlay != null)
+                    {
+                        pnlAddonLoadingOverlay.Visibility = Visibility.Visible;
+                    }
+
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                    {
+                        try
+                        {
+                            UIElement view = entry.GetOrCreateView();
+                            if (view != null && panelAddonHost.Visibility == Visibility.Visible)
+                            {
+                                panelAddonHost.Children.Clear();
+                                panelAddonHost.Children.Add(view);
+                            }
+                        }
+                        finally
+                        {
+                            if (pnlAddonLoadingOverlay != null)
+                            {
+                                pnlAddonLoadingOverlay.Visibility = Visibility.Collapsed;
+                            }
+                        }
+                    }));
+                }
+                else
+                {
+                    UIElement view = entry.GetOrCreateView();
+                    if (view != null)
+                    {
+                        panelAddonHost.Children.Add(view);
+                    }
                 }
             }
         }
@@ -392,6 +483,7 @@ namespace OptiAssist
             if (_settings == null) return;
 
             // Update top bar application branding
+            bool hasCustomName = false;
             if (lblAppTitle != null)
             {
                 string customName = _settings.CustomerName;
@@ -403,6 +495,7 @@ namespace OptiAssist
                 if (!string.IsNullOrWhiteSpace(customName) && customName != "N/A" && !customName.Equals("OptiAssist", StringComparison.OrdinalIgnoreCase))
                 {
                     lblAppTitle.Text = customName;
+                    hasCustomName = true;
                 }
                 else
                 {
@@ -410,11 +503,11 @@ namespace OptiAssist
                 }
             }
 
-            // Bottom status bar right label remains always visible and displays "OptiAssist"
+            // Sidebar footer brand label appears only when a custom application name is configured
             if (lblFooterStoreName != null)
             {
                 lblFooterStoreName.Text = "OptiAssist";
-                lblFooterStoreName.Visibility = Visibility.Visible;
+                lblFooterStoreName.Visibility = hasCustomName ? Visibility.Visible : Visibility.Collapsed;
             }
         }
         #endregion
@@ -443,6 +536,11 @@ namespace OptiAssist
             txtTpmStatus.Foreground = (SolidColorBrush)FindResource("BrushWarning");
             txtSecureBootStatus.Text = LocalizationHelper.Get("Status_Detecting", "Checking...");
             txtSecureBootStatus.Foreground = (SolidColorBrush)FindResource("BrushWarning");
+            if (txtFirmwareStatus != null)
+            {
+                txtFirmwareStatus.Text = LocalizationHelper.Get("Status_Detecting", "Checking...");
+                txtFirmwareStatus.Foreground = (SolidColorBrush)FindResource("BrushWarning");
+            }
 
             _isRefreshingHardwareBg = true;
             ThreadPool.QueueUserWorkItem(state =>
@@ -503,6 +601,11 @@ namespace OptiAssist
             UpdateStatusBadge(txtBitLockerStatus, info.BitLockerStatus);
             UpdateStatusBadge(txtTpmStatus, info.TpmStatus);
             UpdateStatusBadge(txtSecureBootStatus, info.SecureBootStatus);
+            if (txtFirmwareStatus != null)
+            {
+                txtFirmwareStatus.Text = string.IsNullOrEmpty(info.FirmwareMode) ? "Legacy BIOS" : info.FirmwareMode;
+                txtFirmwareStatus.Foreground = (SolidColorBrush)FindResource(info.IsUefi ? "BrushSuccess" : "BrushWarning");
+            }
 
             // Clean Header Bar: Motherboard on line 1, CPU and RAM on line 2
             lblHeaderDevice.Text = info.Motherboard;
@@ -1748,6 +1851,13 @@ namespace OptiAssist
             {
                 foreach (CustomShortcutItem item in _customShortcuts)
                 {
+                    // Skip redundant theme toggle in Common Tasks (now in Dashboard header)
+                    if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(item.TargetValue, "toggle-theme", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     // If this item is 'install-pc' and the app is already installed on the PC, skip it
                     if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(item.TargetValue, "install-pc", StringComparison.OrdinalIgnoreCase) &&
@@ -1803,40 +1913,7 @@ namespace OptiAssist
                 }
             }
 
-            // 2. Add Theme Toggle button (if not already added as a custom shortcut)
-            bool hasThemeToggle = _customShortcuts != null && _customShortcuts.Exists(x =>
-                string.Equals(x.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(x.TargetValue, "toggle-theme", StringComparison.OrdinalIgnoreCase));
-
-            if (!hasThemeToggle)
-            {
-                string themeIcon = _isDarkMode ? "☀️" : "🌙";
-                string themeTitle = _isDarkMode ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
-                Button btnTheme = new Button
-                {
-                    Content = string.Format("{0} {1}", themeIcon, themeTitle),
-                    Style = (Style)FindResource("BtnDefault"),
-                    Height = 34,
-                    Margin = new Thickness(3),
-                    FontSize = 11,
-                    ToolTip = LocalizationHelper.Get("Tooltip_ToggleTheme", "Toggle between dark mode and light mode")
-                };
-                btnTheme.Click += (s, e) =>
-                {
-                    BtnToggleTheme_Click(this, new RoutedEventArgs());
-                    RenderCommonTasks();
-                };
-
-                ContextMenu cmTheme = new ContextMenu();
-                MenuItem miCustomizeTheme = new MenuItem { Header = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize...") };
-                miCustomizeTheme.Click += (s, e) => ShowCustomizeCommonTasksDialog();
-                cmTheme.Items.Add(miCustomizeTheme);
-                btnTheme.ContextMenu = cmTheme;
-
-                ugCommonTasks.Children.Add(btnTheme);
-            }
-
-            // 3. Add "Install on PC" button IF application detects that it is not installed on this system
+            // 2. Add "Install on PC" button IF application detects that it is not installed on this system
             if (!AppDeploymentHelper.IsAppInstalled())
             {
                 bool hasInstallBtn = _customShortcuts != null && _customShortcuts.Exists(x =>
@@ -2672,7 +2749,11 @@ namespace OptiAssist
             try
             {
                 List<string> disabled = _settings != null && _settings.DisabledAddons != null ? _settings.DisabledAddons : new List<string>();
-                List<AddonEntry> list = AddonHelper.LoadDiscoveredAddons(this, disabled);
+                List<string> order = _settings != null && _settings.ModuleOrder != null ? _settings.ModuleOrder : new List<string>();
+                List<AddonEntry> list = AddonHelper.LoadDiscoveredAddons(this, disabled)
+                    .OrderBy(a => AddonHelper.GetModuleSortOrder(a.Id, order))
+                    .ThenBy(a => a.Name)
+                    .ToList();
                 _addons = new ObservableCollection<AddonEntry>(list);
                 if (icAddonsList != null) icAddonsList.ItemsSource = _addons;
                 if (icAboutAddonsList != null) icAboutAddonsList.ItemsSource = _addons;
@@ -2704,8 +2785,9 @@ namespace OptiAssist
 
             if (_addons == null) return;
 
+            List<string> order = _settings != null && _settings.ModuleOrder != null ? _settings.ModuleOrder : new List<string>();
             var sortedAddons = _addons
-                .OrderBy(a => AddonHelper.GetModuleSortOrder(a.Id))
+                .OrderBy(a => AddonHelper.GetModuleSortOrder(a.Id, order))
                 .ThenBy(a => a.Name)
                 .ToList();
 
@@ -2900,6 +2982,42 @@ namespace OptiAssist
             Log("[ADDON] Add-ons list and sidebar modules reloaded.");
         }
 
+        private void BtnMoveAddonUp_Click(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            AddonEntry entry = btn != null ? btn.DataContext as AddonEntry : null;
+            MoveAddonOrder(entry, -1);
+        }
+
+        private void BtnMoveAddonDown_Click(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            AddonEntry entry = btn != null ? btn.DataContext as AddonEntry : null;
+            MoveAddonOrder(entry, 1);
+        }
+
+        private void MoveAddonOrder(AddonEntry entry, int delta)
+        {
+            if (entry == null || _addons == null || _addons.Count < 2) return;
+            int oldIndex = _addons.IndexOf(entry);
+            int newIndex = oldIndex + delta;
+            if (oldIndex < 0 || newIndex < 0 || newIndex >= _addons.Count) return;
+
+            _addons.Move(oldIndex, newIndex);
+
+            if (_settings != null)
+            {
+                _settings.ModuleOrder = _addons
+                    .Where(a => !string.IsNullOrEmpty(a.Id))
+                    .Select(a => a.Id)
+                    .ToList();
+                SettingsHelper.Save(_settings);
+            }
+
+            RebuildSidebarAddonsMenu();
+            Log(string.Format("[ADDON] Reordered module '{0}' to position {1}.", entry.Name, newIndex + 1));
+        }
+
         private void AddonEnableCheckbox_Click(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
@@ -2988,8 +3106,8 @@ namespace OptiAssist
             // 2. Overview (Dashboard)
             if (txtDashboardTitle != null) txtDashboardTitle.Text = LocalizationHelper.Get("Dashboard_Title", "Welcome to OptiAssist!");
             if (txtDashboardSubtitle != null) txtDashboardSubtitle.Text = LocalizationHelper.Get("Dashboard_Subtitle", "The ultimate tool to keep your system in order");
-            if (txtHwCardTitle != null) txtHwCardTitle.Text = LocalizationHelper.Get("Card_Hardware_Title", "🧠 Hardware Information");
-            if (txtOsCardTitle != null) txtOsCardTitle.Text = LocalizationHelper.Get("Card_Os_Title", "🖥️ Operating System");
+            if (txtHwCardTitle != null) txtHwCardTitle.Text = "CPU";
+            if (txtOsCardTitle != null) txtOsCardTitle.Text = "System";
             if (lblSerialTag != null) lblSerialTag.Text = LocalizationHelper.Get("Label_SerialNumber", "Serial Number: ");
             if (btnCopySerial != null)
             {
@@ -3745,28 +3863,36 @@ namespace OptiAssist
         {
             _isDarkMode = isDark;
 
-            SetColorResource("BrushBgPrimary", isDark ? "#18181B" : "#F1F5F9");
-            SetColorResource("BrushBgSidebar", isDark ? "#121214" : "#FFFFFF");
-            SetColorResource("BrushBgCard", isDark ? "#222228" : "#FFFFFF");
-            SetColorResource("BrushBorderCard", isDark ? "#33333D" : "#CBD5E1");
-            SetColorResource("BrushCardHover", isDark ? "#2C2C36" : "#F8FAFC");
+            SetColorResource("BrushBgPrimary", isDark ? "#0D1320" : "#F8FAFC");
+            SetColorResource("BrushBgSidebar", isDark ? "#080C14" : "#FFFFFF");
+            SetColorResource("BrushBgCard", isDark ? "#131B2E" : "#FFFFFF");
+            SetColorResource("BrushBorderCard", isDark ? "#1E293B" : "#E2E8F0");
+            SetColorResource("BrushCardHover", isDark ? "#1A243D" : "#F1F5F9");
             SetColorResource("BrushTextPrimary", isDark ? "#F8FAFC" : "#0F172A");
             SetColorResource("BrushTextSecondary", isDark ? "#94A3B8" : "#475569");
             SetColorResource("BrushTextMuted", isDark ? "#64748B" : "#94A3B8");
-            SetColorResource("BrushBtnBg", isDark ? "#2A2A34" : "#E2E8F0");
-            SetColorResource("BrushBtnHover", isDark ? "#383848" : "#CBD5E1");
-            SetColorResource("BrushBtnBorderHover", isDark ? "#4B4B5E" : "#94A3B8");
-            SetColorResource("BrushBtnPressed", isDark ? "#202028" : "#94A3B8");
-            SetColorResource("BrushNavHover", isDark ? "#1A1A22" : "#F1F5F9");
-            SetColorResource("BrushNavChecked", isDark ? "#202430" : "#E2E8F0");
-            SetColorResource("BrushInputBg", isDark ? "#1C1C22" : "#FFFFFF");
-            SetColorResource("BrushConsoleBg", isDark ? "#0C0C0F" : "#0F172A");
+            SetColorResource("BrushBtnBg", isDark ? "#1A2336" : "#F1F5F9");
+            SetColorResource("BrushBtnHover", isDark ? "#243049" : "#E2E8F0");
+            SetColorResource("BrushBtnBorderHover", isDark ? "#334155" : "#CBD5E1");
+            SetColorResource("BrushBtnPressed", isDark ? "#131B2E" : "#CBD5E1");
+            SetColorResource("BrushNavHover", isDark ? "#111827" : "#F1F5F9");
+            SetColorResource("BrushNavChecked", isDark ? "#162033" : "#E0F2FE");
+            SetColorResource("BrushInputBg", isDark ? "#0F172A" : "#FFFFFF");
+            SetColorResource("BrushConsoleBg", isDark ? "#060911" : "#0F172A");
             SetColorResource("BrushConsoleText", isDark ? "#E2E8F0" : "#F8FAFC");
 
             if (txtThemeIcon != null && txtThemeText != null)
             {
                 txtThemeIcon.Text = isDark ? "☀️" : "🌙";
                 txtThemeText.Text = isDark ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
+            }
+            if (txtDashboardThemeIcon != null)
+            {
+                txtDashboardThemeIcon.Text = isDark ? "☀️" : "🌙";
+            }
+            if (btnDashboardThemeToggle != null)
+            {
+                btnDashboardThemeToggle.ToolTip = isDark ? LocalizationHelper.Get("Theme_Light", "Light Mode") : LocalizationHelper.Get("Theme_Dark", "Dark Mode");
             }
 
             if (_externalLogWindow != null)
@@ -3785,6 +3911,15 @@ namespace OptiAssist
                 Application.Current.Resources[key] = new SolidColorBrush(col);
             }
             catch { }
+        }
+
+        private void BtnQuickTools_Click(object sender, RoutedEventArgs e)
+        {
+            if (rbNavShortcuts != null)
+            {
+                rbNavShortcuts.IsChecked = true;
+                NavButton_Click(rbNavShortcuts, new RoutedEventArgs());
+            }
         }
 
         private void BtnToggleTheme_Click(object sender, RoutedEventArgs e)

@@ -20,6 +20,7 @@ namespace OptiAssist
         public bool OpenExternalLogsByDefault { get; set; }
         public bool AlwaysOnTop { get; set; }
         public List<string> DisabledAddons { get; set; }
+        public List<string> ModuleOrder { get; set; }
         public string CustomLogoPath { get; set; }
         public string FreshStart { get; set; }
 
@@ -39,6 +40,7 @@ namespace OptiAssist
             OpenExternalLogsByDefault = false;
             AlwaysOnTop = false;
             DisabledAddons = new List<string>();
+            ModuleOrder = new List<string>();
             CustomLogoPath = "";
             FreshStart = "true";
         }
@@ -147,6 +149,22 @@ namespace OptiAssist
                         }
                     }
                 }
+                if (dict.ContainsKey("ModuleOrder"))
+                {
+                    string val = dict["ModuleOrder"];
+                    if (!string.IsNullOrWhiteSpace(val))
+                    {
+                        string[] parts = val.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (string p in parts)
+                        {
+                            string trim = p.Trim();
+                            if (!string.IsNullOrEmpty(trim) && !settings.ModuleOrder.Contains(trim))
+                            {
+                                settings.ModuleOrder.Add(trim);
+                            }
+                        }
+                    }
+                }
             }
             catch
             {
@@ -178,7 +196,9 @@ namespace OptiAssist
                 sb.AppendLine(string.Format("  \"CustomLogoPath\": \"{0}\",", EscapeJson(settings.CustomLogoPath)));
                 sb.AppendLine(string.Format("  \"freshstart\": \"{0}\",", EscapeJson(string.IsNullOrEmpty(settings.FreshStart) ? "true" : settings.FreshStart)));
                 string disabledStr = settings.DisabledAddons != null ? string.Join(",", settings.DisabledAddons.ToArray()) : "";
-                sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\"", EscapeJson(disabledStr)));
+                sb.AppendLine(string.Format("  \"DisabledAddons\": \"{0}\",", EscapeJson(disabledStr)));
+                string orderStr = settings.ModuleOrder != null ? string.Join(",", settings.ModuleOrder.ToArray()) : "";
+                sb.AppendLine(string.Format("  \"ModuleOrder\": \"{0}\"", EscapeJson(orderStr)));
                 sb.AppendLine("}");
 
                 File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
@@ -335,15 +355,6 @@ namespace OptiAssist
                     Icon = "📂",
                     TargetType = "Section",
                     TargetValue = "installers-folder",
-                    Arguments = ""
-                },
-                new CustomShortcutItem
-                {
-                    Id = "default-toggle-theme",
-                    Title = "Toggle Theme",
-                    Icon = "🌓",
-                    TargetType = "Section",
-                    TargetValue = "toggle-theme",
                     Arguments = ""
                 }
             };

@@ -2604,7 +2604,6 @@ namespace OptiAssist.Addons.SystemCleaner
         private TextBlock _txtIdleSummaryBadge;
 
         private StackPanel _pnlStateRunning;
-        private TextBlock _txtSpinner;
         private TextBlock _txtRunningCategory;
         private TextBlock _txtRunningItem;
         private TextBlock _txtRunningStats;
@@ -2622,6 +2621,7 @@ namespace OptiAssist.Addons.SystemCleaner
         // UI Controls - Right Pane Bottom Action Bar
         private Button _btnLeftAction;  // "Analyze" or "Cancel"
         private Button _btnRightAction; // "Run Cleaner"
+        private bool _hasAnalyzed = false;
 
         public string Id { get { return "system-cleaner"; } }
         public string Name { get { return T("Nav_SystemCleaner", "System Cleaner"); } }
@@ -3081,35 +3081,13 @@ namespace OptiAssist.Addons.SystemCleaner
             _pnlStateIdle.Children.Add(_txtIdleSummaryBadge);
             centerGrid.Children.Add(_pnlStateIdle);
 
-            // 1.2 Running State (with animated rotating spinner)
+            // 1.2 Running State (with clean horizontal indeterminate progress bar)
             _pnlStateRunning = new StackPanel
             {
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(12, 16, 12, 12),
                 Visibility = Visibility.Collapsed
             };
-
-            StackPanel spSpinnerRow = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            _txtSpinner = new TextBlock
-            {
-                Text = "🔄",
-                FontSize = 24,
-                VerticalAlignment = VerticalAlignment.Center,
-                RenderTransformOrigin = new Point(0.5, 0.5),
-                Margin = new Thickness(0, 0, 14, 0)
-            };
-            RotateTransform rt = new RotateTransform(0);
-            _txtSpinner.RenderTransform = rt;
-            DoubleAnimation da = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(1.1)))
-            {
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-            rt.BeginAnimation(RotateTransform.AngleProperty, da);
 
             StackPanel spRunningText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _txtRunningCategory = new TextBlock
@@ -3128,11 +3106,19 @@ namespace OptiAssist.Addons.SystemCleaner
             };
             _txtRunningItem.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
+            ProgressBar pbRunningIndeterminate = new ProgressBar
+            {
+                IsIndeterminate = true,
+                Height = 5,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+            pbRunningIndeterminate.SetResourceReference(ProgressBar.ForegroundProperty, "BrushAccent");
+            pbRunningIndeterminate.SetResourceReference(ProgressBar.BackgroundProperty, "BrushBgPrimary");
+
             spRunningText.Children.Add(_txtRunningCategory);
             spRunningText.Children.Add(_txtRunningItem);
-            spSpinnerRow.Children.Add(_txtSpinner);
-            spSpinnerRow.Children.Add(spRunningText);
-            _pnlStateRunning.Children.Add(spSpinnerRow);
+            spRunningText.Children.Add(pbRunningIndeterminate);
+            _pnlStateRunning.Children.Add(spRunningText);
 
             Border runningDivider = new Border
             {
@@ -3264,7 +3250,8 @@ namespace OptiAssist.Addons.SystemCleaner
                 Height = 32,
                 Padding = new Thickness(20, 0, 20, 0),
                 FontSize = 11,
-                FontWeight = FontWeights.Bold
+                FontWeight = FontWeights.Bold,
+                IsEnabled = false
             };
             _btnRightAction.SetResourceReference(Button.StyleProperty, "BtnAccent");
             _btnRightAction.Click += BtnClean_Click;
@@ -3566,13 +3553,18 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
                 if (_btnRightAction != null)
                 {
-                    _btnRightAction.IsEnabled = true;
+                    _btnRightAction.IsEnabled = _hasAnalyzed && mode == ViewMode.Scanned;
                 }
             }
         }
 
         private void UpdateSelectedSummary()
         {
+            _hasAnalyzed = false;
+            if (_btnRightAction != null && !_isBusy)
+            {
+                _btnRightAction.IsEnabled = false;
+            }
             if (_allCleaners == null) return;
             long totalBytes = 0;
             int count = 0;
@@ -3725,6 +3717,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
         private void ShowScannedResults(long totalBytes, int totalItems, List<BaseCleaner> withFindings, int totalChecked)
         {
+            _hasAnalyzed = true;
             ShowViewMode(ViewMode.Scanned);
 
             if (_txtScanHeader != null)
@@ -4087,6 +4080,11 @@ namespace OptiAssist.Addons.SystemCleaner
         private void BtnClean_Click(object sender, RoutedEventArgs e)
         {
             if (_isBusy || _allCleaners == null) return;
+            if (!_hasAnalyzed)
+            {
+                MessageBox.Show(T("Msg_CleanerAnalyzeFirst", "Please click 'Analyze' first to review what will be removed before running the cleaner."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
 
             List<BaseCleaner> selected = new List<BaseCleaner>();
             List<string> warnings = new List<string>();
