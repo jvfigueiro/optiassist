@@ -415,21 +415,88 @@ namespace OptiAssist
 
                 try
                 {
-                    using (ManagementObjectSearcher diskSearcher = new ManagementObjectSearcher("SELECT Model, MediaType FROM Win32_DiskDrive"))
+                    int cDiskIndex = 0;
+                    try
                     {
-                        foreach (ManagementObject mo in diskSearcher.Get())
+                        using (ManagementObjectSearcher partSearcher = new ManagementObjectSearcher(
+                            "ASSOCIATORS OF {Win32_LogicalDisk.DeviceID='C:'} WHERE AssocClass=Win32_LogicalDiskToPartition"))
                         {
-                            string mt = mo["MediaType"] != null ? mo["MediaType"].ToString() : "";
-                            string model = mo["Model"] != null ? mo["Model"].ToString() : "";
-                            if (mt.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 || model.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 || model.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0)
+                            foreach (ManagementObject part in partSearcher.Get())
                             {
-                                summary.PrimaryDiskMediaType = "SSD";
+                                if (part["DiskIndex"] != null)
+                                {
+                                    cDiskIndex = Convert.ToInt32(part["DiskIndex"]);
+                                    break;
+                                }
                             }
-                            else if (mt.IndexOf("Fixed", StringComparison.OrdinalIgnoreCase) >= 0 && string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
+                        }
+                    }
+                    catch { }
+
+                    // 1. Check MSFT_PhysicalDisk (Windows Storage Management API) for accurate MediaType / BusType / SpindleSpeed
+                    try
+                    {
+                        using (ManagementObjectSearcher phySearcher = new ManagementObjectSearcher(
+                            @"root\Microsoft\Windows\Storage",
+                            "SELECT DeviceId, FriendlyName, Model, MediaType, BusType, SpindleSpeed FROM MSFT_PhysicalDisk"))
+                        {
+                            foreach (ManagementObject phy in phySearcher.Get())
                             {
-                                summary.PrimaryDiskMediaType = "HDD";
+                                string devId = phy["DeviceId"] != null ? phy["DeviceId"].ToString().Trim() : "";
+                                int diskId = -1;
+                                int.TryParse(devId, out diskId);
+                                if (diskId >= 0 && diskId != cDiskIndex && !string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
+                                    continue;
+
+                                int mediaType = phy["MediaType"] != null ? Convert.ToInt32(phy["MediaType"]) : 0;
+                                int busType = phy["BusType"] != null ? Convert.ToInt32(phy["BusType"]) : 0;
+                                uint spindle = phy["SpindleSpeed"] != null ? Convert.ToUInt32(phy["SpindleSpeed"]) : uint.MaxValue;
+                                string friendly = phy["FriendlyName"] != null ? phy["FriendlyName"].ToString() : "";
+                                string phyModel = phy["Model"] != null ? phy["Model"].ToString() : "";
+
+                                // MediaType: 3 = HDD, 4 = SSD, 5 = SCM; BusType: 17 = NVMe
+                                if (mediaType == 4 || mediaType == 5 || busType == 17 ||
+                                    friendly.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    friendly.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    phyModel.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    phyModel.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    summary.PrimaryDiskMediaType = "SSD";
+                                }
+                                else if (mediaType == 3 || (spindle > 0 && spindle <= 30000))
+                                {
+                                    summary.PrimaryDiskMediaType = "HDD";
+                                }
+                                else if (spindle == 0)
+                                {
+                                    summary.PrimaryDiskMediaType = "SSD";
+                                }
+
+                                if (diskId == cDiskIndex && !string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
+                                    break;
                             }
-                            break;
+                        }
+                    }
+                    catch { }
+
+                    // 2. Fallback: check Win32_DiskDrive model / PNPDeviceID for explicit SSD/NVMe keywords
+                    if (string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
+                    {
+                        using (ManagementObjectSearcher diskSearcher = new ManagementObjectSearcher("SELECT Index, Model, PNPDeviceID FROM Win32_DiskDrive"))
+                        {
+                            foreach (ManagementObject mo in diskSearcher.Get())
+                            {
+                                string model = mo["Model"] != null ? mo["Model"].ToString() : "";
+                                string pnp = mo["PNPDeviceID"] != null ? mo["PNPDeviceID"].ToString() : "";
+                                if (model.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    model.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    pnp.IndexOf("NVME", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    pnp.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    summary.PrimaryDiskMediaType = "SSD";
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -897,6 +964,10 @@ namespace OptiAssist
                         try
                         {
                             int errCode = Convert.ToInt32(mo["ConfigManagerErrorCode"]);
+                            // Ignore disabled devices (22), hidden/not-present devices (24), and phantom/disconnected devices (45)
+                            if (errCode == 22 || errCode == 24 || errCode == 45)
+                                continue;
+
                             string devName = mo["Name"] != null ? mo["Name"].ToString().Trim() : "";
                             string devId = mo["DeviceID"] != null ? mo["DeviceID"].ToString().Trim() : "";
                             string hwId = "";
@@ -909,6 +980,22 @@ namespace OptiAssist
                             else if (mo["HardwareID"] != null)
                             {
                                 hwId = mo["HardwareID"].ToString();
+                            }
+
+                            // Ignore legacy ACPI i8042 PS/2 keyboard/mouse controller nodes that report errors when no PS/2 peripheral is plugged in
+                            if (devName.IndexOf("PS/2", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                devId.IndexOf("PNP0303", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                devId.IndexOf("PNP0F13", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                devId.IndexOf("PNP0F03", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                devId.IndexOf("PNP030B", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                devId.IndexOf("I8042", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                hwId.IndexOf("PNP0303", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                hwId.IndexOf("PNP0F13", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                hwId.IndexOf("PNP0F03", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                hwId.IndexOf("PNP030B", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                hwId.IndexOf("I8042", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                continue;
                             }
 
                             if (string.IsNullOrEmpty(devName))
