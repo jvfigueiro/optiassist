@@ -104,13 +104,14 @@ OptiAssist incorporates or depends on third-party software and data components l
 
 ---
 
-## 6. Baboo Temporary Files Script — Technical & Legal Limitation Record
+## 6. Baboo Temporary Files Script — Attribution & Technical Reference
 
-- **Reference:** https://www.baboo.com.br/tutorial-windows/script-do-baboo-para-apagar-arquivos-temporarios/
-- **Affected Code:** `TweakHelper.CleanTempFiles` and `TweakHelper.CleanWindowsUpdateCache` in `src/TweakHelper.cs` (lines 42–114).
-- **Technical Inspection Result:**
-  - `TweakHelper.cs` uses standard .NET Framework / Win32 APIs (`Path.GetTempPath()`, `Environment.SpecialFolder.Windows`, `Environment.SpecialFolder.CommonApplicationData`, `Shell32.SHEmptyRecycleBin`, `System.ServiceProcess.ServiceController` for `wuauserv`) targeting standard Windows directories (`%TEMP%`, `C:\Windows\Temp`, `C:\Windows\Prefetch`, `WER\ReportQueue`, `SoftwareDistribution\Download`).
-  - No Batch script source file from Baboo is present in the OptiAssist repository, and the System Cleaner module (`SystemCleanerAddon.cs`) was migrated to BleachBit CleanerML XML definitions in commit `4b29b78`.
-- **Limitation & Status:**
-  - **Because the original Baboo `.bat` script file is not present in the repository for side-by-side comparison, independent authorship cannot be declared as legally proven.**
-  - **Action Required Before Public Distribution:** Perform a clean, independent review/reimplementation of `TweakHelper.CleanTempFiles` and `TweakHelper.CleanWindowsUpdateCache` (or obtain express written authorization from the author) to guarantee zero expressive derivation.
+- **Author / Credit:** Aurélio Baboo (BABOO)
+- **Reference Article:** https://www.baboo.com.br/tutorial-windows/script-do-baboo-para-apagar-arquivos-temporarios/
+- **Download Reference:** https://www.baboo.com.br/script/atual
+- **Usage & Attribution:**
+  - Credited as technical reference for Windows temporary-file identification and cleanup routines (`%TEMP%`, `C:\Windows\Temp`, `C:\Windows\Prefetch`, `WER\ReportQueue`, Recycle Bin, and `SoftwareDistribution\Download` / `wuauserv` reset) originally adapted during the development of OptiAssist's cleanup utilities (`TweakHelper.CleanTempFiles` and `TweakHelper.CleanWindowsUpdateCache` in `src/TweakHelper.cs`, lines 42–114), alongside BleachBit CleanerML definitions in `SystemCleanerAddon.cs`.
+- **Technical Inspection & Licensing Status:**
+  - `TweakHelper.cs` uses standard .NET Framework / Win32 APIs (`Path.GetTempPath()`, `Environment.SpecialFolder.Windows`, `Environment.SpecialFolder.CommonApplicationData`, `Shell32.SHEmptyRecycleBin`, `System.ServiceProcess.ServiceController`).
+  - No original Baboo Batch script file is present in the repository for side-by-side comparison, and the reference page describes the script as open-source without specifying an explicit OSI-approved license for redistribution/modification.
+  - **Pending Action Prior to Public Distribution:** Obtain express written authorization from the author or perform a clean, independent reimplementation of `TweakHelper.CleanTempFiles` and `TweakHelper.CleanWindowsUpdateCache`.

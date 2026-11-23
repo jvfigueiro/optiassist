@@ -78,7 +78,8 @@ This document records the upstream origin, version/commit identifiers, retrieval
 
 ---
 
-## 6. Baboo Temporary Files Script (Pending Side-by-Side Verification)
+## 6. Baboo Temporary Files Script (Attribution & Pending Verification)
 
+- **Author / Credit:** Aurélio Baboo (BABOO)
 - **Reference URL:** https://www.baboo.com.br/tutorial-windows/script-do-baboo-para-apagar-arquivos-temporarios/
-- **Status:** Original `.bat` file is not present in the repository. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#6-baboo-temporary-files-script--technical--legal-limitation-record) for the documented limitation and independent reimplementation requirement prior to public distribution.
+- **Status:** Credited as technical reference for part of the cleanup routines in `src/TweakHelper.cs` (`CleanTempFiles`, `CleanWindowsUpdateCache`). The original `.bat` file is not present in the repository; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#6-baboo-temporary-files-script--attribution--technical-reference) for licensing status and pending action prior to public distribution.
