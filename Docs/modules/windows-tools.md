@@ -14,13 +14,13 @@ Windows administrative consoles are scattered across `System32`, Control Panel, 
 
 ## 3. How It Works Internally
 - `WindowsToolsTabsController` (`src/Debloater/WindowsToolsTabsBuilder.cs`) hosts the `OptiBoost` and `Compatibility Checker` views inside `ContentControl`s.
-- `DebloaterCatalogLoader` loads 7 modular JSON catalogs from `Config\Debloater\*.json` (`power`, `appearance_ui`, `services`, `features_capabilities`, `policies_gpo`, `security_best_effort`, `apps_ctt`).
-- `DebloaterEngine` gates tweaks by OS build/edition/hardware (`ssd_only`, `no_ir_camera`, `compact_os_eligible`, etc.), snapshots pre-change Registry/Service values under `Config\Debloater\backups\`, and executes changes asynchronously.
+- `DebloaterCatalogLoader` loads 7 modular JSON catalogs from `Config\Data\OptiBoost\*.json` (`power`, `appearance_ui`, `services`, `features_capabilities`, `policies_gpo`, `security_best_effort`, `apps_ctt`).
+- `DebloaterEngine` gates tweaks by OS build/edition/hardware (`ssd_only`, `no_ir_camera`, `compact_os_eligible`, etc.), snapshots pre-change Registry/Service values under `Config\Data\OptiBoost\backups\`, and executes changes asynchronously.
 - `PlatformDiagnosticService` combines `PlatformProfiler`, `MicroarchDatabase`, `PciIdsDatabase`, `Win11CompatAdvisor`, `ProfileRecommender`, and `KnownIssuesEngine`.
 
 ## 4. Inputs, Outputs & Configuration
-- **Inputs:** `Config\Debloater\*.json`, `Config\Data\microarch.json`, `pci.ids.min`, `known_issues.json`.
-- **Outputs:** Pre-change JSON snapshots and `last_debloat_report.txt` in `Config\Debloater\backups\`; persisted `DebloaterProfileOverride` in `Config\settings.json`.
+- **Inputs:** `Config\Data\OptiBoost\*.json`, `Config\Data\microarch.json`, `pci.ids.min`, `known_issues.json`.
+- **Outputs:** Pre-change JSON snapshots and `last_debloat_report.txt` in `Config\Data\OptiBoost\backups\`; persisted `DebloaterProfileOverride` in `Config\settings.json`.
 
 ## 5. Requirements
 - **Admin:** Required for HKLM Registry writes, services, power plans, and System Restore Points.

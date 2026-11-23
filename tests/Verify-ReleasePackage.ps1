@@ -44,6 +44,13 @@ $requiredFiles = @(
     'Config\Data\pci.ids.min',
     'Config\Data\microarch.json',
     'Config\Data\known_issues.json',
+    'Config\Data\OptiBoost\appearance_ui.json',
+    'Config\Data\OptiBoost\apps_ctt.json',
+    'Config\Data\OptiBoost\features_capabilities.json',
+    'Config\Data\OptiBoost\policies_gpo.json',
+    'Config\Data\OptiBoost\power.json',
+    'Config\Data\OptiBoost\security_best_effort.json',
+    'Config\Data\OptiBoost\services.json',
 
     # Modular Add-on DLLs
     'Config\Addons\AppManager\AppManager.dll',

@@ -99,7 +99,7 @@ OptiAssist incorporates or depends on third-party software and data components l
 - **Distribution Status:** **Not redistributed.** No WinUtil source code (`.ps1`/`.psm1`) or binaries are bundled in OptiAssist.
 - **Usage & Justification for MIT Attribution:**
   - **External Execution:** Remote launcher preset (`irm https://christitus.com/win | iex`) in `Config/Addons/Toolbox/toolbox.json`, `src/Addons/Toolbox/ToolboxStorageManager.cs`, `src/ShortcutsHelper.cs`, and `src/MainWindow.xaml.cs`.
-  - **Preset Concepts / Catalog References:** Curated preset ideas and declarative catalog structures adapted in `Config/Addons/Toolbox/toolbox.json` (commit `ae51cb5`) and `Config/Debloater/apps_ctt.json`.
+  - **Preset Concepts / Catalog References:** Curated preset ideas and declarative catalog structures adapted in `Config/Addons/Toolbox/toolbox.json` (commit `ae51cb5`) and `Config/Data/OptiBoost/apps_ctt.json`.
 - **Obligations:** Preserve MIT attribution for adapted preset concepts and structures.
 
 ---

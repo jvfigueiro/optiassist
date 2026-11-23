@@ -287,7 +287,7 @@ namespace OptiAssist.Platform
             {
                 string dir = !string.IsNullOrEmpty(customBackupDir)
                     ? customBackupDir
-                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Config\Debloater\backups");
+                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Config\Data\OptiBoost\backups");
                 if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
                 string kindStr = fallbackKindStr ?? "DWord";

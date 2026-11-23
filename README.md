@@ -2,12 +2,12 @@
 
 Portable optimization, diagnostic, and post-installation technical assistant for Windows 10 and 11.
 
-[![Version](https://img.shields.io/badge/version-1.1.0.0-blue.svg)](https://github.com/jvfigueiro/optiassist/releases)
+[![Version](https://img.shields.io/badge/version-1.2.S7-blue.svg)](https://github.com/jvfigueiro/optiassist/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20(64--bit)-0078D4.svg)](https://microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-GNU%20GPLv3-green.svg)](LICENSE)
 [![Architecture](https://img.shields.io/badge/architecture-WPF%20%7C%20.NET%204.8-512BD4.svg)](https://dotnet.microsoft.com/)
 
-OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineered for IT professionals, system administrators, and computer repair workshops. It consolidates asynchronous hardware diagnostics, automated post-installation software deployment, deep system cleaning routines, a script and repair hub, native Windows administrative consoles, and service order report generation into a single, cohesive portable environment with zero external dependencies.
+OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineered for IT professionals, system administrators, and computer repair workshops. It consolidates asynchronous hardware diagnostics, live sensor telemetry, automated post-installation software deployment, BleachBit CleanerML-driven system cleaning, a 7-profile declarative optimization engine (**OptiBoost**), a script and repair hub, native Windows administrative consoles, and service order report generation into a single, cohesive portable environment.
 
 ---
 
@@ -15,16 +15,16 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 
 | Module | Summary Description | Documentation |
 | :--- | :--- | :---: |
-| **Dashboard** | Real-time asynchronous hardware telemetry (CPU, total RAM, GPU, motherboard, BIOS, Serial/Service Tag with 1-click copy), OS activation status, security posture (BitLocker, TPM 2.0, Secure Boot), and customizable Common Tasks shortcuts. | [Read Guide](Docs/modules/dashboard.md) |
-| **App Manager** | Batch unattended software deployment via offline local installers (`Installers/`) or official Microsoft Winget repository fallback, with an installed updates scanner and visual catalog editor. | [Read Guide](Docs/modules/app-manager.md) |
+| **Dashboard** | Dynamic 3-state health indicator, integrated diagnostic recommendations with dismiss, 2x2 Bento cards (*Hardware Info*, *Operating System*, *Storage* with 1-click Serial copy), security status bar (UEFI, Secure Boot, TPM 2.0, BitLocker), and customizable Common Tasks. | [Read Guide](Docs/modules/dashboard.md) |
+| **Windows Tools** | Native administrative consoles, **OptiBoost** (7 auto-detected hardware profiles, Dry-Run, snapshot rollback, and Restore Point support), and **Compatibility Checker** (*Hardware Specs*, Windows 11 readiness, Known Issues, and *Windows Support Lifecycle*). | [Read Guide](Docs/modules/windows-tools.md) |
+| **Terminal & Logs** | Native external Windows Terminal (`wt.exe`, with PowerShell/CMD fallback) real-time session log streamer and floating `LogWindow`. | [Read Guide](Docs/modules/logs-terminal.md) |
 | **Toolbox** | Script and repair hub supporting PowerShell (with Base64 encoding), Command Prompt, and portable executables with dynamic categories, real-time stdout/stderr streaming, and process termination. | [Read Guide](Docs/modules/toolbox.md) |
-| **System Cleaner** | Modular deep disk cleaner with non-destructive Dry-Run analysis, protected system path validation (`PathSanitizer`), locked-file resilience, SQLite database compaction, and developer cache cleanup. | [Read Guide](Docs/modules/system-cleaner.md) |
+| **App Manager** | 3-tab software suite: **Batch Installer** (`7-Zip`, `Google Chrome`, `Microsoft Office` pre-selected via Winget), **App Updates** (Winget upgrades + Microsoft Store shortcut), and **Manage Apps** (uninstaller + inline Winget update). | [Read Guide](Docs/modules/app-manager.md) |
+| **System Cleaner** | Declarative BleachBit CleanerML XML disk cleaner with non-destructive Dry-Run analysis, `PathSanitizer` protection, native SQLite compaction (`winsqlite3.dll`), and optional backup confirmation. | [Read Guide](Docs/modules/system-cleaner.md) |
 | **Startup Manager** | Unified autostart inspector: Windows Registry (`Run`/`RunOnce` with non-destructive `StartupApproved` binary control), Startup folders, and Task Scheduler entries via COM (`Schedule.Service`). | [Read Guide](Docs/modules/startup-manager.md) |
-| **Windows Tools** | Fast-launch control panel for native administrative consoles (`sysdm.cpl`, `services.msc`, `regedit`, `cleanmgr`, `dfrgui`), technician storage folders, and direct UEFI firmware reboot. | [Read Guide](Docs/modules/windows-tools.md) |
+| **Hardware Monitor** | System Summary, live **Sensors (Beta)** powered by `LibreHardwareMonitorLib 0.9.6.0` (with optional on-demand **PawnIO** driver installer), PnP Device Inventory, notebook Battery Health, and quick Bench & Stress diagnostics. | [Read Guide](Docs/modules/hardware-monitor.md) |
 | **Maintenance Report** | Technical service order and report generator with client details, machine specifications, an 8-point checklist of performed procedures, and structured `.txt` export. | [Read Guide](Docs/modules/maintenance-report.md) |
-| **Hardware Monitor** | Real-time hardware telemetry monitor (CPU, RAM, GPU, Disks), deep notebook battery health and degradation analysis (ACPI wear level, autonomy, powercfg report), and quick bench diagnostics (CPU, RAM bandwidth, disk I/O, and thermal stress). | [Read Guide](Docs/modules/hardware-monitor.md) |
-| **Settings & Deployment** | UI personalization (Light/Dark themes, accent color, top bar logo), zero-restart language hot-reloading (i18n), Always on Top window pinning, module manager, and built-in deployment engine. | [Read Guide](Docs/modules/settings-deployment.md) |
-| **Logs & Terminal** | Thread-safe real-time diagnostic terminal with an independent floating pop-out window (`LogWindow`), keyword search, clipboard copying, and `.txt` log export. | [Read Guide](Docs/modules/logs-terminal.md) |
+| **Settings & Deployment** | UI personalization (Light/Dark themes, accent color, custom logo, Microsoft Fluent UI SVG icons), zero-restart language hot-reloading (`en-US`/`pt-BR`), module manager, and **OptiAssist Installer** (PC install or Portable Mode). | [Read Guide](Docs/modules/settings-deployment.md) |
 
 ---
 
@@ -41,7 +41,7 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 
 OptiAssist requires no third-party installers and runs immediately from removable flash drives or local directories:
 
-1. **Portable Mode (USB / External Storage)**: Extract the `OptiAssist-v1.1.0.0.7z` archive to any directory or USB drive and run `OptiAssist.exe`. Configuration files and plugins reside entirely within `Config/`.
+1. **Portable Mode (USB / External Storage)**: Extract the `OptiAssist-v1.2.S7.7z` archive to any directory or USB drive, run `OptiAssist.exe`, and select **Portable Mode** in the first-run **OptiAssist Installer**. Configuration files, databases, and plugins reside entirely within `Config/`.
 2. **Standard Installation (Local System)**: Open **Settings > Install OptiAssist** (or use the first-run Welcome Wizard). The application copies files to `%ProgramFiles%\OptiAssist`, creates Start Menu and Desktop shortcuts, and registers in Windows Control Panel (*Programs and Features*).
 3. **USB AutoRun**: From the deployment dialog, generate an `autorun.inf` at the root of a USB flash drive to assign the custom application icon and drive label in Windows Explorer.
 4. **Uninstallation**: Run `OptiAssist.exe --uninstall` or use the Windows Control Panel entry to cleanly remove files, shortcuts, and registry entries.
@@ -91,33 +91,41 @@ For architectural flowcharts and sequence lifecycles, refer to the [Architecture
 ```text
 OptiAssist/
 |-- OptiAssist.csproj              # Main WPF (.NET 4.8) project file
-|-- OptiAssist.sln                 # Visual Studio Solution
 |-- build.bat                      # Automated build script
 |-- LICENSE                        # GNU General Public License v3.0
+|-- THIRD-PARTY-NOTICES.md         # Third-party attributions, licenses, and obligations
+|-- SOURCE-INFO.md                 # Upstream provenance, commits, and source locations
+|-- THIRD-PARTY/                   # Full third-party license texts (MPL-2.0, Apache-2.0, BSD, MIT)
 |-- README.md                      # Consolidated project guide
 |-- src/                           # Host core source code
 |   |-- app.manifest               # Elevation manifest (requireAdministrator)
 |   |-- MainWindow.xaml / .cs      # Shell window and navigation coordinator
-|   |-- AddonHelper.cs             # Add-on discovery engine, contracts, and lifecycle
+|   |-- AddonHelper.cs             # Add-on discovery engine, contracts, and dependency preloader
 |   |-- LocalizationHelper.cs      # Multi-language translation engine (i18n)
 |   |-- SettingsHelper.cs          # Zero-dependency JSON settings engine
-|   |-- ShortcutsHelper.cs         # AppDeploymentHelper, WelcomeWizard, and launchers
+|   |-- ShortcutsHelper.cs         # ModernChromeHelper, AppDeploymentHelper, and launchers
 |   |-- SystemInfoHelper.cs        # Asynchronous WMI/CIM hardware telemetry
 |   |-- TweakHelper.cs             # Registry and process optimization utilities
-|   `-- LogWindow.cs               # Detached floating log console
+|   |-- OptiDialog.cs              # Unified custom modal dialog and text viewer
+|   |-- FluentIcons.cs             # Microsoft Fluent UI System Icons SVG vector engine
+|   |-- LogWindow.cs               # Detached floating log console
+|   |-- Platform/                  # Hardware profiler, PCI IDs, microarch, Win11 advisor, known issues
+|   `-- Debloater/                 # OptiBoost declarative optimization engine & Windows Tools sub-tabs
 |-- src/Addons/                    # Decoupled plugin Class Library projects
-|   |-- AppManager/                # Offline installer and Winget manager
+|   |-- AppManager/                # 3-tab Batch Installer, App Updates, and Manage Apps
 |   |-- MaintenanceReport/         # Service order and checklist generator
+|   |-- PCAssist/                  # Hardware Monitor (LibreHardwareMonitor Sensors, Battery, Bench)
 |   |-- StartupManager/            # Startup items and Task Scheduler inspector
-|   |-- SystemCleaner/             # Deep cleaner engine and dry-run scanner
+|   |-- SystemCleaner/             # BleachBit CleanerML XML engine and dry-run scanner
 |   `-- Toolbox/                   # Script runner and automation hub
-|-- Config/                        # Configurations, catalogs, and translations
+|-- Config/                        # Runtime configurations, databases, catalogs, and translations
 |   |-- settings.json              # Global user preferences
 |   |-- custom_shortcuts.json      # Customizable Dashboard common tasks
-|   |-- Languages/                 # Multi-language dictionaries (en-US, pt-BR)
-|   `-- Addons/                    # Compiled plugin DLL binaries and local catalogs
-|-- Maintenance/                   # Auxiliary portable diagnostic utilities
-|-- Installers/                    # Offline technician installer repository
+|   |-- Languages/                 # Host multi-language dictionaries (en-US, pt-BR)
+|   |-- Data/                      # Hardware databases (pci.ids.min, microarch.json, known_issues.json)
+|   |   `-- OptiBoost/             # OptiBoost declarative tweak catalogs (*.json)
+|   `-- Addons/                    # Compiled plugin DLL binaries, per-module i18n, and catalogs
+|-- tests/                         # Automated C# QA suites and Verify-ReleasePackage.ps1
 `-- Docs/                          # Complete technical documentation
 ```
 

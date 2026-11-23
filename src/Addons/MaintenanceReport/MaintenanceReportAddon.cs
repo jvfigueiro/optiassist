@@ -411,7 +411,7 @@ namespace OptiAssist.Addons.MaintenanceReport
             try
             {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string candidate0 = Path.Combine(baseDir, @"Config\Debloater\backups\last_debloat_report.txt");
+                string candidate0 = Path.Combine(baseDir, @"Config\Data\OptiBoost\backups\last_debloat_report.txt");
                 if (File.Exists(candidate0))
                 {
                     return File.ReadAllText(candidate0, Encoding.UTF8);

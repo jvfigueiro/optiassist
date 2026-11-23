@@ -79,25 +79,25 @@
     <Content Include="Config\Data\known_issues.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\power.json">
+    <Content Include="Config\Data\OptiBoost\power.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\appearance_ui.json">
+    <Content Include="Config\Data\OptiBoost\appearance_ui.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\services.json">
+    <Content Include="Config\Data\OptiBoost\services.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\features_capabilities.json">
+    <Content Include="Config\Data\OptiBoost\features_capabilities.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\policies_gpo.json">
+    <Content Include="Config\Data\OptiBoost\policies_gpo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\security_best_effort.json">
+    <Content Include="Config\Data\OptiBoost\security_best_effort.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Config\Debloater\apps_ctt.json">
+    <Content Include="Config\Data\OptiBoost\apps_ctt.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Resource Include="src\app.ico" />

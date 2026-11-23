@@ -1363,7 +1363,7 @@ namespace OptiAssist
                 DateTime latest = DateTime.MinValue;
                 string source = "";
 
-                string debloatReport = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Config\Debloater\backups\last_debloat_report.txt");
+                string debloatReport = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Config\Data\OptiBoost\backups\last_debloat_report.txt");
                 if (File.Exists(debloatReport))
                 {
                     DateTime dt = File.GetLastWriteTime(debloatReport);

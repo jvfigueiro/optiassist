@@ -11,7 +11,7 @@ Technicians need to brand OptiAssist for their workshop, switch Light/Dark theme
 
 ## 3. How It Works Internally
 1. `SettingsHelper.Save(...)` persists `Config\settings.json`; `MainWindow.ApplyTheme(...)` updates dynamic `Application.Current.Resources` brushes; `MainWindow.ApplyLanguage(...)` hot-reloads dictionaries and calls `FluentIcons.UpgradeVisualTree(this)`.
-2. `AppDeploymentHelper.DeployApplicationFiles(...)` (`src/ShortcutsHelper.cs`) copies `OptiAssist.exe`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `SOURCE-INFO.md`, `THIRD-PARTY\`, `Config\Data\`, `Config\Debloater\`, `Config\Languages\`, and selected `Config\Addons\` into `%ProgramFiles%\OptiAssist` (creating Start Menu / Desktop `.lnk` shortcuts and Control Panel `Uninstall` Registry entry) or a portable target directory.
+2. `AppDeploymentHelper.DeployApplicationFiles(...)` (`src/ShortcutsHelper.cs`) copies `OptiAssist.exe`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `SOURCE-INFO.md`, `THIRD-PARTY\`, `Config\Data\` (including `Config\Data\OptiBoost\`), `Config\Languages\`, and selected `Config\Addons\` into `%ProgramFiles%\OptiAssist` (creating Start Menu / Desktop `.lnk` shortcuts and Control Panel `Uninstall` Registry entry) or a portable target directory.
 
 ## 4. Inputs, Outputs & Configuration
 - **Inputs:** User preferences, custom logo image, `.dll` add-on files.

@@ -1239,15 +1239,11 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 catch { }
             }
 
-            // Data & Debloater catalogs (pci.ids.min, microarch.json, known_issues.json, OptiBoost rules)
-            string[] extraConfigDirs = new string[] { "Data", "Debloater" };
-            foreach (string cfgSub in extraConfigDirs)
+            // Data & OptiBoost catalogs (pci.ids.min, microarch.json, known_issues.json, Config\Data\OptiBoost\*.json)
+            string srcDataDir = Path.Combine(srcConfigDir, "Data");
+            if (Directory.Exists(srcDataDir))
             {
-                string srcSub = Path.Combine(srcConfigDir, cfgSub);
-                if (Directory.Exists(srcSub))
-                {
-                    CopyDirectoryRecursiveSafe(srcSub, Path.Combine(dstConfigDir, cfgSub), targetDir, log);
-                }
+                CopyDirectoryRecursiveSafe(srcDataDir, Path.Combine(dstConfigDir, "Data"), targetDir, log);
             }
 
             // Addons folder

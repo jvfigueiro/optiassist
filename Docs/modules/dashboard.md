@@ -5,7 +5,7 @@ Technicians servicing unfamiliar Windows machines need an immediate, trustworthy
 
 ## 2. How to Use (Step-by-Step)
 1. Launch `OptiAssist.exe` (accept UAC elevation).
-2. Inspect the **Health Hero Card**: review the circular percentage score (`--%` -> `100%`), headline summary, and any integrated diagnostic recommendation strips (click the action button to jump/fix, or `✕` to dismiss for the session).
+2. Inspect the **Health Hero Card**: review the dynamic status icon (green checkmark when 0 recommendations are pending, yellow/amber warning triangle for 1–2 recommendations, or red exclamation circle for 3+ recommendations), headline summary, and any integrated diagnostic recommendation strips (click the action button to jump/fix, or `✕` to dismiss for the session).
 3. Use the top-right hero controls to toggle **Light / Dark Mode** or click **Install on PC** (visible in Portable Mode).
 4. Review the **Hardware Info**, **Operating System**, and **Storage** cards (click **Copy** next to Serial Number to copy it to the clipboard).
 5. Launch frequent workflows from **Common Tasks**, or click **Personalize Common Tasks...** to add, edit, reorder, or reset shortcuts.
@@ -14,7 +14,7 @@ Technicians servicing unfamiliar Windows machines need an immediate, trustworthy
 ## 3. How It Works Internally
 1. `MainWindow_Loaded` triggers `RefreshHardwareAsync()` (when `AutoRefreshHardware` is `true`) on a `ThreadPool` worker, guarded by a 30-second `DispatcherTimer` timeout.
 2. `SystemInfoHelper.GetSystemInfo()` queries WMI/CIM (`Win32_Processor`, `Win32_BaseBoard`, `Win32_BIOS`, `Win32_PhysicalMemory`, `Win32_VideoController`, `Win32_DiskDrive`, `Win32_OperatingSystem`, `Win32_PnPEntity`, `SoftwareLicensingProduct`) and Registry keys (TPM, Secure Boot, Defender real-time protection, pending reboot).
-3. `PlatformDiagnosticService.Instance.GetSnapshot(...)` evaluates hardware/driver findings and merges recommendations into `UpdateDashboardHealthHero(...)`, computing the 0–100% score and rendering `pathHealthArc`.
+3. `PlatformDiagnosticService.Instance.GetSnapshot(...)` evaluates hardware/driver findings and merges recommendations into `UpdateDashboardHealthHero(...)`, updating the 3-state Fluent UI status icon (`pathHealthIcon`) and recommendation strips based on the active recommendation count.
 4. `RenderCommonTasks()` reads `Config\custom_shortcuts.json` via `CustomShortcutsHelper.Load()` and renders the 3-column `UniformGrid`.
 
 ## 4. Inputs, Outputs & Configuration

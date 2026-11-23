@@ -1,5 +1,5 @@
 {
-  "DisableSelectionWarnings": true,
+  "DisableSelectionWarnings": false,
   "HideUninstalledApps": true,
   "EnableBackup": true,
   "CreateRestorePoint": false

@@ -91,11 +91,11 @@ OptiAssist/
 |-- Config/                        # Configuration files, databases, and plugins
 |   |-- settings.json              # Fresh user preferences (freshstart: "true")
 |   |-- custom_shortcuts.json      # Customizable Dashboard common tasks
-|   |-- Data/                      # Hardware & compatibility databases
+|   |-- Data/                      # Hardware, compatibility & OptiBoost databases
 |   |   |-- pci.ids.min            # Curated PCI IDs (BSD-3-Clause)
 |   |   |-- microarch.json
-|   |   `-- known_issues.json
-|   |-- Debloater/                 # OptiBoost declarative tweak catalogs
+|   |   |-- known_issues.json
+|   |   `-- OptiBoost/             # OptiBoost declarative tweak catalogs (*.json)
 |   |-- Languages/                 # Dynamic multi-language dictionaries (en-US, pt-BR)
 |   `-- Addons/                    # Compiled decoupled add-on DLLs & runtime dependencies
 |       |-- AppManager/

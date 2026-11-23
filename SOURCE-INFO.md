@@ -74,7 +74,7 @@ This document records the upstream origin, version/commit identifiers, retrieval
 - **Distribution Status:** **Not redistributed.** No WinUtil source code or binaries are bundled in OptiAssist.
 - **Usage & Justification for MIT Attribution:**
   - External on-demand launch via `irm https://christitus.com/win | iex` in `toolbox.json`, `ToolboxStorageManager.cs`, `ShortcutsHelper.cs`, and `MainWindow.xaml.cs`.
-  - Preset concepts and declarative catalog structures adapted in `Config/Addons/Toolbox/toolbox.json` (commit `ae51cb5`) and `Config/Debloater/apps_ctt.json`, for which MIT attribution is preserved in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+  - Preset concepts and declarative catalog structures adapted in `Config/Addons/Toolbox/toolbox.json` (commit `ae51cb5`) and `Config/Data/OptiBoost/apps_ctt.json`, for which MIT attribution is preserved in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ---
 

@@ -347,7 +347,7 @@ namespace OptiAssist.Debloater
                     string asmDir = Path.GetDirectoryName(asmLoc);
                     if (!string.IsNullOrEmpty(asmDir))
                     {
-                        string candidate = Path.Combine(asmDir, "Config", "Debloater");
+                        string candidate = Path.Combine(asmDir, @"Config\Data\OptiBoost");
                         if (Directory.Exists(candidate)) return candidate;
                     }
                 }
@@ -355,7 +355,7 @@ namespace OptiAssist.Debloater
             catch { }
 
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            return Path.Combine(baseDir, "Config", "Debloater");
+            return Path.Combine(baseDir, @"Config\Data\OptiBoost");
         }
 
         public static string GetDebloaterCatalogDirectory()
@@ -365,7 +365,7 @@ namespace OptiAssist.Debloater
             {
                 return dir;
             }
-            string legacyFallback = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons", "Toolbox", "debloater");
+            string legacyFallback = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Config\Debloater");
             if (Directory.Exists(legacyFallback))
             {
                 return legacyFallback;

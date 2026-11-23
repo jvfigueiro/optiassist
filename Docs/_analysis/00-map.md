@@ -33,7 +33,7 @@ This document is the comprehensive architectural map of **OptiAssist (`1.2.0.7` 
 | `src/Debloater/` | OptiBoost declarative optimization engine & Windows Tools sub-tabs UI: `DebloaterCatalog.cs`, `DebloaterEngine.cs`, `SystemRestoreHelper.cs`, `WindowsToolsTabsBuilder.cs`. |
 | `src/Addons/<Module>/` | Source code for the 6 decoupled Class Library add-on DLLs: `AppManager`, `MaintenanceReport`, `PCAssist`, `StartupManager`, `SystemCleaner`, `Toolbox`. |
 | `lib/LibreHardwareMonitor/` | Build-time reference copies of `LibreHardwareMonitorLib.dll` and its 8 transitive dependency DLLs. |
-| `Config/` | Runtime configuration root: `settings.json`, `custom_shortcuts.json`, `Languages/*.json`, `Data/` (`microarch.json`, `pci.ids.min`, `known_issues.json`), `Debloater/*.json`, and `Addons/<Module>/` (compiled DLLs, per-module `en-US.json`/`pt-BR.json`, catalogs, and CleanerML XMLs). |
+| `Config/` | Runtime configuration root: `settings.json`, `custom_shortcuts.json`, `Languages/*.json`, `Data/` (`microarch.json`, `pci.ids.min`, `known_issues.json`, and `OptiBoost/*.json`), and `Addons/<Module>/` (compiled DLLs, per-module `en-US.json`/`pt-BR.json`, catalogs, and CleanerML XMLs). |
 | `Installers/`, `Maintenance/` | Optional portable technician directories (auto-created in Portable Mode if absent; excluded from mandatory local PC installs). |
 | `tests/` | Automated QA & compliance verification suites (`PlatformDiagnosticTests.cs`, `DebloaterEndToEndTests.cs`, `DeploymentComplianceTests.cs`, `Verify-ReleasePackage.ps1`). |
 | `Docs/` | Technical architecture, module guides, build/release docs, and troubleshooting documentation. |
@@ -64,8 +64,8 @@ This document is the comprehensive architectural map of **OptiAssist (`1.2.0.7` 
 
 | Module / Feature | Purpose | Primary Files | Internal Dependencies | Admin Required |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dashboard** | Health score ring (%), integrated diagnostic recommendations, 2x2 Bento hardware/OS/storage cards, customizable Common Tasks | `src/MainWindow.xaml(.cs)`, `src/SystemInfoHelper.cs`, `src/Platform/*` | `LocalizationHelper`, `SettingsHelper`, `CustomShortcutsHelper`, `PlatformDiagnosticService` | Yes (manifest) |
-| **Windows Tools (`OptiBoost` & `Compatibility Checker`)** | Native admin consoles, 7-profile declarative OptiBoost engine with snapshots/rollback, Hardware Specs & Known Issues | `src/Debloater/*.cs`, `Config/Debloater/*.json`, `src/Platform/*.cs` | `PlatformDiagnosticService`, `SystemRestoreHelper`, `OptiDialog` | Yes |
+| **Dashboard** | Dynamic 3-state health icon (green/amber/red), integrated diagnostic recommendations, 2x2 Bento hardware/OS/storage cards, customizable Common Tasks | `src/MainWindow.xaml(.cs)`, `src/SystemInfoHelper.cs`, `src/Platform/*` | `LocalizationHelper`, `SettingsHelper`, `CustomShortcutsHelper`, `PlatformDiagnosticService` | Yes (manifest) |
+| **Windows Tools (`OptiBoost` & `Compatibility Checker`)** | Native admin consoles, 7-profile declarative OptiBoost engine with snapshots/rollback, Hardware Specs & Known Issues | `src/Debloater/*.cs`, `Config/Data/OptiBoost/*.json`, `src/Platform/*.cs` | `PlatformDiagnosticService`, `SystemRestoreHelper`, `OptiDialog` | Yes |
 | **Terminal (External Logs)** | Real-time diagnostic log streaming in Windows Terminal (`wt.exe`) / PowerShell / CMD + `LogWindow` | `src/MainWindow.xaml.cs`, `src/LogWindow.cs` | `LocalizationHelper`, `ModernChromeHelper` | Inherited |
 | **Toolbox** (`toolbox`) | Script & command runner (PowerShell Base64, CMD, executables), preset repair hub, WinUtil launcher | `src/Addons/Toolbox/*.cs`, `Config/Addons/Toolbox/toolbox.json` | `IOptiAssistHost`, `OptiDialog` | Yes |
 | **App Manager** (`app-manager`) | 3-tab software suite: Batch Installer (7-Zip/Chrome/Office default), App Updates (Winget + Store), Manage Apps | `src/Addons/AppManager/*.cs`, `Config/Addons/AppManager/autoinstall.json` | `IOptiAssistHost`, `ShortcutsHelper`, `OptiDialog` | Yes |
@@ -95,7 +95,7 @@ This document is the comprehensive architectural map of **OptiAssist (`1.2.0.7` 
 - **Configuration (`SettingsHelper`):** Zero-dependency custom JSON parser/serializer persisting `Config\settings.json`, `Config\custom_shortcuts.json`, `Config\Addons\SystemCleaner\settings.json`, `Config\Addons\Toolbox\toolbox.json`, and `Config\Addons\AppManager\autoinstall.json`.
 - **Localization (`LocalizationHelper`):** Merges `Config\Languages\<lang>.json` with per-module `Config\Addons\<Module>\<lang>.json`; supports zero-restart hot-reloading.
 - **Logging:** Thread-safe `Dispatcher.Invoke` logging to `MainWindow.txtConsoleLog`, `%TEMP%\OptiAssist_Terminal_<pid>.log` (tailed by external Windows Terminal), and optional `LogWindow`.
-- **Persistence & Rollback:** OptiBoost saves pre-change JSON snapshots under `Config\Debloater\backups\`; System Cleaner optionally backs up cleaned items via `CleanerBackupManager`.
+- **Persistence & Rollback:** OptiBoost saves pre-change JSON snapshots under `Config\Data\OptiBoost\backups\`; System Cleaner optionally backs up cleaned items via `CleanerBackupManager`.
 - **Error Handling:** `App.xaml.cs` catches `DispatcherUnhandledException` and `AppDomain.UnhandledException` via `OptiDialog`; `MainWindow` guards WMI detection with a 30-second `DispatcherTimer` fallback; `LibreHardwareEngine` guards `DiskInfoToolkit` against `StackOverflowException` on virtualized VirtIO/QEMU/VMware SCSI disks (`HasVirtualizedStorageDisk()`).
 
 ---
