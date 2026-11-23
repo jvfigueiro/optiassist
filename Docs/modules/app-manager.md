@@ -3,6 +3,10 @@
 ## 1. Overview & Problem Solved
 Post-installation workflows require deploying standard software suites (`7-Zip`, `Google Chrome`, `Microsoft Office`, etc.), checking for outdated packages, and auditing/uninstalling bloatware. **App Manager** consolidates offline installers, Microsoft Winget automation, and installed-app management into 3 full-height tabs.
 
+![App Manager - Batch Installer](../images/batch-installer.png)
+
+![App Manager - App Updates](../images/app-updates.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Click **App Manager** in the sidebar.
 2. **Batch Installer tab (default):** review pre-selected essentials (`7-Zip`, `Google Chrome`, `Microsoft Office` via Winget by default), check additional packages or edit the catalog, and click **Install Selected**.

@@ -28,6 +28,22 @@ OptiAssist is a native C#/WPF (.NET Framework 4.8) technician workbench engineer
 
 ---
 
+## Screenshots
+
+| Dashboard | OptiBoost (Windows Tools) |
+| :---: | :---: |
+| ![Dashboard](Docs/images/dashboard.png) | ![OptiBoost](Docs/images/optiboost.png) |
+
+| Hardware Monitor | System Cleaner |
+| :---: | :---: |
+| ![Hardware Monitor](Docs/images/hardware-monitor.png) | ![System Cleaner](Docs/images/system-cleaner.png) |
+
+| App Manager — Batch Installer | Toolbox |
+| :---: | :---: |
+| ![Batch Installer](Docs/images/batch-installer.png) | ![Toolbox](Docs/images/toolbox.png) |
+
+---
+
 ## System Requirements
 
 - **Operating System**: Windows 10 (version 1809 or higher) or Windows 11 (64-bit recommended).

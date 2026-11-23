@@ -3,6 +3,8 @@
 ## 1. Overview & Problem Solved
 Field technicians need live thermal/voltage/clock sensors, accurate physical storage bus identification, full PnP device inventory, notebook battery wear diagnostics, and quick CPU/RAM/Disk stress/bench checks without carrying multiple third-party executables.
 
+![Hardware Monitor](../images/hardware-monitor.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Click **Hardware Monitor** in the sidebar.
 2. **System Summary tab:** inspect motherboard, CPU, RAM DIMMs, GPU, physical disks (NVMe/SATA/USB, SSD vs. HDD), and network adapters.

@@ -3,6 +3,10 @@
 ## 1. Overview & Problem Solved
 Windows administrative consoles are scattered across `System32`, Control Panel, and Settings, while manual Windows optimization ("debloating") is error-prone without hardware awareness or rollback. **Windows Tools** unifies native consoles, the 7-profile **OptiBoost** engine, and **Compatibility Checker** in one tabbed workspace.
 
+![OptiBoost](../images/optiboost.png)
+
+![Compatibility Checker](../images/windows-compat-checker.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Select **Windows Tools** in the sidebar.
 2. **Windows Administrative Tools tab:** click any of the 23 native tools (`Device Manager`, `Disk Management`, `MSCONFIG`, `Services`, `Event Viewer`, `GPEDIT`, etc.) or **Maintenance Tools** (Portable Mode).

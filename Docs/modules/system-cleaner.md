@@ -3,6 +3,8 @@
 ## 1. Overview & Problem Solved
 Accumulated browser caches, application logs, temporary files, and bloated SQLite databases consume gigabytes of disk space. **System Cleaner** provides a safe, non-destructive Dry-Run analyzer and CleanerML-driven cleanup engine with path safety guards and optional backup before deletion.
 
+![System Cleaner](../images/system-cleaner.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Click **System Cleaner** in the sidebar.
 2. Select options under **Windows** or **Applications** tabs (installed apps are detected automatically).

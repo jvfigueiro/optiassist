@@ -3,6 +3,8 @@
 ## 1. Overview & Problem Solved
 Technicians servicing unfamiliar Windows machines need an immediate, trustworthy snapshot of system health, hardware specifications, OS activation/build, security posture, and quick-launch utilities without opening multiple Windows consoles. The **Dashboard** consolidates these into a single landing view.
 
+![OptiAssist Dashboard](../images/dashboard.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Launch `OptiAssist.exe` (accept UAC elevation).
 2. Inspect the **Health Hero Card**: review the dynamic status icon (green checkmark when 0 recommendations are pending, yellow/amber warning triangle for 1–2 recommendations, or red exclamation circle for 3+ recommendations), headline summary, and any integrated diagnostic recommendation strips (click the action button to jump/fix, or `✕` to dismiss for the session).

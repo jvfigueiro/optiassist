@@ -3,6 +3,8 @@
 ## 1. Overview & Problem Solved
 Technicians repeatedly run repair commands (`sfc /scannow`, `DISM`, network resets, WinGet/Windows Update repairs) and custom portable scripts. **Toolbox** centralizes categorized command presets and user-defined actions with real-time streaming output and cancellation support.
 
+![Toolbox](../images/toolbox.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Click **Toolbox** in the sidebar.
 2. Browse presets by category (`Community Tools`, `Integrity & Repair`, `Networking`, etc.) or add a custom script/command.

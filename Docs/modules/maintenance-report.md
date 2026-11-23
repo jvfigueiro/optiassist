@@ -3,6 +3,8 @@
 ## 1. Overview & Problem Solved
 Repair workshops and IT technicians need standardized service-order documentation summarizing customer details, detected machine specifications, performed maintenance steps, and technician notes. **Maintenance Report** generates structured `.txt` reports directly from live telemetry.
 
+![Maintenance Report](../images/maintenance-report.png)
+
 ## 2. How to Use (Step-by-Step)
 1. Enable **Maintenance Report** in **Settings > Installed Modules & Plugins** if disabled by default, then click **Maintenance Report** in the sidebar.
 2. Enter customer/device details and check off completed maintenance procedures from the 8-point checklist.
