@@ -1,0 +1,228 @@
+{
+  "version": "2.0.F3",
+  "category": "features_capabilities",
+  "tweaks": [
+    {
+      "id": "cap-vbscript",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_CapVbscript_Title",
+      "titleFallback": "Uninstall VBSCRIPT Optional Capability (Win11 24H2+)",
+      "descKey": "Debloat_CapVbscript_Desc",
+      "descFallback": "Dynamically matches and removes the deprecated VBSCRIPT capability via Get-WindowsCapability without hardcoded version suffixes.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 26100,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "capability", "pattern": "*VBSCRIPT*", "state": "Remove" }
+      ],
+      "revert": "manual",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "cap-math-recognizer",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_CapMathRecognizer_Title",
+      "titleFallback": "Uninstall Math Recognizer Capability",
+      "descKey": "Debloat_CapMathRecognizer_Desc",
+      "descFallback": "Removes MathRecognizer optional capability dynamically via wildcard matching.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "capability", "pattern": "*MathRecognizer*", "state": "Remove" }
+      ],
+      "revert": "manual",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "cap-hello-face",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_CapHelloFace_Title",
+      "titleFallback": "Uninstall Windows Hello Facial Recognition (No IR Camera)",
+      "descKey": "Debloat_CapHelloFace_Desc",
+      "descFallback": "Removes Hello.Face capability when no Infrared camera is detected. Opt-in on laptops.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "no_ir_camera"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "ask",
+        "laptopGaming": "ask",
+        "ultraportable": "ask"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "capability", "pattern": "*Hello.Face*", "state": "Remove" }
+      ],
+      "revert": "manual",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "cap-extended-wallpapers",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_CapExtWallpapers_Title",
+      "titleFallback": "Uninstall Extended Theme / Wallpaper Content",
+      "descKey": "Debloat_CapExtWallpapers_Desc",
+      "descFallback": "Removes optional Extended Theme/Wallpaper Content capability via wildcard matching.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 22000,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "capability", "pattern": "*Wallpaper*Extended*", "state": "Remove" }
+      ],
+      "revert": "manual",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "feat-workfolders",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_FeatWorkFolders_Title",
+      "titleFallback": "Disable Work Folders Client Optional Feature",
+      "descKey": "Debloat_FeatWorkFolders_Desc",
+      "descFallback": "Disables the enterprise WorkFolders-Client Windows optional feature via DISM.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "optionalFeature", "name": "WorkFolders-Client", "state": "Disable" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "feat-smbdirect",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_FeatSmbDirect_Title",
+      "titleFallback": "Disable SMB Direct (RDMA) Optional Feature",
+      "descKey": "Debloat_FeatSmbDirect_Desc",
+      "descFallback": "Disables SmbDirect (used only on enterprise RDMA NICs) on consumer/gaming/laptop PCs.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "optionalFeature", "name": "SmbDirect", "state": "Disable" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "feat-printing-stack",
+      "category": "features_capabilities",
+      "titleKey": "Debloat_FeatPrintingStack_Title",
+      "titleFallback": "Disable Printing Optional Features (Print to PDF, XPS, Foundation)",
+      "descKey": "Debloat_FeatPrintingStack_Desc",
+      "descFallback": "Disables Printing-PrintToPDFServices-Features, Printing-XPSServices-Features, and Printing-Foundation-Features following the Spooler profile rule.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "ask",
+        "laptop": "ask",
+        "laptopGaming": "on",
+        "ultraportable": "ask"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "optionalFeature", "name": "Printing-PrintToPDFServices-Features", "state": "Disable" },
+        { "type": "optionalFeature", "name": "Printing-XPSServices-Features", "state": "Disable" },
+        { "type": "optionalFeature", "name": "Printing-Foundation-Features", "state": "Disable" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Removes Microsoft Print to PDF and XPS Document Writer."
+      ],
+      "needsReboot": true
+    }
+  ]
+}

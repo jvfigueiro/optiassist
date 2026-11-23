@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using OptiAssist.Platform;
 
 namespace OptiAssist
 {
@@ -18,6 +19,9 @@ namespace OptiAssist
         string CurrentLanguage { get; }
         AppSettings Settings { get; }
         HardwareSummary Hardware { get; }
+        PlatformInfo Platform { get; }
+        PlatformDiagnosticSnapshot PlatformDiagnostic { get; }
+        bool IsPortableMode { get; }
         void SaveSettings();
         void OpenLogWindow();
     }
@@ -299,9 +303,13 @@ namespace OptiAssist
     /// </summary>
     public static class AddonHelper
     {
+        private static readonly Dictionary<string, Assembly> _resolvedDepCache = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
+
         static AddonHelper()
         {
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+            AppDomain.CurrentDomain.AssemblyResolve += OnAddonAssemblyResolve;
+            _assemblyResolverRegistered = true;
         }
 
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
@@ -350,10 +358,19 @@ namespace OptiAssist
             var companyAttr = GetAssemblyAttribute<AssemblyCompanyAttribute>(asm);
             var productAttr = GetAssemblyAttribute<AssemblyProductAttribute>(asm);
             var copyrightAttr = GetAssemblyAttribute<AssemblyCopyrightAttribute>(asm);
+            var infoVerAttr = GetAssemblyAttribute<AssemblyInformationalVersionAttribute>(asm);
             var fileVerAttr = GetAssemblyAttribute<AssemblyFileVersionAttribute>(asm);
 
             string asmVer = "";
-            if (fileVerAttr != null && !string.IsNullOrWhiteSpace(fileVerAttr.Version))
+            if (!string.IsNullOrWhiteSpace(addon.Version))
+            {
+                asmVer = addon.Version;
+            }
+            else if (infoVerAttr != null && !string.IsNullOrWhiteSpace(infoVerAttr.InformationalVersion))
+            {
+                asmVer = infoVerAttr.InformationalVersion;
+            }
+            else if (fileVerAttr != null && !string.IsNullOrWhiteSpace(fileVerAttr.Version))
             {
                 asmVer = fileVerAttr.Version;
             }
@@ -411,23 +428,185 @@ namespace OptiAssist
                 case "startup_manager":
                 case "startupmanager":
                     return 4;
-                case "maintenance-report":
-                case "maintenance_report":
-                    return 5;
                 case "hardware-monitor":
                 case "hardware_monitor":
                 case "hardwaremonitor":
                 case "pc-assist":
                 case "pc_assist":
                 case "pcassist":
+                    return 5;
+                case "maintenance-report":
+                case "maintenance_report":
+                case "maintenancereport":
                     return 6;
                 default:
                     return 50;
             }
         }
 
+        private static bool _assemblyResolverRegistered = false;
+        private static readonly object _resolverLock = new object();
+
+        private static void EnsureAddonAssemblyResolver()
+        {
+            lock (_resolverLock)
+            {
+                if (_assemblyResolverRegistered) return;
+                _assemblyResolverRegistered = true;
+                AppDomain.CurrentDomain.AssemblyResolve += OnAddonAssemblyResolve;
+            }
+        }
+
+        [ThreadStatic]
+        private static HashSet<string> _resolvingAssemblies;
+
+        private static Assembly OnAddonAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            if (args == null || string.IsNullOrEmpty(args.Name)) return null;
+            if (_resolvingAssemblies == null) _resolvingAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!_resolvingAssemblies.Add(args.Name)) return null;
+
+            try
+            {
+                string simpleName = new AssemblyName(args.Name).Name;
+                if (string.IsNullOrEmpty(simpleName) || simpleName.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                // 0. Check our in-memory byte-loaded dependency cache first
+                Assembly cachedAsm;
+                lock (_resolverLock)
+                {
+                    if (_resolvedDepCache.TryGetValue(simpleName, out cachedAsm) && cachedAsm != null)
+                    {
+                        return cachedAsm;
+                    }
+                }
+
+                // 1. Check if an assembly with this simple name is already loaded in the AppDomain
+                //    (handles minor version redirects like BlackSharp.Core 1.0.4 -> 1.0.7 seamlessly)
+                Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
+                for (int i = 0; i < loaded.Length; i++)
+                {
+                    try
+                    {
+                        if (string.Equals(loaded[i].GetName().Name, simpleName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            lock (_resolverLock) { _resolvedDepCache[simpleName] = loaded[i]; }
+                            return loaded[i];
+                        }
+                    }
+                    catch { }
+                }
+
+                string addonsDir = GetAddonsDirectory();
+                if (!Directory.Exists(addonsDir)) return null;
+
+                foreach (string subDir in Directory.GetDirectories(addonsDir))
+                {
+                    string directCandidate = Path.Combine(subDir, simpleName + ".dll");
+                    if (File.Exists(directCandidate))
+                    {
+                        Assembly loadedDep = LoadDependencyBytesSafe(directCandidate, simpleName);
+                        if (loadedDep != null) return loadedDep;
+                    }
+                    string depsCandidate = Path.Combine(subDir, "deps", simpleName + ".dll");
+                    if (File.Exists(depsCandidate))
+                    {
+                        Assembly loadedDep = LoadDependencyBytesSafe(depsCandidate, simpleName);
+                        if (loadedDep != null) return loadedDep;
+                    }
+                }
+            }
+            catch { }
+            finally
+            {
+                _resolvingAssemblies.Remove(args.Name);
+            }
+            return null;
+        }
+
+        private static Assembly LoadDependencyBytesSafe(string dllPath, string simpleName)
+        {
+            try
+            {
+                lock (_resolverLock)
+                {
+                    Assembly existing;
+                    if (_resolvedDepCache.TryGetValue(simpleName, out existing) && existing != null)
+                    {
+                        return existing;
+                    }
+                }
+                byte[] bytes = File.ReadAllBytes(dllPath);
+                Assembly asm = Assembly.Load(bytes);
+                if (asm != null)
+                {
+                    lock (_resolverLock)
+                    {
+                        _resolvedDepCache[simpleName] = asm;
+                        string actualName = asm.GetName().Name;
+                        if (!string.IsNullOrEmpty(actualName)) _resolvedDepCache[actualName] = asm;
+                    }
+                    return asm;
+                }
+            }
+            catch
+            {
+                try
+                {
+                    Assembly fallback = Assembly.LoadFrom(dllPath);
+                    if (fallback != null)
+                    {
+                        lock (_resolverLock) { _resolvedDepCache[simpleName] = fallback; }
+                        return fallback;
+                    }
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private static void PreloadSiblingDependencies(string addonFolder, string primaryDllPath)
+        {
+            if (string.IsNullOrEmpty(addonFolder) || !Directory.Exists(addonFolder)) return;
+
+            // Load low-level leaf dependencies first so higher-level libraries bind from memory immediately
+            string[] priorityOrder = new string[]
+            {
+                "System.Runtime.CompilerServices.Unsafe",
+                "System.Buffers",
+                "System.Numerics.Vectors",
+                "System.Memory",
+                "BlackSharp.Core",
+                "HidSharp",
+                "DiskInfoToolkit",
+                "RAMSPDToolkit-NDD",
+                "LibreHardwareMonitorLib"
+            };
+
+            for (int i = 0; i < priorityOrder.Length; i++)
+            {
+                string pPath = Path.Combine(addonFolder, priorityOrder[i] + ".dll");
+                if (File.Exists(pPath))
+                {
+                    LoadDependencyBytesSafe(pPath, priorityOrder[i]);
+                }
+            }
+
+            foreach (string f in Directory.GetFiles(addonFolder, "*.dll", SearchOption.TopDirectoryOnly))
+            {
+                if (string.Equals(f, primaryDllPath, StringComparison.OrdinalIgnoreCase)) continue;
+                string sName = Path.GetFileNameWithoutExtension(f);
+                LoadDependencyBytesSafe(f, sName);
+            }
+        }
+
         public static List<AddonEntry> LoadDiscoveredAddons(IOptiAssistHost host, List<string> disabledAddonIds)
         {
+            EnsureAddonAssemblyResolver();
+
             // Ensure per-module language files are merged into LocalizationHelper before initializing addons
             LocalizationHelper.LoadAddonLanguageFiles(host != null ? host.CurrentLanguage : LocalizationHelper.CurrentLanguage);
 
@@ -445,11 +624,22 @@ namespace OptiAssist
                 }
 
                 // Scan subdirectories Config\Addons\<ModuleName>\*.dll
+                // If <ModuleName>.dll exists in the folder, load only that primary addon assembly
+                // so co-located dependency DLLs (e.g. LibreHardwareMonitorLib.dll) are not scanned as addons.
                 foreach (string subDir in Directory.GetDirectories(addonsDir))
                 {
-                    foreach (string f in Directory.GetFiles(subDir, "*.dll", SearchOption.TopDirectoryOnly))
+                    string folderName = Path.GetFileName(subDir);
+                    string primaryDll = Path.Combine(subDir, folderName + ".dll");
+                    if (File.Exists(primaryDll))
                     {
-                        dllFiles.Add(f);
+                        dllFiles.Add(primaryDll);
+                    }
+                    else
+                    {
+                        foreach (string f in Directory.GetFiles(subDir, "*.dll", SearchOption.TopDirectoryOnly))
+                        {
+                            dllFiles.Add(f);
+                        }
                     }
                 }
             }
@@ -472,6 +662,10 @@ namespace OptiAssist
                         }
                     }
                     catch { }
+
+                    // Preload any sibling dependency DLLs in the same module folder (e.g. LibreHardwareMonitorLib.dll)
+                    // into the exact same byte-loaded context before loading the addon assembly itself.
+                    PreloadSiblingDependencies(Path.GetDirectoryName(dllPath), dllPath);
 
                     // Load assembly from byte array so the .dll file on disk is never locked by the process
                     byte[] rawBytes = File.ReadAllBytes(sourceToLoad);

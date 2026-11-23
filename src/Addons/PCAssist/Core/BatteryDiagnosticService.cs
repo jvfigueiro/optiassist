@@ -51,6 +51,7 @@ namespace OptiAssist.Addons.PCAssist.Core
             // 1. Initial check via Win32 GetSystemPowerStatus
             NativeMethods.SYSTEM_POWER_STATUS powerStatus;
             bool hasApiPower = NativeMethods.GetSystemPowerStatus(out powerStatus);
+            bool apiSaysNoBattery = false;
 
             if (hasApiPower)
             {
@@ -58,20 +59,17 @@ namespace OptiAssist.Addons.PCAssist.Core
                 report.ChargePercent = (powerStatus.BatteryLifePercent <= 100) ? powerStatus.BatteryLifePercent : 0;
                 report.IsCharging = ((powerStatus.BatteryFlag & 8) != 0);
 
-                if (powerStatus.BatteryFlag == 128 || powerStatus.BatteryFlag == 255)
+                if (powerStatus.BatteryFlag == 128) // 128 = No system battery
                 {
-                    report.HasBattery = false;
-                    report.Grade = BatteryHealthGrade.DesktopNoBattery;
-                    report.DiagnosticSummary = "Desktop PC or No Battery Installed (Direct AC Power)";
-                    return report;
+                    apiSaysNoBattery = true;
                 }
             }
 
             // 2. Query WMI root\wmi for Deep ACPI Battery Details
             bool foundWmiBattery = false;
+            // 2. Query root\wmi battery classes individually (isolated try/catch per class so one missing EC class never aborts the others)
             try
             {
-                // BatteryStaticData: DesignCapacity, DeviceName, ManufactureName, SerialNumber, Chemistry
                 using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT * FROM BatteryStaticData"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
@@ -91,12 +89,16 @@ namespace OptiAssist.Addons.PCAssist.Core
                         break;
                     }
                 }
+            }
+            catch { }
 
-                // BatteryFullChargedCapacity: FullChargedCapacity
+            try
+            {
                 using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT * FROM BatteryFullChargedCapacity"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
                     {
+                        foundWmiBattery = true;
                         if (obj["FullChargedCapacity"] != null)
                         {
                             long full = 0;
@@ -106,41 +108,60 @@ namespace OptiAssist.Addons.PCAssist.Core
                         }
                     }
                 }
+            }
+            catch { }
 
-                // BatteryStatus: RemainingCapacity, Voltage, DischargeRate, Charging, Discharging
+            try
+            {
                 using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT * FROM BatteryStatus"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
                     {
-                        if (obj["RemainingCapacity"] != null)
+                        foundWmiBattery = true;
+                        try
                         {
-                            long rem = 0;
-                            long.TryParse(obj["RemainingCapacity"].ToString(), out rem);
-                            report.RemainingCapacityMwh = rem;
+                            if (obj["RemainingCapacity"] != null)
+                            {
+                                long rem = 0;
+                                long.TryParse(obj["RemainingCapacity"].ToString(), out rem);
+                                report.RemainingCapacityMwh = rem;
+                            }
                         }
+                        catch { }
 
-                        if (obj["Voltage"] != null)
+                        try
                         {
-                            double mv = 0;
-                            double.TryParse(obj["Voltage"].ToString(), out mv);
-                            report.VoltageVolts = Math.Round(mv / 1000.0, 2);
+                            if (obj["Voltage"] != null)
+                            {
+                                double mv = 0;
+                                double.TryParse(obj["Voltage"].ToString(), out mv);
+                                report.VoltageVolts = Math.Round(mv / 1000.0, 2);
+                            }
                         }
+                        catch { }
 
-                        if (obj["DischargeRate"] != null)
+                        try
                         {
-                            double mw = 0;
-                            double.TryParse(obj["DischargeRate"].ToString(), out mw);
-                            report.RateWatts = Math.Round(Math.Abs(mw) / 1000.0, 2);
+                            if (obj["DischargeRate"] != null)
+                            {
+                                double mw = 0;
+                                double.TryParse(obj["DischargeRate"].ToString(), out mw);
+                                report.RateWatts = Math.Round(Math.Abs(mw) / 1000.0, 2);
+                            }
                         }
+                        catch { }
 
-                        if (obj["Charging"] != null) report.IsCharging = Convert.ToBoolean(obj["Charging"]);
-                        if (obj["Discharging"] != null) report.IsDischarging = Convert.ToBoolean(obj["Discharging"]);
-                        if (obj["PowerOnline"] != null) report.IsAcConnected = Convert.ToBoolean(obj["PowerOnline"]);
+                        try { if (obj["Charging"] != null) report.IsCharging = Convert.ToBoolean(obj["Charging"]); } catch { }
+                        try { if (obj["Discharging"] != null) report.IsDischarging = Convert.ToBoolean(obj["Discharging"]); } catch { }
+                        try { if (obj["PowerOnline"] != null) report.IsAcConnected = Convert.ToBoolean(obj["PowerOnline"]); } catch { }
                         break;
                     }
                 }
+            }
+            catch { }
 
-                // BatteryCycleCount
+            try
+            {
                 using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT * FROM BatteryCycleCount"))
                 {
                     foreach (ManagementObject obj in searcher.Get())
@@ -148,7 +169,7 @@ namespace OptiAssist.Addons.PCAssist.Core
                         if (obj["CycleCount"] != null)
                         {
                             int cycles = 0;
-                            if (int.TryParse(obj["CycleCount"].ToString(), out cycles))
+                            if (int.TryParse(obj["CycleCount"].ToString(), out cycles) && cycles > 0)
                             {
                                 report.CycleCount = cycles;
                             }
@@ -208,7 +229,10 @@ namespace OptiAssist.Addons.PCAssist.Core
                 catch { }
             }
 
-            report.HasBattery = foundWmiBattery && (report.DesignCapacityMwh > 0 || report.ChargePercent > 0 || IsMobileFormFactor());
+            bool foundAnyBattery = foundWmiBattery || (hasApiPower && !apiSaysNoBattery && (powerStatus.BatteryLifePercent <= 100 || (powerStatus.BatteryFlag & 128) == 0));
+            report.HasBattery = (foundAnyBattery && (report.DesignCapacityMwh > 0 || report.ChargePercent > 0 || foundWmiBattery)) || 
+                                (IsMobileFormFactor() && hasApiPower && !apiSaysNoBattery);
+
             if (!report.HasBattery)
             {
                 report.Grade = BatteryHealthGrade.DesktopNoBattery;

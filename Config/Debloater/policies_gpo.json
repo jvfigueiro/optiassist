@@ -1,0 +1,410 @@
+{
+  "version": "2.0.F3",
+  "category": "policies_gpo",
+  "tweaks": [
+    {
+      "id": "dll-debloat-consumer-features",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_ConsumerFeatures_Title",
+      "titleFallback": "Disable Consumer Features & Store Suggestions (CloudContent.admx)",
+      "descKey": "Debloat_ConsumerFeatures_Desc",
+      "descFallback": "Prevents automatic installation of sponsored apps via CloudContent policies and disables ContentDeliveryManager suggestions for active and default users.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent", "name": "DisableWindowsConsumerFeatures", "equals": "1" },
+        { "type": "registry", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SilentInstalledAppsEnabled", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent", "name": "DisableWindowsConsumerFeatures", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent", "name": "DisableCloudOptimizedContent", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent", "name": "DisableConsumerAccountStateContent", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent", "name": "DisableSoftLanding", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SilentInstalledAppsEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "PreInstalledAppsEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "OemPreInstalledAppsEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "ContentDeliveryAllowed", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SoftLandingEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContentEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SystemPaneSuggestionsEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-telemetry",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_Telemetry_Title",
+      "titleFallback": "Disable Windows Telemetry & Error Reporting (ErrorReporting.admx)",
+      "descKey": "Debloat_Telemetry_Desc",
+      "descFallback": "Sets edition-aware AllowTelemetry (0 on Enterprise/IoT, 1 on Pro/Home), disables Advertising ID, feedback notifications, and Windows Error Reporting (Disabled=1).",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection", "name": "AllowTelemetry", "editionAwareTelemetry": true },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting", "name": "Disabled", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection", "name": "AllowTelemetry", "kind": "DWord", "editionAwareTelemetry": true },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection", "name": "DoNotShowFeedbackNotifications", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting", "name": "Disabled", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting", "name": "LoggingDisabled", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AdvertisingInfo", "name": "DisabledByGroupPolicy", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo", "name": "Enabled", "kind": "DWord", "value": "0", "includeDefaultUser": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-activity-history",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_ActivityHistory_Title",
+      "titleFallback": "Disable Activity History & Cloud Timeline Sync",
+      "descKey": "Debloat_ActivityHistory_Desc",
+      "descFallback": "Sets EnableActivityFeed=0, PublishUserActivities=0, and UploadUserActivities=0 under Policies\\Microsoft\\Windows\\System.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableActivityFeed", "equals": "0" },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "PublishUserActivities", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableActivityFeed", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "PublishUserActivities", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "UploadUserActivities", "kind": "DWord", "value": "0" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-bg-apps",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_BgApps_Title",
+      "titleFallback": "Force Deny UWP Background Apps (AppPrivacy.admx)",
+      "descKey": "Debloat_BgApps_Desc",
+      "descFallback": "Sets AppPrivacy\\LetAppsRunInBackground=2 (Force Deny) to stop idle UWP apps from waking CPU/RAM in the background.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsRunInBackground", "equals": "2" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsRunInBackground", "kind": "DWord", "value": "2" },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications", "name": "GlobalUserDisabled", "kind": "DWord", "value": "1", "includeDefaultUser": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-widgets",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_Widgets_Title",
+      "titleFallback": "Disable Taskbar Widgets & News and Interests (NewsAndInterests.admx)",
+      "descKey": "Debloat_Widgets_Desc",
+      "descFallback": "Applies Dsh\\AllowNewsAndInterests=0, DisableWidgetsBoard=1, and removes WebExperience packages to free RAM.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 19041,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh", "name": "AllowNewsAndInterests", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh", "name": "AllowNewsAndInterests", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh", "name": "DisableWidgetsBoard", "kind": "DWord", "value": "1", "minBuild": 22000 },
+        { "type": "appx", "pattern": "*WebExperience*", "allUsers": true, "stopProcesses": "Widgets,WidgetService" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-windows-ai",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_WindowsAI_Title",
+      "titleFallback": "Disable Windows AI, Recall Snapshots, Click to Do & Copilot",
+      "descKey": "Debloat_WindowsAI_Desc",
+      "descFallback": "Blocks Recall (DisableAIDataAnalysis=1, AllowRecallEnablement=0), Click to Do, Copilot, and merges 'aicomponents' into SettingsPageVisibility non-destructively.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 19041,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI", "name": "DisableAIDataAnalysis", "equals": "1" },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot", "name": "TurnOffWindowsCopilot", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI", "name": "DisableAIDataAnalysis", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI", "name": "AllowRecallEnablement", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI", "name": "DisableClickToDo", "kind": "DWord", "value": "1", "minBuild": 26100 },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI", "name": "DisableSettingsAgent", "kind": "DWord", "value": "1", "minBuild": 26100 },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot", "name": "TurnOffWindowsCopilot", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Policies\\Microsoft\\Windows\\WindowsCopilot", "name": "TurnOffWindowsCopilot", "kind": "DWord", "value": "1", "includeDefaultUser": true },
+        { "type": "registry", "operation": "mergeHideList", "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer", "name": "SettingsPageVisibility", "kind": "String", "value": "aicomponents" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-bing-search",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_BingSearch_Title",
+      "titleFallback": "Disable Bing Web Search, Search Highlights & Cortana (Search.admx)",
+      "descKey": "Debloat_BingSearch_Desc",
+      "descFallback": "Applies DisableWebSearch=1, AllowCortana=0, EnableDynamicContentInWSB=0, and DisableSearchBoxSuggestions=1 for fast local-only Start Menu search.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search", "name": "DisableWebSearch", "equals": "1" },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search", "name": "EnableDynamicContentInWSB", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search", "name": "DisableWebSearch", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search", "name": "AllowCortana", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search", "name": "EnableDynamicContentInWSB", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Policies\\Microsoft\\Windows\\Explorer", "name": "DisableSearchBoxSuggestions", "kind": "DWord", "value": "1", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Search", "name": "BingSearchEnabled", "kind": "DWord", "value": "0", "includeDefaultUser": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pol-delivery-optimization",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_PolDeliveryOpt_Title",
+      "titleFallback": "Disable Delivery Optimization P2P Uploads (DeliveryOptimization.admx)",
+      "descKey": "Debloat_PolDeliveryOpt_Desc",
+      "descFallback": "Sets DODownloadMode=0 (HTTP only, no peer-to-peer uploads) to avoid background bandwidth spikes while gaming or on metered connections.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization", "name": "DODownloadMode", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization", "name": "DODownloadMode", "kind": "DWord", "value": "0" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pol-location-maps-homegroup",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_PolLocMapsHome_Title",
+      "titleFallback": "Disable Location Provider, Offline Maps Auto-Update & HomeGroup",
+      "descKey": "Debloat_PolLocMapsHome_Desc",
+      "descFallback": "Applies LocationProviderAdm.admx (DisableWindowsLocationProvider=1 on desktops), WinMaps.admx (AutoDownloadAndUpdateMapData=0), and legacy HomeGroup policy.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "ask",
+        "laptopGaming": "ask",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Maps", "name": "AutoDownloadAndUpdateMapData", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Maps", "name": "AutoDownloadAndUpdateMapData", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\LocationAndSensors", "name": "DisableWindowsLocationProvider", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\HomeGroup", "name": "DisableHomeGroup", "kind": "DWord", "value": "1" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pol-store-auto-download",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_PolStoreAutoDownload_Title",
+      "titleFallback": "Disable Microsoft Store Automatic App Updates (WindowsStore.admx)",
+      "descKey": "Debloat_PolStoreAutoDownload_Desc",
+      "descFallback": "Sets WindowsStore\\AutoDownload=2 to stop background Store downloads. Pre-selected (with Dry-Run warning) in Gaming, Hybrid, and Ultraportable; opt-in in others.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "ask",
+        "laptop": "ask",
+        "laptopGaming": "ask",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\WindowsStore", "name": "AutoDownload", "equals": "2" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\WindowsStore", "name": "AutoDownload", "kind": "DWord", "value": "2" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Microsoft Store apps (including Xbox, Gaming Services, and codecs) will require manual updates via Store."
+      ],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-wpbt",
+      "category": "policies_gpo",
+      "titleKey": "Debloat_Wpbt_Title",
+      "titleFallback": "Disable WPBT Execution (BIOS/OEM Bloatware) [Medium Risk]",
+      "descKey": "Debloat_Wpbt_Desc",
+      "descFallback": "Sets DisableWpbtExecution=1 to block OEM binaries injected via ACPI WPBT table at boot. Caution on OEM laptops using legitimate firmware tools.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "ask",
+        "laptopGaming": "ask",
+        "ultraportable": "ask"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager", "name": "DisableWpbtExecution", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager", "name": "DisableWpbtExecution", "kind": "DWord", "value": "1" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Blocks firmware-injected OEM executables (WPBT) on next boot."
+      ],
+      "needsReboot": true
+    }
+  ]
+}

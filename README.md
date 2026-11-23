@@ -74,10 +74,15 @@ For architectural flowcharts and sequence lifecycles, refer to the [Architecture
 
 ## Technologies Used
 
-- **Language**: C# 7.3+ and XAML (WPF).
+- **Language**: C# 5 / .NET Framework 4.8 and XAML (WPF).
 - **Framework**: Microsoft .NET Framework 4.8.
 - **System Integrations**: Windows Management Instrumentation (WMI / CIM via `System.Management`), native Windows Registry (`Microsoft.Win32`), Windows Package Manager (`winget.exe`), Windows Task Scheduler 2.0 COM interface (`Schedule.Service`), Win32 Shell APIs (`Shell32.SHEmptyRecycleBin`, `User32.SendMessageTimeout`), and asynchronous PowerShell/CMD subprocesses.
-- **External Dependencies**: **Zero**. JSON parsing, i18n dictionaries, COM shortcut creation, and logging pipelines are implemented entirely with native .NET Framework BCL assemblies and Windows platform APIs.
+- **Third-Party Components**:
+  - `LibreHardwareMonitorLib` (`0.9.6.0`, **MPL-2.0**) and its transitive dependencies (`MPL-2.0`, `Apache-2.0`, `MIT`) for Hardware Monitor sensor telemetry.
+  - `BleachBit` CleanerML XML definitions (**GPL-3.0-or-later**) for System Cleaner rules.
+  - `pci.ids` curated hardware ID database (**BSD-3-Clause**) for Platform Diagnostics & OptiBoost.
+  - `Fluent UI System Icons` (**MIT**) for UI vector icons.
+  - Complete licensing inventory, copyright notices, and source-code provenance are documented in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), [SOURCE-INFO.md](SOURCE-INFO.md), and [THIRD-PARTY/](THIRD-PARTY/).
 
 ---
 
@@ -141,9 +146,9 @@ This tool is intended strictly for IT professionals, system administrators, and 
 
 ## License
 
-OptiAssist is free and open-source software licensed under the **GNU General Public License v3.0 (GNU GPLv3)**. You are free to run, study, share, and modify the application under the terms of this license.
+OptiAssist is free and open-source software licensed under the **GNU General Public License v3.0 or later (`SPDX-License-Identifier: GPL-3.0-or-later`)**. You are free to run, study, share, and modify the application under the terms of this license.
 
-For complete license terms, refer to the [LICENSE](LICENSE) file or access the built-in License view within the application (*Settings > License*).
+For complete license terms, refer to [LICENSE](LICENSE), [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), and [SOURCE-INFO.md](SOURCE-INFO.md), or access the built-in License view within the application (*About > License*).
 
 ---
 

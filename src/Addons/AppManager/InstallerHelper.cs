@@ -262,10 +262,10 @@ namespace OptiAssist.Addons.AppManager
         {
             List<InstallAppItem> list = new List<InstallAppItem>();
 
-            // Default application catalog entries
-            list.Add(new InstallAppItem("Google Chrome", true, "Local", "Google.Chrome", "/silent /install"));
-            list.Add(new InstallAppItem("7-Zip", true, "Local", "7zip.7zip", "/S"));
-            list.Add(new InstallAppItem("Microsoft Office", true, "Local", "Microsoft.Office", "/configure configuration.xml"));
+            // Default application catalog entries (Essentials pre-selected via Winget: 7-Zip, Google Chrome, Microsoft Office)
+            list.Add(new InstallAppItem("7-Zip", true, "Winget", "7zip.7zip", "/S"));
+            list.Add(new InstallAppItem("Google Chrome", true, "Winget", "Google.Chrome", "/silent /install"));
+            list.Add(new InstallAppItem("Microsoft Office", true, "Winget", "Microsoft.Office", "/configure configuration.xml"));
             list.Add(new InstallAppItem("WinRAR", false, "Local", "RARLab.WinRAR", "/s"));
             list.Add(new InstallAppItem("NanaZip", false, "Winget", "M2Team.NanaZip", ""));
             list.Add(new InstallAppItem("VLC Media Player", false, "Local", "VideoLAN.VLC", "/S"));
@@ -986,8 +986,18 @@ namespace OptiAssist.Addons.AppManager
         public string Name { get; set; }
         public string Id { get; set; }
         public string Version { get; set; }
+        public string AvailableVersion { get; set; }
         public string Source { get; set; }
+        public string Publisher { get; set; }
+        public string InstallDate { get; set; }
+        public string InstallLocation { get; set; }
         public long SizeKb { get; set; }
+
+        public bool HasUpdate
+        {
+            get { return !string.IsNullOrWhiteSpace(AvailableVersion); }
+        }
+
         public string DiskSizeDisplay
         {
             get
@@ -999,21 +1009,51 @@ namespace OptiAssist.Addons.AppManager
             }
         }
 
-        public WingetInstalledAppItem(string name, string id, string version, string source, long sizeKb)
+        public WingetInstalledAppItem(string name, string id, string version, string availableVersion, string source, long sizeKb, string publisher, string installDate, string installLocation)
         {
             Name = name ?? "";
             Id = id ?? "";
             Version = version ?? "";
+            AvailableVersion = availableVersion ?? "";
             Source = source ?? "";
             SizeKb = sizeKb;
+            Publisher = publisher ?? "";
+            InstallDate = installDate ?? "";
+            InstallLocation = installLocation ?? "";
         }
     }
 
     public static class WingetInstalledHelper
     {
-        private static Dictionary<string, long> BuildRegistrySizeMap()
+        private class RegistryAppMeta
         {
-            var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            public long SizeKb;
+            public string Publisher;
+            public string InstallDate;
+            public string InstallLocation;
+        }
+
+        private static string FormatRegistryInstallDate(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "";
+            string s = raw.Trim();
+            if (s.Length == 8)
+            {
+                int y, m, d;
+                if (int.TryParse(s.Substring(0, 4), out y) &&
+                    int.TryParse(s.Substring(4, 2), out m) &&
+                    int.TryParse(s.Substring(6, 2), out d) &&
+                    y >= 1995 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31)
+                {
+                    return string.Format("{0:00}/{1:00}/{2:0000}", d, m, y);
+                }
+            }
+            return s;
+        }
+
+        private static Dictionary<string, RegistryAppMeta> BuildRegistryMetaMap()
+        {
+            var map = new Dictionary<string, RegistryAppMeta>(StringComparer.OrdinalIgnoreCase);
             RegistryKey[] roots = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
             string[] subPaths = new string[]
             {
@@ -1038,14 +1078,55 @@ namespace OptiAssist.Addons.AppManager
                                     {
                                         if (appKey == null) continue;
                                         string dispName = appKey.GetValue("DisplayName") as string;
+                                        if (string.IsNullOrWhiteSpace(dispName)) continue;
+                                        string cleanName = dispName.Trim();
+
+                                        long kb = 0;
                                         object estSize = appKey.GetValue("EstimatedSize");
-                                        if (!string.IsNullOrWhiteSpace(dispName) && estSize != null)
+                                        if (estSize != null)
                                         {
-                                            long kb = Convert.ToInt64(estSize);
-                                            if (kb > 0 && !map.ContainsKey(dispName.Trim()))
+                                            try { kb = Convert.ToInt64(estSize); } catch { }
+                                        }
+
+                                        string pub = (appKey.GetValue("Publisher") as string ?? "").Trim();
+                                        string instDate = FormatRegistryInstallDate(appKey.GetValue("InstallDate") as string);
+                                        string instLoc = (appKey.GetValue("InstallLocation") as string ?? "").Trim().Trim('"');
+                                        if (string.IsNullOrEmpty(instLoc))
+                                        {
+                                            string dispIcon = (appKey.GetValue("DisplayIcon") as string ?? "").Trim().Trim('"');
+                                            if (!string.IsNullOrEmpty(dispIcon))
                                             {
-                                                map[dispName.Trim()] = kb;
+                                                int commaIdx = dispIcon.IndexOf(',');
+                                                if (commaIdx > 0) dispIcon = dispIcon.Substring(0, commaIdx).Trim().Trim('"');
+                                                try
+                                                {
+                                                    if (dispIcon.Length > 3 && dispIcon[1] == ':')
+                                                    {
+                                                        string dir = Path.GetDirectoryName(dispIcon);
+                                                        if (!string.IsNullOrEmpty(dir)) instLoc = dir;
+                                                    }
+                                                }
+                                                catch { }
                                             }
+                                        }
+
+                                        RegistryAppMeta existing;
+                                        if (!map.TryGetValue(cleanName, out existing))
+                                        {
+                                            map[cleanName] = new RegistryAppMeta()
+                                            {
+                                                SizeKb = kb,
+                                                Publisher = pub,
+                                                InstallDate = instDate,
+                                                InstallLocation = instLoc
+                                            };
+                                        }
+                                        else
+                                        {
+                                            if (existing.SizeKb <= 0 && kb > 0) existing.SizeKb = kb;
+                                            if (string.IsNullOrEmpty(existing.Publisher) && !string.IsNullOrEmpty(pub)) existing.Publisher = pub;
+                                            if (string.IsNullOrEmpty(existing.InstallDate) && !string.IsNullOrEmpty(instDate)) existing.InstallDate = instDate;
+                                            if (string.IsNullOrEmpty(existing.InstallLocation) && !string.IsNullOrEmpty(instLoc)) existing.InstallLocation = instLoc;
                                         }
                                     }
                                 }
@@ -1059,11 +1140,11 @@ namespace OptiAssist.Addons.AppManager
             return map;
         }
 
-        private static long LookupSizeKb(string name, Dictionary<string, long> map)
+        private static RegistryAppMeta LookupMeta(string name, Dictionary<string, RegistryAppMeta> map)
         {
-            if (string.IsNullOrWhiteSpace(name) || map == null || map.Count == 0) return 0;
+            if (string.IsNullOrWhiteSpace(name) || map == null || map.Count == 0) return null;
             string clean = name.Trim();
-            long exact;
+            RegistryAppMeta exact;
             if (map.TryGetValue(clean, out exact)) return exact;
 
             foreach (var kv in map)
@@ -1074,7 +1155,7 @@ namespace OptiAssist.Addons.AppManager
                     return kv.Value;
                 }
             }
-            return 0;
+            return null;
         }
 
         public static List<WingetInstalledAppItem> GetInstalledApps(Action<string> logger)
@@ -1082,7 +1163,7 @@ namespace OptiAssist.Addons.AppManager
             var result = new List<WingetInstalledAppItem>();
             try
             {
-                var sizeMap = BuildRegistrySizeMap();
+                var metaMap = BuildRegistryMetaMap();
                 ProcessStartInfo psi = new ProcessStartInfo("winget", "list --accept-source-agreements")
                 {
                     UseShellExecute = false,
@@ -1141,14 +1222,26 @@ namespace OptiAssist.Addons.AppManager
                                 version = line.Substring(verStart, verEnd - verStart).Trim();
                             }
 
+                            string available = "";
+                            if (availStart > 0 && availStart < line.Length)
+                            {
+                                int availEnd = (srcStart > availStart && srcStart < line.Length) ? srcStart : line.Length;
+                                available = line.Substring(availStart, availEnd - availStart).Trim();
+                                if (available == "winget" || available == "msstore") available = "";
+                            }
+
                             string source = "";
                             if (srcStart > 0 && srcStart < line.Length)
                             {
                                 source = line.Substring(srcStart).Trim();
                             }
 
-                            long kb = LookupSizeKb(name, sizeMap);
-                            result.Add(new WingetInstalledAppItem(name, id, version, source, kb));
+                            RegistryAppMeta meta = LookupMeta(name, metaMap);
+                            long kb = (meta != null) ? meta.SizeKb : 0;
+                            string pub = (meta != null) ? meta.Publisher : "";
+                            string instDate = (meta != null) ? meta.InstallDate : "";
+                            string instLoc = (meta != null) ? meta.InstallLocation : "";
+                            result.Add(new WingetInstalledAppItem(name, id, version, available, source, kb, pub, instDate, instLoc));
                         }
                     }
                 }
@@ -1160,6 +1253,45 @@ namespace OptiAssist.Addons.AppManager
                 if (logger != null) logger("[APP MANAGER] winget list error: " + ex.Message);
             }
             return result;
+        }
+
+        public static bool UpgradePackage(string id, string name, Action<string> logger)
+        {
+            try
+            {
+                string args = !string.IsNullOrWhiteSpace(id) && !id.Contains("…") && !id.EndsWith("...")
+                    ? string.Format("upgrade --id \"{0}\" --exact --silent --accept-package-agreements --accept-source-agreements", id)
+                    : string.Format("upgrade --name \"{0}\" --silent --accept-package-agreements --accept-source-agreements", name);
+
+                if (logger != null) logger("[WINGET UPGRADE] winget " + args);
+
+                ProcessStartInfo psi = new ProcessStartInfo("winget", args)
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                };
+
+                using (Process p = Process.Start(psi))
+                {
+                    string stdout = p.StandardOutput.ReadToEnd();
+                    string stderr = p.StandardError.ReadToEnd();
+                    p.WaitForExit(300000);
+                    if (logger != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(stdout)) logger(stdout.Trim());
+                        if (!string.IsNullOrWhiteSpace(stderr)) logger("[STDERR] " + stderr.Trim());
+                    }
+                    return p.ExitCode == 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (logger != null) logger("[WINGET UPGRADE ERROR] " + ex.Message);
+                return false;
+            }
         }
 
         public static bool UninstallPackage(string id, string name, Action<string> logger)

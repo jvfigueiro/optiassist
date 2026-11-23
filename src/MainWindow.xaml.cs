@@ -13,6 +13,8 @@ using System.Text;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using OptiAssist.Platform;
+using OptiAssist.Debloater;
 
 namespace OptiAssist
 {
@@ -22,12 +24,14 @@ namespace OptiAssist
         private HardwareSummary _hardware;
         private ObservableCollection<AddonEntry> _addons;
         private List<CustomShortcutItem> _customShortcuts = new List<CustomShortcutItem>();
+        private WindowsToolsTabsController _windowsToolsController;
         private bool _isRefreshingHardwareBg = false;
         private bool _isLoadingSettings = false;
         private System.Windows.Threading.DispatcherTimer _sidebarHoverTimer;
 
         public MainWindow()
         {
+            FluentIcons.RegisterGlobalVisualTreeHooks();
             InitializeComponent();
             Loaded += MainWindow_Loaded;
             StateChanged += MainWindow_StateChanged;
@@ -109,6 +113,7 @@ namespace OptiAssist
             }
 
             LoadAppLogo();
+            EnsureRequiredFolders();
             UpdateDeploymentButtonsUI();
             ReloadAddonsList();
             _customShortcuts = CustomShortcutsHelper.Load();
@@ -118,6 +123,28 @@ namespace OptiAssist
             {
                 RefreshHardwareAsync();
             }
+
+            FluentIcons.UpgradeVisualTree(this);
+        }
+
+        private void EnsureRequiredFolders()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string configDir = Path.Combine(baseDir, "Config");
+                if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
+
+                // In Portable Mode (not installed on PC), automatically ensure Installers & Maintenance exist
+                if (IsPortableMode)
+                {
+                    string instDir = Path.Combine(baseDir, "Installers");
+                    string maintDir = Path.Combine(baseDir, "Maintenance");
+                    if (!Directory.Exists(instDir)) Directory.CreateDirectory(instDir);
+                    if (!Directory.Exists(maintDir)) Directory.CreateDirectory(maintDir);
+                }
+            }
+            catch { }
         }
 
         private void UpdateStatusBadge(TextBlock tb, string value)
@@ -230,10 +257,29 @@ namespace OptiAssist
             }
         }
 
+        private RadioButton _lastActiveNavButton;
+
         private void NavButton_Click(object sender, RoutedEventArgs e)
         {
             RadioButton rb = sender as RadioButton;
             if (rb == null) return;
+
+            // Clicking Terminal opens the native Windows Terminal / PowerShell / cmd log viewer without leaving the current tab
+            if (rb == rbNavTerminal)
+            {
+                OpenExternalLogWindow();
+                if (_lastActiveNavButton != null && _lastActiveNavButton != rbNavTerminal)
+                {
+                    _lastActiveNavButton.IsChecked = true;
+                }
+                else if (rbNavDashboard != null)
+                {
+                    rbNavDashboard.IsChecked = true;
+                }
+                return;
+            }
+
+            _lastActiveNavButton = rb;
 
             // Hide all panels
             scrollViewerContent.Visibility = Visibility.Collapsed;
@@ -258,14 +304,6 @@ namespace OptiAssist
                 scrollViewerContent.Visibility = Visibility.Visible;
                 panelShortcuts.Visibility = Visibility.Visible;
             }
-            else if (rb == rbNavTerminal)
-            {
-                panelTerminal.Visibility = Visibility.Visible;
-                if (_settings != null && _settings.OpenExternalLogsByDefault)
-                {
-                    OpenExternalLogWindow();
-                }
-            }
             else if (rb == rbNavSettings)
             {
                 scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
@@ -283,7 +321,8 @@ namespace OptiAssist
                 AddonEntry entry = (AddonEntry)rb.Tag;
                 if (string.Equals(entry.Id, "system-cleaner", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(entry.Id, "toolbox", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(entry.Id, "hardware-monitor", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(entry.Id, "hardware-monitor", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(entry.Id, "app-manager", StringComparison.OrdinalIgnoreCase))
                 {
                     scrollViewerContent.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
                 }
@@ -316,6 +355,7 @@ namespace OptiAssist
                             {
                                 panelAddonHost.Children.Clear();
                                 panelAddonHost.Children.Add(view);
+                                FluentIcons.UpgradeVisualTree(view);
                             }
                         }
                         finally
@@ -333,6 +373,7 @@ namespace OptiAssist
                     if (view != null)
                     {
                         panelAddonHost.Children.Add(view);
+                        FluentIcons.UpgradeVisualTree(view);
                     }
                 }
             }
@@ -341,24 +382,95 @@ namespace OptiAssist
 
         #region CONSOLE & TERMINAL LOGGING
         private LogWindow _externalLogWindow;
+        private Process _externalTerminalProc;
+        private string _sessionLogFilePath;
+        private readonly object _logFileLock = new object();
+
+        private string EnsureSessionLogFile()
+        {
+            lock (_logFileLock)
+            {
+                if (string.IsNullOrEmpty(_sessionLogFilePath))
+                {
+                    int pid = 0;
+                    try { pid = Process.GetCurrentProcess().Id; } catch { }
+                    _sessionLogFilePath = Path.Combine(Path.GetTempPath(), string.Format("OptiAssist_Terminal_{0}.log", pid));
+                }
+                if (!File.Exists(_sessionLogFilePath))
+                {
+                    try
+                    {
+                        string existing = (txtConsoleLog != null && !string.IsNullOrEmpty(txtConsoleLog.Text))
+                            ? txtConsoleLog.Text
+                            : string.Format("[{0:HH:mm:ss}] OptiAssist Terminal Session Started{1}", DateTime.Now, Environment.NewLine);
+                        File.WriteAllText(_sessionLogFilePath, existing, Encoding.UTF8);
+                    }
+                    catch { }
+                }
+                return _sessionLogFilePath;
+            }
+        }
 
         public void OpenExternalLogWindow()
         {
-            if (_externalLogWindow == null)
+            try
             {
-                _externalLogWindow = new LogWindow(this);
-                _externalLogWindow.SetLogText(txtConsoleLog != null ? txtConsoleLog.Text : "");
-                _externalLogWindow.ApplyTheme(_isDarkMode);
-                _externalLogWindow.Show();
-            }
-            else
-            {
-                if (_externalLogWindow.WindowState == WindowState.Minimized)
+                string logPath = EnsureSessionLogFile();
+
+                // Write a dedicated .ps1 script file so wt.exe arguments never contain semicolons
+                // (Windows Terminal treats ';' on its command line as a new-tab delimiter).
+                int pid = 0;
+                try { pid = Process.GetCurrentProcess().Id; } catch { }
+                string scriptPath = Path.Combine(Path.GetTempPath(), string.Format("OptiAssist_Terminal_{0}.ps1", pid));
+                string escapedLog = logPath.Replace("'", "''");
+                StringBuilder ps = new StringBuilder();
+                ps.AppendLine("$Host.UI.RawUI.WindowTitle = 'OptiAssist Terminal'");
+                ps.AppendLine("Write-Host '=== OptiAssist Live Terminal ===' -ForegroundColor Cyan");
+                ps.AppendLine(string.Format("Write-Host 'Log: {0}' -ForegroundColor DarkGray", escapedLog));
+                ps.AppendLine("Write-Host ''");
+                ps.AppendLine(string.Format("Get-Content -LiteralPath '{0}' -Wait -Encoding UTF8", escapedLog));
+                File.WriteAllText(scriptPath, ps.ToString(), new UTF8Encoding(true));
+
+                string wtPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    @"Microsoft\WindowsApps\wt.exe");
+
+                if (File.Exists(wtPath))
                 {
-                    _externalLogWindow.WindowState = WindowState.Normal;
+                    ProcessStartInfo wtPsi = new ProcessStartInfo()
+                    {
+                        FileName = wtPath,
+                        Arguments = string.Format("--title \"OptiAssist Terminal\" powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"{0}\"", scriptPath),
+                        UseShellExecute = true
+                    };
+                    _externalTerminalProc = Process.Start(wtPsi);
+                    return;
                 }
-                _externalLogWindow.ApplyTheme(_isDarkMode);
-                _externalLogWindow.Activate();
+
+                try
+                {
+                    ProcessStartInfo psPsi = new ProcessStartInfo()
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = string.Format("-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"{0}\"", scriptPath),
+                        UseShellExecute = true
+                    };
+                    _externalTerminalProc = Process.Start(psPsi);
+                    return;
+                }
+                catch { }
+
+                ProcessStartInfo cmdPsi = new ProcessStartInfo()
+                {
+                    FileName = "cmd.exe",
+                    Arguments = string.Format("/k title OptiAssist Terminal & type \"{0}\"", logPath),
+                    UseShellExecute = true
+                };
+                _externalTerminalProc = Process.Start(cmdPsi);
+            }
+            catch (Exception ex)
+            {
+                OptiDialog.Show("Could not open Windows Terminal: " + ex.Message, "OptiAssist - Terminal", MessageBoxButton.OK, MessageBoxImage.Warning, this);
             }
         }
 
@@ -388,6 +500,17 @@ namespace OptiAssist
             {
                 txtConsoleLog.Clear();
             }
+            try
+            {
+                lock (_logFileLock)
+                {
+                    if (!string.IsNullOrEmpty(_sessionLogFilePath) && File.Exists(_sessionLogFilePath))
+                    {
+                        File.WriteAllText(_sessionLogFilePath, "", Encoding.UTF8);
+                    }
+                }
+            }
+            catch { }
         }
 
         private void BtnPopoutLog_Click(object sender, RoutedEventArgs e)
@@ -403,9 +526,24 @@ namespace OptiAssist
                 return;
             }
 
-            txtConsoleLog.AppendText(message + Environment.NewLine);
-            txtConsoleLog.CaretIndex = txtConsoleLog.Text.Length;
-            txtConsoleLog.ScrollToEnd();
+            if (txtConsoleLog != null)
+            {
+                txtConsoleLog.AppendText(message + Environment.NewLine);
+                txtConsoleLog.CaretIndex = txtConsoleLog.Text.Length;
+                txtConsoleLog.ScrollToEnd();
+            }
+
+            try
+            {
+                string logPath = EnsureSessionLogFile();
+                lock (_logFileLock)
+                {
+                    File.AppendAllText(logPath, message + Environment.NewLine, Encoding.UTF8);
+                }
+            }
+            catch { }
+
+            try { Console.WriteLine(message); } catch { }
 
             if (_externalLogWindow != null)
             {
@@ -427,7 +565,7 @@ namespace OptiAssist
             if (!string.IsNullOrEmpty(txtConsoleLog.Text))
             {
                 Clipboard.SetText(txtConsoleLog.Text);
-                MessageBox.Show(LocalizationHelper.Get("Msg_LogCopied", "Console log copied to clipboard!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(LocalizationHelper.Get("Msg_LogCopied", "Console log copied to clipboard!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -435,7 +573,7 @@ namespace OptiAssist
         {
             if (string.IsNullOrEmpty(txtConsoleLog.Text))
             {
-                MessageBox.Show(LocalizationHelper.Get("Msg_LogEmpty", "The terminal log is currently empty."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(LocalizationHelper.Get("Msg_LogEmpty", "The terminal log is currently empty."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -447,13 +585,13 @@ namespace OptiAssist
                 if (sfd.ShowDialog() == true)
                 {
                     System.IO.File.WriteAllText(sfd.FileName, txtConsoleLog.Text, System.Text.Encoding.UTF8);
-                    MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LogSaved", "Log successfully saved to:\n{0}"), sfd.FileName), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_LogSaved", "Log successfully saved to:\n{0}"), sfd.FileName), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                     Log("[SAVED] Log exported to: " + sfd.FileName);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LogSaveError", "Failed to save log: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_LogSaveError", "Failed to save log: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         #endregion
@@ -575,6 +713,10 @@ namespace OptiAssist
             lblHeaderDevice.Text = LocalizationHelper.Get("Status_Detecting", "Detecting...");
             lblHeaderCpu.Text = LocalizationHelper.Get("Status_Detecting", "Detecting processor...");
             lblHeaderRam.Text = LocalizationHelper.Get("Status_Detecting", "Detecting RAM...");
+            if (txtHealthHeadline != null)
+            {
+                txtHealthHeadline.Text = LocalizationHelper.Get("Dashboard_Analyzing", "Analyzing system health...");
+            }
 
             lblOsTitle.Text = LocalizationHelper.Get("Status_Detecting", "Querying system info and WMI...");
             if (lblOsInstallDate != null) lblOsInstallDate.Text = LocalizationHelper.Get("Label_OsInstallDate", "Install Date: ") + LocalizationHelper.Get("Status_Detecting", "Detecting...");
@@ -804,6 +946,488 @@ namespace OptiAssist
             }
 
             RenderRecommendations(info);
+            UpdateDashboardHealthHero(info);
+        }
+
+        private bool _lastPendingReboot = false;
+        private string _heroAttentionTarget = "";
+
+        private void UpdateDashboardHealthHero(HardwareSummary info)
+        {
+            if (cardHealthHero == null) return;
+
+            try
+            {
+                bool isPt = (LocalizationHelper.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+
+                // 1. System Disk (C:) space
+                double freeGb = 0;
+                double totalGb = 0;
+                double freePct = 100;
+                try
+                {
+                    string sysDrive = Environment.GetEnvironmentVariable("SystemDrive");
+                    if (string.IsNullOrEmpty(sysDrive)) sysDrive = "C:";
+                    DriveInfo di = new DriveInfo(sysDrive.Substring(0, 1));
+                    if (di.IsReady)
+                    {
+                        totalGb = di.TotalSize / (1024.0 * 1024.0 * 1024.0);
+                        freeGb = di.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0);
+                        freePct = totalGb > 0 ? (freeGb / totalGb) * 100.0 : 100.0;
+                    }
+                }
+                catch { }
+
+                // 2. Protection (Defender / Security)
+                bool isProtected = true;
+                try
+                {
+                    using (var rtp = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows Defender\Real-Time Protection", false))
+                    {
+                        if (rtp != null)
+                        {
+                            object dis = rtp.GetValue("DisableRealtimeMonitoring");
+                            if (dis != null && Convert.ToInt32(dis) == 1)
+                            {
+                                isProtected = false;
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // 4. Pending Reboot
+                bool pendingReboot = DetectPendingReboot();
+                _lastPendingReboot = pendingReboot;
+
+                // 5. Compute Health Score (0-100) & Collect Unified Hero Attention/Recommendation Strips
+                int score = 100;
+                var heroItems = new System.Collections.Generic.List<HardwareRecommendation>();
+
+                if (!isProtected)
+                {
+                    score -= 20;
+                    heroItems.Add(new HardwareRecommendation()
+                    {
+                        Icon = "⚠️",
+                        Title = isPt ? "A proteção do Windows Defender requer atenção." : "Windows Defender protection requires attention.",
+                        ActionButtonText = isPt ? "Ver" : "View",
+                        ActionTag = "hero_protection",
+                        Level = RecommendationLevel.Warning
+                    });
+                }
+                if (totalGb > 0 && freePct < 10.0)
+                {
+                    score -= 18;
+                    heroItems.Add(new HardwareRecommendation()
+                    {
+                        Icon = "⚠️",
+                        Title = isPt ? "Espaço crítico no disco do sistema (menos de 10% livre)." : "Critical free space on system drive (under 10% free).",
+                        ActionButtonText = isPt ? "Limpar" : "Clean",
+                        ActionTag = "system_cleaner",
+                        Level = RecommendationLevel.Critical
+                    });
+                }
+                else if (totalGb > 0 && freePct < 18.0)
+                {
+                    score -= 8;
+                    heroItems.Add(new HardwareRecommendation()
+                    {
+                        Icon = "⚠️",
+                        Title = isPt ? "O disco do sistema está ficando cheio — recomenda-se limpeza." : "System drive is running low on space — cleanup recommended.",
+                        ActionButtonText = isPt ? "Limpar" : "Clean",
+                        ActionTag = "system_cleaner",
+                        Level = RecommendationLevel.Warning
+                    });
+                }
+                if (pendingReboot)
+                {
+                    score -= 6;
+                    heroItems.Add(new HardwareRecommendation()
+                    {
+                        Icon = "⚠️",
+                        Title = isPt ? "Há um reinício pendente do Windows para aplicar atualizações." : "A Windows reboot is pending to complete updates.",
+                        ActionButtonText = isPt ? "Ver" : "View",
+                        ActionTag = "hero_reboot",
+                        Level = RecommendationLevel.Warning
+                    });
+                }
+
+                // Merge HardwareSummary recommendations
+                if (info != null && info.Recommendations != null)
+                {
+                    for (int i = 0; i < info.Recommendations.Count; i++)
+                    {
+                        if (info.Recommendations[i] != null) heroItems.Add(info.Recommendations[i]);
+                    }
+                }
+
+                // Merge PlatformDiagnostic recommendations
+                try
+                {
+                    PlatformDiagnosticSnapshot diag = PlatformDiagnostic;
+                    if (diag != null && diag.Recommendations != null)
+                    {
+                        for (int i = 0; i < diag.Recommendations.Count; i++)
+                        {
+                            var rec = diag.Recommendations[i];
+                            if (rec == null) continue;
+                            if (rec.Severity == RecommendationSeverity.Critical) score -= 12;
+                            else if (rec.Severity == RecommendationSeverity.Warning) score -= 6;
+
+                            heroItems.Add(new HardwareRecommendation()
+                            {
+                                Icon = (rec.Category == "Profile") ? "✨" : ((rec.Category == "Win11") ? "🪟" : "⚠️"),
+                                Title = rec.Title,
+                                Description = rec.Description,
+                                ActionButtonText = string.IsNullOrEmpty(rec.ActionLabel) ? (isPt ? "Ver" : "View") : rec.ActionLabel,
+                                ActionTag = rec.ActionTag,
+                                Category = rec.Category,
+                                Level = (rec.Severity == RecommendationSeverity.Critical) ? RecommendationLevel.Critical
+                                      : ((rec.Severity == RecommendationSeverity.Warning) ? RecommendationLevel.Warning : RecommendationLevel.Info)
+                            });
+                        }
+                    }
+                }
+                catch { }
+
+                if (score < 20) score = 20;
+                if (score > 100) score = 100;
+
+                // Update Hero Ring & Texts
+                string ringHex = score >= 85 ? "#22C55E" : (score >= 65 ? "#F59E0B" : "#EF4444");
+                if (pathHealthArc != null)
+                {
+                    pathHealthArc.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(ringHex));
+                    pathHealthArc.Data = BuildHealthArcGeometry(score, 44.0, 44.0, 38.5);
+                }
+                if (txtHealthScore != null) txtHealthScore.Text = score.ToString() + "%";
+
+                int activeRecCount = 0;
+                for (int i = 0; i < heroItems.Count; i++)
+                {
+                    if (heroItems[i] == null) continue;
+                    string dk = (heroItems[i].ActionTag ?? "") + "|" + (heroItems[i].Title ?? "");
+                    if (!_dismissedRecommendations.Contains(dk)) activeRecCount++;
+                }
+
+                if (txtHealthHeadline != null)
+                {
+                    if (activeRecCount == 0)
+                    {
+                        txtHealthHeadline.Text = isPt
+                            ? "Nenhuma recomendação pendente para este equipamento"
+                            : "No pending recommendations for this system";
+                    }
+                    else if (activeRecCount == 1)
+                    {
+                        txtHealthHeadline.Text = isPt
+                            ? "1 recomendação de diagnóstico disponível"
+                            : "1 diagnostic recommendation available";
+                    }
+                    else
+                    {
+                        txtHealthHeadline.Text = string.Format(
+                            isPt ? "{0} recomendações de diagnóstico disponíveis" : "{0} diagnostic recommendations available",
+                            activeRecCount);
+                    }
+                }
+
+                // Render integrated recommendation strips inside Hero Card (same clean strip style + Dismiss button)
+                if (pnlHeroAttentionList != null)
+                {
+                    pnlHeroAttentionList.Children.Clear();
+                    int visibleCount = 0;
+
+                    for (int i = 0; i < heroItems.Count; i++)
+                    {
+                        HardwareRecommendation rec = heroItems[i];
+                        if (rec == null) continue;
+                        string dismissKey = (rec.ActionTag ?? "") + "|" + (rec.Title ?? "");
+                        if (_dismissedRecommendations.Contains(dismissKey)) continue;
+
+                        visibleCount++;
+                        Border strip = new Border()
+                        {
+                            BorderThickness = new Thickness(0, 1, 0, 0),
+                            Margin = new Thickness(0, 8, 0, 0),
+                            Padding = new Thickness(0, 10, 0, 0)
+                        };
+                        strip.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                        Grid g = new Grid();
+                        g.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+                        g.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+                        g.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+                        g.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+                        TextBlock tbIcon = new TextBlock()
+                        {
+                            Text = string.IsNullOrEmpty(rec.Icon) ? "⚠️" : rec.Icon,
+                            FontSize = 13,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Margin = new Thickness(0, 0, 8, 0)
+                        };
+                        Grid.SetColumn(tbIcon, 0);
+                        g.Children.Add(tbIcon);
+
+                        TextBlock tbMsg = new TextBlock()
+                        {
+                            Text = rec.Title ?? "",
+                            FontSize = 11.5,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            TextWrapping = TextWrapping.Wrap,
+                            ToolTip = string.IsNullOrEmpty(rec.Description) ? rec.Title : rec.Description
+                        };
+                        tbMsg.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                        Grid.SetColumn(tbMsg, 1);
+                        g.Children.Add(tbMsg);
+
+                        HardwareRecommendation capturedRec = rec;
+                        Button btnAct = new Button()
+                        {
+                            Content = string.IsNullOrEmpty(rec.ActionButtonText) ? (isPt ? "Ver" : "View") : rec.ActionButtonText,
+                            Height = 26,
+                            Padding = new Thickness(14, 0, 14, 0),
+                            FontSize = 11,
+                            Margin = new Thickness(10, 0, 6, 0),
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        btnAct.SetResourceReference(Button.StyleProperty, "BtnAccent");
+                        btnAct.Click += (s, e) =>
+                        {
+                            if (capturedRec.ActionTag == "hero_protection") TileProtection_Click(s, null);
+                            else if (capturedRec.ActionTag == "hero_reboot") TileReboot_Click(s, null);
+                            else ExecuteRecommendationAction(capturedRec.ActionTag, capturedRec);
+                        };
+                        Grid.SetColumn(btnAct, 2);
+                        g.Children.Add(btnAct);
+
+                        string capturedKey = dismissKey;
+                        Button btnDismiss = new Button()
+                        {
+                            Content = "✕",
+                            Width = 26,
+                            Height = 26,
+                            Padding = new Thickness(0),
+                            FontSize = 11,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            ToolTip = isPt ? "Dispensar esta recomendação" : "Dismiss this recommendation"
+                        };
+                        btnDismiss.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                        btnDismiss.Click += (s, e) =>
+                        {
+                            _dismissedRecommendations.Add(capturedKey);
+                            UpdateDashboardHealthHero(_hardware);
+                        };
+                        Grid.SetColumn(btnDismiss, 3);
+                        g.Children.Add(btnDismiss);
+
+                        strip.Child = g;
+                        pnlHeroAttentionList.Children.Add(strip);
+                    }
+
+                    pnlHeroAttentionList.Visibility = (visibleCount > 0) ? Visibility.Visible : Visibility.Collapsed;
+                    FluentIcons.UpgradeVisualTree(pnlHeroAttentionList);
+                }
+            }
+            catch { }
+        }
+
+        private static Geometry BuildHealthArcGeometry(int score, double cx, double cy, double radius)
+        {
+            double pct = Math.Max(0.01, Math.Min(99.9, (double)score)) / 100.0;
+            double angleRad = (pct * 360.0 - 90.0) * Math.PI / 180.0;
+            double startX = cx;
+            double startY = cy - radius;
+            double endX = cx + radius * Math.Cos(angleRad);
+            double endY = cy + radius * Math.Sin(angleRad);
+            bool isLargeArc = pct > 0.5;
+
+            PathFigure fig = new PathFigure();
+            fig.StartPoint = new Point(startX, startY);
+            fig.Segments.Add(new ArcSegment(
+                new Point(endX, endY),
+                new Size(radius, radius),
+                0.0,
+                isLargeArc,
+                SweepDirection.Clockwise,
+                true));
+
+            PathGeometry geom = new PathGeometry();
+            geom.Figures.Add(fig);
+            return geom;
+        }
+
+        private static bool DetectPendingReboot()
+        {
+            try
+            {
+                using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending", false))
+                {
+                    if (k != null) return true;
+                }
+                using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired", false))
+                {
+                    if (k != null) return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private static string GetWindowsSupportSummary(OsFirmwareInfo os, bool isPt, out bool isEos)
+        {
+            isEos = false;
+            if (os == null) return "";
+
+            string ed = (os.EditionId ?? "").ToLowerInvariant();
+            string ver = (os.DisplayVersion ?? os.ReleaseId ?? "").ToUpperInvariant();
+            bool isLtsc = ed.Contains("ltsc") || ed.Contains("iotenterprises");
+            bool isIot = ed.Contains("iot");
+
+            DateTime eosDate = DateTime.MinValue;
+            if (os.CurrentBuild >= 26100)
+            {
+                // Win11 24H2 / 25H2 / LTSC 2024
+                if (isLtsc && isIot) eosDate = new DateTime(2034, 10, 10);
+                else if (isLtsc) eosDate = new DateTime(2029, 10, 9);
+                else if (ver == "25H2") eosDate = new DateTime(2027, 10, 12);
+                else eosDate = new DateTime(2026, 10, 13);
+            }
+            else if (os.CurrentBuild >= 22631)
+            {
+                eosDate = new DateTime(2025, 11, 11); // Win11 23H2 Home/Pro
+            }
+            else if (os.CurrentBuild >= 22621)
+            {
+                eosDate = new DateTime(2024, 10, 8); // Win11 22H2
+            }
+            else if (os.CurrentBuild >= 19044 && isLtsc)
+            {
+                eosDate = isIot ? new DateTime(2032, 1, 13) : new DateTime(2027, 1, 12);
+            }
+            else if (os.CurrentBuild >= 17763 && isLtsc)
+            {
+                eosDate = new DateTime(2029, 1, 9);
+            }
+            else if (os.CurrentBuild >= 19041)
+            {
+                eosDate = new DateTime(2025, 10, 14); // Win10 Home/Pro
+            }
+
+            if (eosDate == DateTime.MinValue) return "";
+            isEos = DateTime.Today > eosDate;
+            string dateStr = eosDate.ToString("dd/MM/yyyy");
+            if (isEos)
+            {
+                return isPt ? ("suporte encerrado em " + dateStr) : ("support ended " + dateStr);
+            }
+            return isPt ? ("suporte até " + dateStr) : ("supported until " + dateStr);
+        }
+
+        private static void GetLastMaintenanceInfo(bool isPt, out string primary, out string sub)
+        {
+            primary = isPt ? "Sem registro" : "No record yet";
+            sub = isPt ? "Clique para abrir relatório" : "Click to open report";
+            try
+            {
+                DateTime latest = DateTime.MinValue;
+                string source = "";
+
+                string debloatReport = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Config\Debloater\backups\last_debloat_report.txt");
+                if (File.Exists(debloatReport))
+                {
+                    DateTime dt = File.GetLastWriteTime(debloatReport);
+                    if (dt > latest) { latest = dt; source = "OptiBoost"; }
+                }
+
+                string reportsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Reports");
+                if (Directory.Exists(reportsDir))
+                {
+                    string[] files = Directory.GetFiles(reportsDir, "*.txt");
+                    for (int i = 0; i < files.Length; i++)
+                    {
+                        DateTime dt = File.GetLastWriteTime(files[i]);
+                        if (dt > latest) { latest = dt; source = isPt ? "Relatório de Manutenção" : "Maintenance Report"; }
+                    }
+                }
+
+                if (latest > DateTime.MinValue)
+                {
+                    int days = (int)Math.Floor((DateTime.Now - latest).TotalDays);
+                    if (days <= 0) primary = isPt ? "Hoje" : "Today";
+                    else if (days == 1) primary = isPt ? "Ontem" : "Yesterday";
+                    else primary = string.Format(isPt ? "há {0} dias" : "{0} days ago", days);
+                    sub = source + " (" + latest.ToString("dd/MM") + ")";
+                }
+            }
+            catch { }
+        }
+
+        private void BtnHealthRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshHardwareAsync();
+        }
+
+        private void BtnHeroOptimize_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWindowsToolsTab(1);
+        }
+
+        private void BtnHeroClean_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToAddon("system-cleaner");
+        }
+
+        private void BtnHeroAttentionView_Click(object sender, RoutedEventArgs e)
+        {
+            if (_heroAttentionTarget == "cleaner") NavigateToAddon("system-cleaner");
+            else if (_heroAttentionTarget == "compat") NavigateToWindowsToolsTab(2);
+            else if (_heroAttentionTarget == "protection") TileProtection_Click(sender, null);
+            else if (_heroAttentionTarget == "reboot") TileReboot_Click(sender, null);
+            else NavigateToWindowsToolsTab(1);
+        }
+
+        private void TileSysDisk_Click(object sender, MouseButtonEventArgs e)
+        {
+            NavigateToAddon("system-cleaner");
+        }
+
+        private void TileProtection_Click(object sender, MouseButtonEventArgs e)
+        {
+            try { Process.Start("windowsdefender://"); } catch { }
+        }
+
+        private void TileWindows_Click(object sender, MouseButtonEventArgs e)
+        {
+            NavigateToWindowsToolsTab(2);
+        }
+
+        private void TileReboot_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (_lastPendingReboot)
+            {
+                try { Process.Start("ms-settings:windowsupdate"); } catch { }
+            }
+            else
+            {
+                bool isPt = (LocalizationHelper.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+                OptiDialog.Show(
+                    isPt ? "Nenhum reinício pendente detectado no Windows Update ou Servicing." : "No pending reboot detected in Windows Update or Servicing.",
+                    "OptiAssist",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information,
+                    this);
+            }
+        }
+
+        private void TileLastMaint_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (!NavigateToAddon("maintenance-report"))
+            {
+                NavigateToWindowsToolsTab(1);
+            }
         }
 
         private void RenderRecommendations(HardwareSummary info)
@@ -816,7 +1440,42 @@ namespace OptiAssist
                 txtRecommendationsTitle.Text = LocalizationHelper.Get("Card_Recommendations_ShortTitle", "Recommendations");
             }
 
-            var recs = info != null ? info.Recommendations : null;
+            var recs = new System.Collections.Generic.List<HardwareRecommendation>();
+            if (info != null && info.Recommendations != null)
+            {
+                recs.AddRange(info.Recommendations);
+            }
+
+            try
+            {
+                var diag = PlatformDiagnostic;
+                if (diag != null && diag.Recommendations != null)
+                {
+                    for (int i = 0; i < diag.Recommendations.Count; i++)
+                    {
+                        var d = diag.Recommendations[i];
+                        if (d == null) continue;
+
+                        HardwareRecommendation r = new HardwareRecommendation();
+                        r.Title = d.Title;
+                        r.Description = d.Description;
+                        r.ActionButtonText = d.ActionLabel;
+                        r.ActionTag = d.ActionTag;
+                        r.Category = d.Category;
+                        if (d.Severity == RecommendationSeverity.Critical) r.Level = RecommendationLevel.Critical;
+                        else if (d.Severity == RecommendationSeverity.Warning) r.Level = RecommendationLevel.Warning;
+                        else r.Level = RecommendationLevel.Info;
+
+                        if (d.Category == "Profile") r.Icon = "⚙️";
+                        else if (d.Category == "Win11") r.Icon = "🪟";
+                        else r.Icon = "⚠️";
+
+                        recs.Add(r);
+                    }
+                }
+            }
+            catch { }
+
             var visibleRecs = new System.Collections.Generic.List<HardwareRecommendation>();
             if (recs != null)
             {
@@ -999,6 +1658,19 @@ namespace OptiAssist
                     case "reboot_uefi":
                         BtnRebootBios_Click(this, null);
                         break;
+                    case "open_debloater":
+                        NavigateToWindowsToolsTab(1);
+                        break;
+                    case "open_compat_checker":
+                    case "win11_details":
+                        NavigateToWindowsToolsTab(2);
+                        break;
+                    case "fix_transparency":
+                    case "fix_ulps":
+                    case "fix_abnt2_key":
+                    case "fix_gma_ui":
+                        ApplyPlatformQuickFix(actionTag, rec);
+                        break;
                     case "dual_channel_info":
                     case "ssd_upgrade_info":
                         ShowProblemDriversDialog(rec);
@@ -1010,7 +1682,108 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not launch action: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show("Could not launch action: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void ApplyPlatformQuickFix(string actionTag, HardwareRecommendation rec)
+        {
+            try
+            {
+                var diag = PlatformDiagnostic;
+                if (diag != null && diag.Recommendations != null)
+                {
+                    for (int i = 0; i < diag.Recommendations.Count; i++)
+                    {
+                        var item = diag.Recommendations[i];
+                        if (item != null && string.Equals(item.ActionTag, actionTag, StringComparison.OrdinalIgnoreCase))
+                        {
+                            bool ok = PlatformDiagnosticService.Instance.ApplyQuickRegistryFix(item, Log);
+                            if (ok)
+                            {
+                                OptiDialog.Show(this, "Quick Fix applied successfully! Rollback snapshot recorded.", "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                                if (rec != null)
+                                {
+                                    _dismissedRecommendations.Add((rec.ActionTag ?? "") + "|" + (rec.Title ?? ""));
+                                }
+                                RenderRecommendations(_hardware);
+                                return;
+                            }
+                        }
+                    }
+                }
+                OptiDialog.Show(this, "Could not apply quick fix automatically.", "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                OptiDialog.Show(this, "Could not apply fix: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void EnsureWindowsToolsController()
+        {
+            if (_windowsToolsController == null)
+            {
+                _windowsToolsController = new WindowsToolsTabsController(this, Log, () => RenderRecommendations(_hardware));
+                _windowsToolsController.AttachHosts(ccToolsDebloaterContent, ccToolsCompatContent);
+            }
+        }
+
+        private void NavigateToWindowsToolsTab(int subTabIndex)
+        {
+            if (rbNavShortcuts != null)
+            {
+                rbNavShortcuts.IsChecked = true;
+                NavButton_Click(rbNavShortcuts, new RoutedEventArgs());
+            }
+            SwitchWindowsToolsSubTab(subTabIndex);
+        }
+
+        private void TabToolsAdmin_Click(object sender, MouseButtonEventArgs e)
+        {
+            SwitchWindowsToolsSubTab(0);
+        }
+
+        private void TabToolsDebloater_Click(object sender, MouseButtonEventArgs e)
+        {
+            SwitchWindowsToolsSubTab(1);
+        }
+
+        private void TabToolsCompat_Click(object sender, MouseButtonEventArgs e)
+        {
+            SwitchWindowsToolsSubTab(2);
+        }
+
+        private void SwitchWindowsToolsSubTab(int tabIndex)
+        {
+            if (tabIndex == 1 || tabIndex == 2)
+            {
+                EnsureWindowsToolsController();
+            }
+
+            if (pnlToolsAdminContent != null) pnlToolsAdminContent.Visibility = (tabIndex == 0) ? Visibility.Visible : Visibility.Collapsed;
+            if (ccToolsDebloaterContent != null) ccToolsDebloaterContent.Visibility = (tabIndex == 1) ? Visibility.Visible : Visibility.Collapsed;
+            if (ccToolsCompatContent != null) ccToolsCompatContent.Visibility = (tabIndex == 2) ? Visibility.Visible : Visibility.Collapsed;
+
+            SetSubTabStyle(tabToolsAdmin, txtTabToolsAdmin, tabIndex == 0);
+            SetSubTabStyle(tabToolsDebloater, txtTabToolsDebloater, tabIndex == 1);
+            SetSubTabStyle(tabToolsCompat, txtTabToolsCompat, tabIndex == 2);
+        }
+
+        private void SetSubTabStyle(Border border, TextBlock label, bool isActive)
+        {
+            if (border == null || label == null) return;
+            if (isActive)
+            {
+                border.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+                label.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                label.FontWeight = FontWeights.Bold;
+            }
+            else
+            {
+                border.BorderBrush = Brushes.Transparent;
+                label.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                label.FontWeight = FontWeights.SemiBold;
             }
         }
 
@@ -1022,18 +1795,18 @@ namespace OptiAssist
             if (!string.IsNullOrEmpty(sn) && sn != "..." && sn != "Não informado" && sn != "Not informed" && sn != "Not available" && sn != "Não disponível" && sn != notAvailStr && sn != notInfStr)
             {
                 Clipboard.SetText(sn);
-                MessageBox.Show(LocalizationHelper.Get("Msg_SerialCopied", "Serial number copied to clipboard!") + "\n\n" + sn, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(LocalizationHelper.Get("Msg_SerialCopied", "Serial number copied to clipboard!") + "\n\n" + sn, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 Log(string.Format("[CLIPBOARD] Serial number '{0}' copied to the clipboard.", sn));
             }
             else
             {
-                MessageBox.Show(LocalizationHelper.Get("Status_NotDetected", "No valid serial number was detected on this equipment."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(LocalizationHelper.Get("Status_NotDetected", "No valid serial number was detected on this equipment."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
         private void BtnRebootBios_Click(object sender, RoutedEventArgs e)
         {
-            MessageBoxResult res = MessageBox.Show(
+            MessageBoxResult res = OptiDialog.Show(
                 LocalizationHelper.Get("Msg_RebootUefiConfirm", "Are you sure you want to reboot directly into the BIOS / UEFI menu?\n\nMake sure to save all open work before continuing."),
                 "OptiAssist - BIOS / UEFI",
                 MessageBoxButton.YesNo,
@@ -1045,7 +1818,7 @@ namespace OptiAssist
                 bool ok = SystemInfoHelper.RebootToBios(out error);
                 if (!ok)
                 {
-                    MessageBox.Show(error, "OptiAssist - Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    OptiDialog.Show(error, "OptiAssist - Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     Log("[BIOS WARNING] " + error);
                 }
             }
@@ -1224,7 +1997,7 @@ namespace OptiAssist
                         string capturedHw = dev.HardwareId;
                         btnCopyHw.Click += (s, e) =>
                         {
-                            try { Clipboard.SetText(capturedHw); MessageBox.Show(win, "Hardware ID copied to clipboard:\n\n" + capturedHw, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information); } catch { }
+                            try { Clipboard.SetText(capturedHw); OptiDialog.Show(win, "Hardware ID copied to clipboard:\n\n" + capturedHw, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information); } catch { }
                         };
                         Grid.SetColumn(btnCopyHw, 1);
                         hwRow.Children.Add(btnCopyHw);
@@ -1302,7 +2075,7 @@ namespace OptiAssist
 
         private void BtnRunPostInstallTask_Click(object sender, RoutedEventArgs e)
         {
-            MessageBoxResult confirm = MessageBox.Show(
+            MessageBoxResult confirm = OptiDialog.Show(
                 LocalizationHelper.Get("Msg_RunPostInstallConfirm", "Are you sure you want to run the automated application installation now?\n\nOptiAssist will navigate to App Manager (Automated Application Installation), open the external Logs window, and start installing the selected programs."),
                 LocalizationHelper.Get("Task_RunPostInstall", "🚀 Run Post-Install"),
                 MessageBoxButton.YesNo,
@@ -1312,7 +2085,7 @@ namespace OptiAssist
 
             if (!NavigateToAddon("app-manager"))
             {
-                MessageBox.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1346,7 +2119,7 @@ namespace OptiAssist
         {
             if (!NavigateToAddon("app-manager"))
             {
-                MessageBox.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(LocalizationHelper.Get("Msg_AppManagerNotAvailable", "The App Manager module is currently disabled or not installed."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         #endregion
@@ -1390,7 +2163,7 @@ namespace OptiAssist
                     "Do you want to run a NEW full benchmark now? (May take several minutes)",
                     current.OverallScore, current.CpuScore, current.MemoryScore, current.D3DScore, current.GraphicsScore, current.DiskScore);
 
-                MessageBoxResult res = MessageBox.Show(infoMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                MessageBoxResult res = OptiDialog.Show(infoMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
                 if (res != MessageBoxResult.Yes)
                 {
                     Log(string.Format("[WINSAT] Scores: Overall {0:F1} | CPU {1:F1} | RAM {2:F1} | Disk {3:F1} | D3D {4:F1}",
@@ -1417,7 +2190,7 @@ namespace OptiAssist
 
                     Dispatcher.Invoke(new Action(() =>
                     {
-                        MessageBox.Show(
+                        OptiDialog.Show(
                             string.Format(LocalizationHelper.Get("Msg_WinSatCompleted", "WinSAT Benchmark Completed Successfully!\n\nOverall Score: {0:F1}\nCPU: {1:F1} | RAM: {2:F1} | Disk: {3:F1}"),
                             updated.OverallScore, updated.CpuScore, updated.MemoryScore, updated.DiskScore),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1870,7 +2643,7 @@ namespace OptiAssist
 
             btnRestore.Click += (s, e) =>
             {
-                var res = MessageBox.Show(dlg,
+                var res = OptiDialog.Show(dlg,
                     LocalizationHelper.Get("Msg_RestoreCommonTasksConfirm", "Do you want to reset Common Tasks to default factory shortcuts?"),
                     "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (res == MessageBoxResult.Yes)
@@ -2075,10 +2848,12 @@ namespace OptiAssist
                         continue;
                     }
 
-                    // Hide Run Post-Install when running from a non-portable installed location
+                    // Hide portable-only shortcuts (Run Post-Install, Maintenance folder, Installers folder) when installed on PC
                     if (string.Equals(item.TargetType, "Section", StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(item.TargetValue, "post-install-run", StringComparison.OrdinalIgnoreCase) &&
-                        AppDeploymentHelper.IsRunningFromInstalledLocation())
+                        !IsPortableMode &&
+                        (string.Equals(item.TargetValue, "post-install-run", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(item.TargetValue, "maintenance-folder", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(item.TargetValue, "installers-folder", StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
@@ -2292,7 +3067,7 @@ namespace OptiAssist
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         string.Format(LocalizationHelper.Get("Shortcut_Msg_LaunchError", "Unable to launch shortcut '{0}':\n{1}"), item.Title, ex.Message),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
@@ -2420,7 +3195,7 @@ namespace OptiAssist
                     if (startEx != null)
                     {
                         Log(string.Format("[SHORTCUTS] ❌ Failed to start '{0}': {1}", title, startEx.Message));
-                        MessageBox.Show(
+                        OptiDialog.Show(
                             string.Format(LocalizationHelper.Get("Shortcut_Msg_LaunchError", "Unable to launch shortcut '{0}':\n{1}"), title, startEx.Message),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
@@ -2847,7 +3622,7 @@ namespace OptiAssist
 
                 if (string.IsNullOrWhiteSpace(targetVal))
                 {
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         LocalizationHelper.Get("Shortcut_Msg_Required", "Please specify a valid target path or select an app section."),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -2924,6 +3699,20 @@ namespace OptiAssist
         public HardwareSummary Hardware
         {
             get { return _hardware; }
+        }
+
+        public PlatformInfo Platform
+        {
+            get { return PlatformDiagnostic.Platform; }
+        }
+
+        public PlatformDiagnosticSnapshot PlatformDiagnostic
+        {
+            get
+            {
+                string ov = _settings != null ? _settings.DebloaterProfileOverride : null;
+                return PlatformDiagnosticService.Instance.GetSnapshot(false, ov);
+            }
         }
 
         public void SaveSettings()
@@ -3088,7 +3877,7 @@ namespace OptiAssist
                     {
                         Log("[ADDON] Installed module from: " + dlg.FileName);
                         ReloadAddonsList();
-                        MessageBox.Show(
+                        OptiDialog.Show(
                             LocalizationHelper.Get("Msg_AddonAdded", "Module (.dll) successfully added and integrated into OptiAssist!"),
                             "OptiAssist",
                             MessageBoxButton.OK,
@@ -3097,7 +3886,7 @@ namespace OptiAssist
                     else
                     {
                         Log("[ADDON ERROR] Failed to install module: " + errorMsg);
-                        MessageBox.Show(
+                        OptiDialog.Show(
                             string.Format(LocalizationHelper.Get("Msg_AddonAddError", "Could not load or install the selected DLL module:\n{0}"), errorMsg),
                             "OptiAssist",
                             MessageBoxButton.OK,
@@ -3122,7 +3911,7 @@ namespace OptiAssist
                 entry.Name,
                 entry.DisplayPath);
 
-            MessageBoxResult res = MessageBox.Show(confirmMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            MessageBoxResult res = OptiDialog.Show(confirmMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes) return;
 
             string errorMsg;
@@ -3137,7 +3926,7 @@ namespace OptiAssist
                 Log(string.Format("[ADDON] Removed module '{0}' ({1}).", entry.Name, entry.Id));
                 ReloadAddonsList();
 
-                MessageBox.Show(
+                OptiDialog.Show(
                     LocalizationHelper.Get("Msg_AddonRemoved", "Module removed successfully."),
                     "OptiAssist",
                     MessageBoxButton.OK,
@@ -3146,7 +3935,7 @@ namespace OptiAssist
             else
             {
                 Log("[ADDON REMOVE ERROR] " + errorMsg);
-                MessageBox.Show(
+                OptiDialog.Show(
                     string.Format(LocalizationHelper.Get("Msg_AddonRemoveError", "Failed to remove module:\n{0}"), errorMsg),
                     "OptiAssist",
                     MessageBoxButton.OK,
@@ -3291,13 +4080,17 @@ namespace OptiAssist
             // 1. Sidebar Navigation
             if (rbNavDashboard != null) rbNavDashboard.Content = LocalizationHelper.Get("Nav_Dashboard", "💻  Dashboard");
             if (rbNavShortcuts != null) rbNavShortcuts.Content = LocalizationHelper.Get("Nav_Shortcuts", "🛠️  Windows Tools");
-            if (rbNavTerminal != null) rbNavTerminal.Content = LocalizationHelper.Get("Nav_Terminal", "📜  Logs");
+            if (rbNavTerminal != null) rbNavTerminal.Content = ">_  Terminal";
             if (rbNavSettings != null) rbNavSettings.Content = LocalizationHelper.Get("Nav_Settings", "⚙️  Settings");
             if (rbNavAbout != null) rbNavAbout.Content = LocalizationHelper.Get("Nav_About", "ℹ️  About");
 
             // 2. Overview (Dashboard)
             if (txtDashboardTitle != null) txtDashboardTitle.Text = LocalizationHelper.Get("Dashboard_Title", "Welcome to OptiAssist!");
-            if (txtDashboardSubtitle != null) txtDashboardSubtitle.Text = LocalizationHelper.Get("Dashboard_Subtitle", "The ultimate tool to keep your system in order");
+            if (txtDashboardSubtitle != null)
+            {
+                txtDashboardSubtitle.Text = "";
+                txtDashboardSubtitle.Visibility = Visibility.Collapsed;
+            }
             if (txtHwCardTitle != null) txtHwCardTitle.Text = LocalizationHelper.Get("Card_Hardware_ShortTitle", "Hardware Info");
             if (txtHwCardSubtitle != null) txtHwCardSubtitle.Text = LocalizationHelper.Get("Card_Hardware_Subtitle", "Processor, Board, RAM & GPU");
             if (txtOsCardTitle != null) txtOsCardTitle.Text = LocalizationHelper.Get("Card_Os_ShortTitle", "Operating System");
@@ -3316,7 +4109,8 @@ namespace OptiAssist
             if (txtCommonTasksTitle != null) txtCommonTasksTitle.Text = LocalizationHelper.Get("Card_CommonTasks_Title", "⚡ Common Tasks");
             if (btnCustomizeCommonTasks != null)
             {
-                btnCustomizeCommonTasks.Content = LocalizationHelper.Get("Btn_Customize", "⚙️ Customize");
+                bool isPtLoc = (LocalizationHelper.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+                btnCustomizeCommonTasks.Content = isPtLoc ? "⚙️ Personalizar Tarefas Comuns..." : "⚙️ Personalize Common Tasks...";
                 btnCustomizeCommonTasks.ToolTip = LocalizationHelper.Get("Tooltip_CustomizeCommonTasks", "Customize common tasks, add new shortcuts, reorganize or remove buttons");
             }
             if (txtCommonTasksEmpty != null)
@@ -3381,6 +4175,7 @@ namespace OptiAssist
             {
                 btnOpenMaintenanceFolderTool.Content = LocalizationHelper.Get("Btn_OpenMaintenanceFolder", "📁 Maintenance Tools");
                 btnOpenMaintenanceFolderTool.ToolTip = LocalizationHelper.Get("Tooltip_OpenMaintenanceFolder", "Access local Maintenance folder containing portable tools");
+                btnOpenMaintenanceFolderTool.Visibility = IsPortableMode ? Visibility.Visible : Visibility.Collapsed;
             }
 
             // 5.5. Add-ons & Modular Plugins Management (in Settings + Dynamic Sidebar Modules)
@@ -3490,9 +4285,11 @@ namespace OptiAssist
             // 9. About
             if (txtAboutTitle != null) txtAboutTitle.Text = LocalizationHelper.Get("Nav_About", "ℹ️  About");
             if (txtAboutSub != null) txtAboutSub.Text = LocalizationHelper.Get("About_Subtitle", "Version information, copyright, and open-source license");
-            if (txtAboutCreditsTitle != null) txtAboutCreditsTitle.Text = LocalizationHelper.Get("About_Credits_Title", "🤝 Acknowledgments & Credits");
-            if (txtAboutCreditsText != null) txtAboutCreditsText.Text = LocalizationHelper.Get("About_Credits_Text", "Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist.");
             if (btnAboutGithub != null) btnAboutGithub.Content = LocalizationHelper.Get("Btn_AboutGithub", "🌐 GitHub Repository");
+            if (txtTabToolsAdmin != null) txtTabToolsAdmin.Text = "🛠️  " + LocalizationHelper.Get("Tools_Tab_Admin", "Windows Administrative Tools");
+            if (txtTabToolsDebloater != null) txtTabToolsDebloater.Text = "✨  OptiBoost";
+            if (txtTabToolsCompat != null) txtTabToolsCompat.Text = "🛡️  " + LocalizationHelper.Get("Tools_Tab_Compat", "Compatibility Checker");
+            if (_windowsToolsController != null) _windowsToolsController.OnLanguageChanged();
             if (btnAboutWebsite != null) btnAboutWebsite.Content = LocalizationHelper.Get("Btn_AboutWebsite", "🔗 Official Website");
             if (btnAboutDocumentation != null)
             {
@@ -3559,6 +4356,8 @@ namespace OptiAssist
                 if (txtTpmStatus != null) txtTpmStatus.Text = detecting;
                 if (txtSecureBootStatus != null) txtSecureBootStatus.Text = detecting;
             }
+
+            FluentIcons.UpgradeVisualTree(this);
         }
 
         private void SetupLanguageControls(string activeLang)
@@ -3692,13 +4491,13 @@ namespace OptiAssist
             UpdateServiceProviderUI();
             ApplyThemeAccentColor(_settings.AccentColor);
 
-            MessageBox.Show(LocalizationHelper.Get("Msg_SettingsSaved", "Settings successfully saved in Config\\settings.json!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+            OptiDialog.Show(LocalizationHelper.Get("Msg_SettingsSaved", "Settings successfully saved in Config\\settings.json!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             Log("[CONFIG] Application settings updated and saved.");
         }
 
         private void BtnResetSettings_Click(object sender, RoutedEventArgs e)
         {
-            var res = MessageBox.Show(
+            var res = OptiDialog.Show(
                 LocalizationHelper.Get("Msg_ResetSettingsConfirm", "Do you want to restore all application settings to their default values?"),
                 "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes) return;
@@ -3710,7 +4509,7 @@ namespace OptiAssist
             // Reload everything from disk so language, theme, accent color and visibility are re-applied
             LoadApplicationSettings();
 
-            MessageBox.Show(LocalizationHelper.Get("Msg_ResetSettingsDone", "Default settings successfully restored!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+            OptiDialog.Show(LocalizationHelper.Get("Msg_ResetSettingsDone", "Default settings successfully restored!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             Log("[CONFIG] Application settings restored to factory defaults.");
         }
 
@@ -3772,7 +4571,7 @@ namespace OptiAssist
                 File.WriteAllText(autorunPath, autorunContent, Encoding.Default);
 
                 Log(string.Format("[AUTORUN] autorun.inf created successfully at: {0}", autorunPath));
-                MessageBox.Show(
+                OptiDialog.Show(
                     string.Format(LocalizationHelper.Get("Msg_AutorunCreated", "autorun.inf created successfully on drive root: {0}\nWhen connecting the USB drive, Windows will display the OptiAssist icon and execution action."), autorunPath),
                     "AutoRun",
                     MessageBoxButton.OK,
@@ -3781,7 +4580,7 @@ namespace OptiAssist
             catch (Exception ex)
             {
                 Log(string.Format("[AUTORUN ERROR] Failed to create autorun.inf: {0}", ex.Message));
-                MessageBox.Show(
+                OptiDialog.Show(
                     string.Format(LocalizationHelper.Get("Msg_AutorunError", "Failed to create autorun.inf: {0}"), ex.Message),
                     "AutoRun",
                     MessageBoxButton.OK,
@@ -3863,13 +4662,13 @@ namespace OptiAssist
 
                     LoadAppLogo();
 
-                    MessageBox.Show(LocalizationHelper.Get("Msg_LogoChanged", "Application logo updated successfully!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    OptiDialog.Show(LocalizationHelper.Get("Msg_LogoChanged", "Application logo updated successfully!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                     Log("[CONFIG] Custom application logo changed to: " + _settings.CustomLogoPath);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LogoError", "Failed to update logo: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_LogoError", "Failed to update logo: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 Log("[CONFIG ERROR] Failed to change logo: " + ex.Message);
             }
         }
@@ -4020,7 +4819,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ColorPickerError", "Error opening color picker: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_ColorPickerError", "Error opening color picker: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -4036,11 +4835,11 @@ namespace OptiAssist
                 _settings.AccentColor = hex;
                 SettingsHelper.Save(_settings);
                 Log("[CONFIG] Custom color applied and saved: " + hex);
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ColorApplied", "Button and accent color applied successfully!\n{0}"), hex), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_ColorApplied", "Button and accent color applied successfully!\n{0}"), hex), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch
             {
-                MessageBox.Show(LocalizationHelper.Get("Msg_ColorInvalid", "Invalid hexadecimal code! Use format #RRGGBB (e.g. #0EA5E9)."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(LocalizationHelper.Get("Msg_ColorInvalid", "Invalid hexadecimal code! Use format #RRGGBB (e.g. #0EA5E9)."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -4061,6 +4860,7 @@ namespace OptiAssist
 
         private bool _isDarkMode = false;
         public bool IsDarkMode { get { return _isDarkMode; } }
+        public bool IsPortableMode { get { return AppDeploymentHelper.IsPortableMode(); } }
 
         public void ApplyTheme(bool isDark)
         {
@@ -4104,6 +4904,7 @@ namespace OptiAssist
             }
 
             RenderCommonTasks();
+            FluentIcons.UpgradeVisualTree(this);
         }
 
         private void SetColorResource(string key, string hex)
@@ -4150,7 +4951,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -4162,7 +4963,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -4174,7 +4975,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                OptiDialog.Show(
                     string.Format(LocalizationHelper.Get("Msg_LinkOpenError", "Unable to open link: {0}"), ex.Message),
                     "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }

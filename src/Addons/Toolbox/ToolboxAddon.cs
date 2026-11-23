@@ -3,11 +3,15 @@ using System.IO;
 using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.Win32;
+using OptiAssist.Platform;
 
 namespace OptiAssist.Addons.Toolbox
 {
@@ -24,15 +28,8 @@ namespace OptiAssist.Addons.Toolbox
         private List<ToolboxCommandItem> _commands;
         private ToolboxCommandItem _editingItem;
 
-        // Navigation Tabs (Toolbox | Windows Debloater)
-        private Border _tabToolboxBorder;
-        private TextBlock _tabToolboxText;
-        private Border _tabDebloaterBorder;
-        private TextBlock _tabDebloaterText;
         private Grid _pnlMainToolboxView;
-        private ScrollViewer _pnlDebloaterView;
         private List<KeyValuePair<CheckBox, ToolboxCommandItem>> _toolboxChecks = new List<KeyValuePair<CheckBox, ToolboxCommandItem>>();
-        private List<KeyValuePair<CheckBox, ToolboxCommandItem>> _debloatChecks = new List<KeyValuePair<CheckBox, ToolboxCommandItem>>();
 
         // Top Header & Toolbar controls
         private TextBlock _txtTitle;
@@ -93,7 +90,7 @@ namespace OptiAssist.Addons.Toolbox
         public string Id { get { return "toolbox"; } }
         public string Name { get { return T("Nav_Toolbox", "Toolbox"); } }
         public string Description { get { return T("Toolbox_Subtitle", "Custom actions and system tools integrated into OptiAssist"); } }
-        public string Version { get { return "1.2.S4"; } }
+        public string Version { get { return "1.2.S7"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🧰"; } }
 
@@ -193,33 +190,7 @@ namespace OptiAssist.Addons.Toolbox
             rootGrid.Children.Add(headerGrid);
 
             // =====================================================================
-            // ROW 1: NAVIGATION TABS (Toolbox | Windows Debloater)
-            // =====================================================================
-            Border tabsBar = new Border()
-            {
-                CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(8, 0, 8, 0),
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            tabsBar.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            tabsBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            StackPanel tabsPanel = new StackPanel() { Orientation = Orientation.Horizontal };
-            _tabToolboxBorder = CreateTabButton("🛠️  " + T("Toolbox_Tab_Main", "Toolbox"), true, out _tabToolboxText);
-            _tabToolboxBorder.MouseLeftButtonDown += (s, e) => SwitchToolboxTab(true);
-            tabsPanel.Children.Add(_tabToolboxBorder);
-
-            _tabDebloaterBorder = CreateTabButton("🧹  " + T("Toolbox_Tab_Debloater", "Windows Debloater"), false, out _tabDebloaterText);
-            _tabDebloaterBorder.MouseLeftButtonDown += (s, e) => SwitchToolboxTab(false);
-            tabsPanel.Children.Add(_tabDebloaterBorder);
-
-            tabsBar.Child = tabsPanel;
-            Grid.SetRow(tabsBar, 1);
-            rootGrid.Children.Add(tabsBar);
-
-            // =====================================================================
-            // ROW 2: TAB CONTENTS (Toolbox Main + Windows Debloater)
+            // ROW 1/2: MAIN TOOLBOX CONTENT
             // =====================================================================
             Grid tabHost = new Grid();
             Grid.SetRow(tabHost, 2);
@@ -310,10 +281,10 @@ namespace OptiAssist.Addons.Toolbox
                 }
                 if (selected.Count == 0)
                 {
-                    MessageBox.Show(T("Toolbox_NoneSelected", "Select at least one task to run."), "OptiAssist - Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
+                    OptiDialog.Show(T("Toolbox_NoneSelected", "Select at least one task to run."), "OptiAssist - Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
-                var confirm = MessageBox.Show(
+                var confirm = OptiDialog.Show(
                     string.Format(T("Toolbox_ConfirmSelected", "Execute {0} selected Toolbox tasks sequentially?"), selected.Count),
                     "OptiAssist - Toolbox",
                     MessageBoxButton.YesNo,
@@ -381,11 +352,7 @@ namespace OptiAssist.Addons.Toolbox
             Grid.SetRow(svCategories, 4);
             _pnlMainToolboxView.Children.Add(svCategories);
 
-            _pnlDebloaterView = BuildDebloaterTab();
-            _pnlDebloaterView.Visibility = Visibility.Collapsed;
-
             tabHost.Children.Add(_pnlMainToolboxView);
-            tabHost.Children.Add(_pnlDebloaterView);
             rootGrid.Children.Add(tabHost);
 
             RebuildCategoriesAccordion();
@@ -698,7 +665,7 @@ namespace OptiAssist.Addons.Toolbox
         {
             if (_cmbManageExistingCategories == null || _cmbManageExistingCategories.SelectedItem == null)
             {
-                MessageBox.Show(T("Msg_SelectCategoryFirst", "Please select an existing category first."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(T("Msg_SelectCategoryFirst", "Please select an existing category first."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -706,7 +673,7 @@ namespace OptiAssist.Addons.Toolbox
             string newName = (_txtRenameCategory.Text ?? "").Trim();
             if (string.IsNullOrWhiteSpace(newName))
             {
-                MessageBox.Show(T("Msg_CategoryNameEmpty", "Category name cannot be empty."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(T("Msg_CategoryNameEmpty", "Category name cannot be empty."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -720,7 +687,7 @@ namespace OptiAssist.Addons.Toolbox
             RefreshCategoryManagerDropdowns();
             RebuildCategoriesAccordion();
             HostLog(string.Format("[TOOLBOX] Renamed category '{0}' to '{1}' ({2} actions updated).", oldName, newName, count));
-            MessageBox.Show(
+            OptiDialog.Show(
                 string.Format(T("Msg_CategoryRenamed", "Category successfully renamed to '{0}'. {1} action(s) updated."), newName, count),
                 "Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -729,7 +696,7 @@ namespace OptiAssist.Addons.Toolbox
         {
             if (_cmbManageExistingCategories == null || _cmbManageExistingCategories.SelectedItem == null)
             {
-                MessageBox.Show(T("Msg_SelectCategoryFirst", "Please select an existing category first."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(T("Msg_SelectCategoryFirst", "Please select an existing category first."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -743,7 +710,7 @@ namespace OptiAssist.Addons.Toolbox
                 }
             }
 
-            var res = MessageBox.Show(
+            var res = OptiDialog.Show(
                 string.Format(T("Msg_CategoryDeleteConfirm", "Are you sure you want to delete category '{0}' and all {1} action(s) in it?"), cat, matching),
                 "Toolbox", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes) return;
@@ -753,7 +720,7 @@ namespace OptiAssist.Addons.Toolbox
             RefreshCategoryManagerDropdowns();
             RebuildCategoriesAccordion();
             HostLog(string.Format("[TOOLBOX] Deleted category '{0}' and its {1} action(s).", cat, deleted));
-            MessageBox.Show(
+            OptiDialog.Show(
                 string.Format(T("Msg_CategoryDeleted", "Category '{0}' and {1} action(s) deleted successfully."), cat, deleted),
                 "Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -763,7 +730,7 @@ namespace OptiAssist.Addons.Toolbox
             string newCat = (_txtAddNewCategory.Text ?? "").Trim();
             if (string.IsNullOrWhiteSpace(newCat))
             {
-                MessageBox.Show(T("Msg_CategoryNameEmpty", "Category name cannot be empty."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(T("Msg_CategoryNameEmpty", "Category name cannot be empty."), "Toolbox", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -772,7 +739,7 @@ namespace OptiAssist.Addons.Toolbox
             OpenEditorForNew();
             _cmbFieldCategory.Text = newCat;
             _txtFieldTitle.Focus();
-            MessageBox.Show(
+            OptiDialog.Show(
                 string.Format(T("Msg_CategoryAdded", "Category '{0}' created! Fill in the first action to save it."), newCat),
                 "Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -1114,7 +1081,7 @@ namespace OptiAssist.Addons.Toolbox
             btnRunCategoryBatch.Click += (s, e) =>
             {
                 if (batchList.Count == 0) return;
-                var res = MessageBox.Show(
+                var res = OptiDialog.Show(
                     string.Format(T("Msg_Toolbox_ConfirmBatch", "Execute all {0} tasks in category '{1}' sequentially?"), batchList.Count, categoryName),
                     "OptiAssist - Toolbox",
                     MessageBoxButton.YesNo,
@@ -1399,7 +1366,7 @@ namespace OptiAssist.Addons.Toolbox
             string validationError;
             if (!candidate.Validate(out validationError))
             {
-                MessageBox.Show(
+                OptiDialog.Show(
                     validationError,
                     "OptiAssist - Toolbox Validation",
                     MessageBoxButton.OK,
@@ -1417,7 +1384,7 @@ namespace OptiAssist.Addons.Toolbox
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                OptiDialog.Show(
                     "Failed to save action: " + ex.Message,
                     "OptiAssist - Toolbox Error",
                     MessageBoxButton.OK,
@@ -1432,7 +1399,7 @@ namespace OptiAssist.Addons.Toolbox
                 T("Msg_ToolboxDeleteConfirm", "Are you sure you want to delete '{0}'?"),
                 item.title);
 
-            if (MessageBox.Show(confirmMsg, "OptiAssist - Toolbox", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            if (OptiDialog.Show(confirmMsg, "OptiAssist - Toolbox", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
                 return;
             }
@@ -1446,7 +1413,7 @@ namespace OptiAssist.Addons.Toolbox
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error deleting action: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show("Error deleting action: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1454,7 +1421,7 @@ namespace OptiAssist.Addons.Toolbox
         {
             string msg = T("Msg_ToolboxRestoreConfirm",
                 "Do you want to restore the default Toolbox presets?\nThis will reset toolbox.json to the factory preset list.");
-            if (MessageBox.Show(msg, "OptiAssist - Toolbox", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            if (OptiDialog.Show(msg, "OptiAssist - Toolbox", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
                 return;
             }
@@ -1482,466 +1449,11 @@ namespace OptiAssist.Addons.Toolbox
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not open toolbox.json: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show("Could not open toolbox.json: " + ex.Message, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         #endregion
-
-        private Border CreateTabButton(string text, bool isActive, out TextBlock lbl)
-        {
-            Border b = new Border()
-            {
-                Padding = new Thickness(14, 10, 14, 10),
-                Margin = new Thickness(0, 0, 6, 0),
-                BorderThickness = new Thickness(0, 0, 0, 2.5),
-                Cursor = Cursors.Hand,
-                Background = Brushes.Transparent
-            };
-            lbl = new TextBlock()
-            {
-                Text = text,
-                FontSize = 12,
-                FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold
-            };
-            if (isActive)
-            {
-                b.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
-                lbl.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            }
-            else
-            {
-                b.BorderBrush = Brushes.Transparent;
-                lbl.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            }
-            b.Child = lbl;
-            return b;
-        }
-
-        private void SwitchToolboxTab(bool isMainToolbox)
-        {
-            if (_pnlMainToolboxView != null) _pnlMainToolboxView.Visibility = isMainToolbox ? Visibility.Visible : Visibility.Collapsed;
-            if (_pnlDebloaterView != null) _pnlDebloaterView.Visibility = isMainToolbox ? Visibility.Collapsed : Visibility.Visible;
-            if (_btnOptions != null) _btnOptions.Visibility = isMainToolbox ? Visibility.Visible : Visibility.Collapsed;
-
-            if (_tabToolboxBorder != null && _tabToolboxText != null)
-            {
-                if (isMainToolbox)
-                {
-                    _tabToolboxBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
-                    _tabToolboxText.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-                    _tabToolboxText.FontWeight = FontWeights.Bold;
-                }
-                else
-                {
-                    _tabToolboxBorder.BorderBrush = Brushes.Transparent;
-                    _tabToolboxText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-                    _tabToolboxText.FontWeight = FontWeights.SemiBold;
-                }
-            }
-
-            if (_tabDebloaterBorder != null && _tabDebloaterText != null)
-            {
-                if (!isMainToolbox)
-                {
-                    _tabDebloaterBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
-                    _tabDebloaterText.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-                    _tabDebloaterText.FontWeight = FontWeights.Bold;
-                }
-                else
-                {
-                    _tabDebloaterBorder.BorderBrush = Brushes.Transparent;
-                    _tabDebloaterText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-                    _tabDebloaterText.FontWeight = FontWeights.SemiBold;
-                }
-            }
-        }
-
-        private ScrollViewer BuildDebloaterTab()
-        {
-            _debloatChecks.Clear();
-            ScrollViewer sv = new ScrollViewer()
-            {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Background = Brushes.Transparent
-            };
-            sv.PreviewMouseWheel += (s, e) =>
-            {
-                if (!e.Handled && sv.ScrollableHeight > 0)
-                {
-                    e.Handled = true;
-                    sv.ScrollToVerticalOffset(sv.VerticalOffset - (e.Delta / 2.5));
-                }
-            };
-
-            StackPanel root = new StackPanel() { Margin = new Thickness(0, 0, 0, 8) };
-
-            // Header Card with Batch Controls
-            Border topCard = new Border()
-            {
-                CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(14),
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            topCard.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-            topCard.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-            Grid topGrid = new Grid();
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-
-            StackPanel infoStack = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
-            TextBlock lblTitle = new TextBlock()
-            {
-                Text = "🧹 " + T("Debloater_Title", "Windows Debloater"),
-                FontSize = 13.5,
-                FontWeight = FontWeights.Bold
-            };
-            lblTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
-            TextBlock lblSub = new TextBlock()
-            {
-                Text = T("Debloater_Subtitle", "Select telemetry, bloatware, AI, and browser tweaks built directly into the module and apply them individually or in batch."),
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0),
-                TextWrapping = TextWrapping.Wrap
-            };
-            lblSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            infoStack.Children.Add(lblTitle);
-            infoStack.Children.Add(lblSub);
-            Grid.SetColumn(infoStack, 0);
-            topGrid.Children.Add(infoStack);
-
-            StackPanel btnPanel = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
-            Button btnSelectAll = new Button() { Content = T("Btn_SelectAll", "Select All"), Height = 28, Padding = new Thickness(10, 0, 10, 0), FontSize = 11, Margin = new Thickness(0, 0, 6, 0) };
-            btnSelectAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnSelectAll.Click += (s, e) => { foreach (var kv in _debloatChecks) kv.Key.IsChecked = true; };
-
-            Button btnClearAll = new Button() { Content = T("Btn_ClearAll", "Clear"), Height = 28, Padding = new Thickness(10, 0, 10, 0), FontSize = 11, Margin = new Thickness(0, 0, 6, 0) };
-            btnClearAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnClearAll.Click += (s, e) => { foreach (var kv in _debloatChecks) kv.Key.IsChecked = false; };
-
-            Button btnApplySelected = new Button() { Content = "🚀 " + T("Debloater_ApplySelected", "Apply Selected"), Height = 28, Padding = new Thickness(14, 0, 14, 0), FontSize = 11, FontWeight = FontWeights.Bold };
-            btnApplySelected.SetResourceReference(Button.StyleProperty, "BtnAccent");
-            btnApplySelected.Click += (s, e) =>
-            {
-                List<ToolboxCommandItem> selected = new List<ToolboxCommandItem>();
-                foreach (var kv in _debloatChecks)
-                {
-                    if (kv.Key.IsChecked == true) selected.Add(kv.Value);
-                }
-                if (selected.Count == 0)
-                {
-                    MessageBox.Show(T("Debloater_NoneSelected", "Select at least one debloat tweak to apply."), "OptiAssist - Windows Debloater", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-                var confirm = MessageBox.Show(
-                    string.Format(T("Debloater_ConfirmBatch", "Apply {0} selected Windows Debloater tweaks sequentially?"), selected.Count),
-                    "OptiAssist - Windows Debloater",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                if (confirm != MessageBoxResult.Yes) return;
-                ExecuteBatchItems(selected, 0, btnApplySelected, btnApplySelected.Content);
-            };
-
-            btnPanel.Children.Add(btnSelectAll);
-            btnPanel.Children.Add(btnClearAll);
-            btnPanel.Children.Add(btnApplySelected);
-            Grid.SetColumn(btnPanel, 1);
-            topGrid.Children.Add(btnPanel);
-
-            StackPanel topCardStack = new StackPanel();
-            topCardStack.Children.Add(topGrid);
-
-            WrapPanel presetBar = new WrapPanel()
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 10, 0, 0)
-            };
-            TextBlock lblPresets = new TextBlock()
-            {
-                Text = T("Debloater_Presets_Label", "Presets:"),
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-            lblPresets.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-            presetBar.Children.Add(lblPresets);
-
-            Button btnPresetLaptop = new Button()
-            {
-                Content = "💻 " + T("Debloater_Preset_Laptop", "Laptop de Entrada"),
-                Height = 26,
-                Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11,
-                Margin = new Thickness(0, 0, 6, 0)
-            };
-            btnPresetLaptop.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnPresetLaptop.Click += (s, e) => ApplyDebloaterPreset(new string[]
-            {
-                "dll-debloat-consumer-features",
-                "dll-debloat-telemetry",
-                "dll-debloat-widgets",
-                "dll-debloat-wpbt",
-                "dll-debloat-activity-history",
-                "dll-debloat-bg-apps",
-                "dll-debloat-windows-ai",
-                "dll-debloat-bing-search"
-            });
-            presetBar.Children.Add(btnPresetLaptop);
-
-            Button btnPresetGaming = new Button()
-            {
-                Content = "🎮 " + T("Debloater_Preset_Gaming", "PC Gamer"),
-                Height = 26,
-                Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11,
-                Margin = new Thickness(0, 0, 6, 0)
-            };
-            btnPresetGaming.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnPresetGaming.Click += (s, e) => ApplyDebloaterPreset(new string[]
-            {
-                "dll-debloat-consumer-features",
-                "dll-debloat-telemetry",
-                "dll-debloat-widgets",
-                "dll-debloat-wpbt",
-                "dll-debloat-bg-apps",
-                "dll-debloat-windows-ai",
-                "dll-debloat-bing-search",
-                "dll-debloat-edge"
-            });
-            presetBar.Children.Add(btnPresetGaming);
-
-            Button btnPresetConventional = new Button()
-            {
-                Content = "🖥️ " + T("Debloater_Preset_Conventional", "Convencional"),
-                Height = 26,
-                Padding = new Thickness(10, 0, 10, 0),
-                FontSize = 11
-            };
-            btnPresetConventional.SetResourceReference(Button.StyleProperty, "BtnDefault");
-            btnPresetConventional.Click += (s, e) => ApplyDebloaterPreset(new string[]
-            {
-                "dll-debloat-consumer-features",
-                "dll-debloat-telemetry",
-                "dll-debloat-widgets",
-                "dll-debloat-activity-history",
-                "dll-debloat-bing-search",
-                "dll-debloat-edge"
-            });
-            presetBar.Children.Add(btnPresetConventional);
-
-            topCardStack.Children.Add(presetBar);
-            topCard.Child = topCardStack;
-            root.Children.Add(topCard);
-
-            // Built-in Windows Debloater Tweaks (directly in Toolbox.dll)
-            List<ToolboxCommandItem> builtInTweaks = GetBuiltInDebloatTweaks();
-            foreach (ToolboxCommandItem tweak in builtInTweaks)
-            {
-                Border card = new Border()
-                {
-                    CornerRadius = new CornerRadius(8),
-                    BorderThickness = new Thickness(1),
-                    Padding = new Thickness(12, 10, 12, 10),
-                    Margin = new Thickness(0, 0, 0, 6)
-                };
-                card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
-                card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-
-                Grid row = new Grid();
-                row.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-                row.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-
-                CheckBox chk = new CheckBox()
-                {
-                    IsChecked = false,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 12, 0)
-                };
-                Grid.SetColumn(chk, 0);
-                row.Children.Add(chk);
-
-                StackPanel textCol = new StackPanel() { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
-                TextBlock titleTxt = new TextBlock() { Text = tweak.title, FontSize = 12.5, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
-                titleTxt.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-                TextBlock descTxt = new TextBlock() { Text = tweak.description, FontSize = 11, Margin = new Thickness(0, 2, 0, 0), TextWrapping = TextWrapping.Wrap };
-                descTxt.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-                textCol.Children.Add(titleTxt);
-                textCol.Children.Add(descTxt);
-                Grid.SetColumn(textCol, 1);
-                row.Children.Add(textCol);
-
-                Button btnApplyOne = new Button()
-                {
-                    Content = "▶ " + T("Btn_Apply", "Apply"),
-                    Height = 28,
-                    Padding = new Thickness(12, 0, 12, 0),
-                    FontSize = 11,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                btnApplyOne.SetResourceReference(Button.StyleProperty, "BtnDefault");
-                ToolboxCommandItem captured = tweak;
-                btnApplyOne.Click += (s, e) => ExecuteCommandItem(captured, btnApplyOne);
-                Grid.SetColumn(btnApplyOne, 2);
-                row.Children.Add(btnApplyOne);
-
-                card.Child = row;
-                root.Children.Add(card);
-                _debloatChecks.Add(new KeyValuePair<CheckBox, ToolboxCommandItem>(chk, tweak));
-            }
-
-            sv.Content = root;
-            return sv;
-        }
-
-        private void ApplyDebloaterPreset(string[] targetIds)
-        {
-            HashSet<string> set = new HashSet<string>(targetIds, StringComparer.OrdinalIgnoreCase);
-            foreach (var kv in _debloatChecks)
-            {
-                kv.Key.IsChecked = (kv.Value != null && set.Contains(kv.Value.id));
-            }
-        }
-
-        private List<ToolboxCommandItem> GetBuiltInDebloatTweaks()
-        {
-            var list = new List<ToolboxCommandItem>();
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-consumer-features",
-                title = T("Debloat_ConsumerFeatures_Title", "Disable Consumer Features & Store Suggestions"),
-                description = T("Debloat_ConsumerFeatures_Desc", "Prevents automatic installation of sponsored apps and Microsoft Store suggestions"),
-                command = "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent\" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-telemetry",
-                title = T("Debloat_Telemetry_Title", "Disable Full Windows Telemetry & Data Collection"),
-                description = T("Debloat_Telemetry_Desc", "Disables diagnostic reporting, advertising ID, tailored experiences, and DiagTrack/wermgr services"),
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$paths = @('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo','HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy','HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection','HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection','HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System'); foreach ($p in $paths) { if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null } }; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo' -Name Enabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy' -Name TailoredExperiencesWithDiagnosticDataEnabled -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection' -Name AllowTelemetry -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' -Name AllowTelemetry -Value 0 -Type DWord -Force; Get-Service diagtrack, wermgr -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue; Stop-Service diagtrack, wermgr -Force -ErrorAction SilentlyContinue; Write-Host 'Telemetry disabled!'\"",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-widgets",
-                title = T("Debloat_Widgets_Title", "Remove Taskbar Widgets (WebExperience)"),
-                description = T("Debloat_Widgets_Desc", "Terminates and uninstalls Widgets and WebExperience packages to free up RAM"),
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Process *Widget* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Get-AppxPackage Microsoft.WidgetsPlatformRuntime -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxPackage MicrosoftWindows.Client.WebExperience -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Write-Host 'Widgets removed!'\"",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-wpbt",
-                title = T("Debloat_Wpbt_Title", "Disable WPBT Execution (BIOS/OEM Bloatware)"),
-                description = T("Debloat_Wpbt_Desc", "Blocks automatic execution of OEM binaries and drivers injected via ACPI WPBT table at boot"),
-                command = "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\" /v DisableWpbtExecution /t REG_DWORD /d 1 /f",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-activity-history",
-                title = T("Debloat_ActivityHistory_Title", "Disable User Activity History"),
-                description = T("Debloat_ActivityHistory_Desc", "Prevents Windows from publishing or uploading user activity history"),
-                command = "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v PublishUserActivities /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\" /v UploadUserActivities /t REG_DWORD /d 0 /f",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-bg-apps",
-                title = T("Debloat_BgApps_Title", "Disable Background Apps"),
-                description = T("Debloat_BgApps_Desc", "Globally disables background execution for Microsoft Store applications"),
-                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications\" /v GlobalUserDisabled /t REG_DWORD /d 1 /f",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-windows-ai",
-                title = T("Debloat_WindowsAI_Title", "Disable & Remove Windows AI Features (Copilot / Recall)"),
-                description = T("Debloat_WindowsAI_Desc", "Removes Copilot, hides AI components in Settings, disables Recall and Notepad AI features"),
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"reg add \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\\" /v SettingsPageVisibility /t REG_SZ /d \\\"hide:aicomponents\\\" /f; reg add \\\"HKLM\\SOFTWARE\\Policies\\WindowsNotepad\\\" /v DisableAIFeatures /t REG_DWORD /d 1 /f; Get-AppxPackage -AllUsers *Copilot* -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Disable-WindowsOptionalFeature -FeatureName Recall -Online -NoRestart -ErrorAction SilentlyContinue; Write-Host 'AI features disabled!'\"",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 120
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-bing-search",
-                title = T("Debloat_BingSearch_Title", "Disable Bing Web Search in Windows Search Bar"),
-                description = T("Debloat_BingSearch_Desc", "Removes Bing web results from the Start Menu, speeding up local file searches"),
-                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\" /v BingSearchEnabled /t REG_DWORD /d 0 /f && reg add \"HKCU\\Software\\Policies\\Microsoft\\Windows\\Explorer\" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-edge",
-                title = T("Debloat_Edge_Title", "Debloat Microsoft Edge (Shopping, Telemetry & Popups)"),
-                description = T("Debloat_Edge_Desc", "Disables shopping assistant, first-run popups, promotions, widgets, and telemetry in Edge"),
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$edge = 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge'; if (-not (Test-Path $edge)) { New-Item -Path $edge -Force | Out-Null }; @('PersonalizationReportingEnabled','ShowRecommendationsEnabled','UserFeedbackAllowed','AlternateErrorPagesEnabled','EdgeCollectionsEnabled','EdgeShoppingAssistantEnabled','MicrosoftEdgeInsiderPromotionEnabled','ShowMicrosoftRewards','WebWidgetAllowed','DiagnosticData') | ForEach-Object { Set-ItemProperty -Path $edge -Name $_ -Value 0 -Type DWord -Force }; @('HideFirstRunExperience','ConfigureDoNotTrack') | ForEach-Object { Set-ItemProperty -Path $edge -Name $_ -Value 1 -Type DWord -Force }; Write-Host 'Edge debloat applied!'\"",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            list.Add(new ToolboxCommandItem
-            {
-                id = "dll-debloat-brave",
-                title = T("Debloat_Brave_Title", "Debloat Brave Browser (Crypto, VPN & Leo AI)"),
-                description = T("Debloat_Brave_Desc", "Applies corporate policies in Brave to disable crypto wallet, VPN, Leo AI, and telemetry"),
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$path = 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave'; if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }; @('BraveRewardsDisabled','BraveWalletDisabled','BraveVPNDisabled','BraveNewsDisabled','BraveTalkDisabled','TorDisabled') | ForEach-Object { Set-ItemProperty -Path $path -Name $_ -Value 1 -Type DWord -Force }; @('BraveAIChatEnabled','BraveStatsPingEnabled','BraveP3AEnabled','MetricsReportingEnabled') | ForEach-Object { Set-ItemProperty -Path $path -Name $_ -Value 0 -Type DWord -Force }; Write-Host 'Brave debloat applied!'\"",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-            return list;
-        }
 
         private void ExecuteBatchItems(List<ToolboxCommandItem> queue, int index, Button triggerBtn, object originalContent)
         {
@@ -1960,7 +1472,7 @@ namespace OptiAssist.Addons.Toolbox
             {
                 if (_runner != null && _runner.IsRunning)
                 {
-                    MessageBox.Show(T("Msg_ToolboxBusy", "A Toolbox action is already running in background. Please wait for it to complete."), "OptiAssist - Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
+                    OptiDialog.Show(T("Msg_ToolboxBusy", "A Toolbox action is already running in background. Please wait for it to complete."), "OptiAssist - Toolbox", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
                 if (_host != null) _host.OpenLogWindow();
@@ -2002,7 +1514,7 @@ namespace OptiAssist.Addons.Toolbox
             if (item == null) return;
             if (_runner != null && _runner.IsRunning)
             {
-                MessageBox.Show(
+                OptiDialog.Show(
                     T("Msg_ToolboxBusy", "A Toolbox action is already running in background. Please wait for it to complete."),
                     "OptiAssist - Toolbox",
                     MessageBoxButton.OK,
@@ -2102,13 +1614,6 @@ namespace OptiAssist.Addons.Toolbox
             if (_btnCancelEdit != null) _btnCancelEdit.Content = T("Btn_Cancel", "✕ Cancel");
 
             RebuildCategoriesAccordion();
-            if (_tabToolboxText != null) _tabToolboxText.Text = "🧰  " + T("Toolbox_Tab_Main", "Toolbox");
-            if (_tabDebloaterText != null) _tabDebloaterText.Text = "🧹  " + T("Toolbox_Tab_Debloater", "Windows Debloater");
-            if (_pnlDebloaterView != null)
-            {
-                ScrollViewer refreshed = BuildDebloaterTab();
-                _pnlDebloaterView.Content = refreshed.Content;
-            }
         }
     }
 }

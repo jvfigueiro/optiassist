@@ -8,6 +8,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("Copyright (C) 2026 João Figueiró. Licensed under GNU GPLv3.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("1.2.0.4")]
-[assembly: AssemblyFileVersion("1.2.0.4")]
+[assembly: AssemblyVersion("1.2.0.7")]
+[assembly: AssemblyFileVersion("1.2.0.7")]
 

@@ -23,6 +23,7 @@ namespace OptiAssist
         public List<string> ModuleOrder { get; set; }
         public string CustomLogoPath { get; set; }
         public string FreshStart { get; set; }
+        public string DebloaterProfileOverride { get; set; }
 
         // A new instance always holds the factory default values
         public AppSettings()
@@ -40,9 +41,18 @@ namespace OptiAssist
             OpenExternalLogsByDefault = false;
             AlwaysOnTop = false;
             DisabledAddons = new List<string> { "maintenance-report" };
-            ModuleOrder = new List<string>();
+            ModuleOrder = new List<string>
+            {
+                "toolbox",
+                "app-manager",
+                "system-cleaner",
+                "startup-manager",
+                "hardware-monitor",
+                "maintenance-report"
+            };
             CustomLogoPath = "";
             FreshStart = "true";
+            DebloaterProfileOverride = "";
         }
     }
 

@@ -1,0 +1,324 @@
+{
+  "version": "2.0.F3",
+  "category": "power",
+  "tweaks": [
+    {
+      "id": "pwr-optiassist-hybrid-plan",
+      "category": "power",
+      "titleKey": "Debloat_PwrHybridPlan_Title",
+      "titleFallback": "Create & Activate 'OptiAssist Hybrid' Power Plan",
+      "descKey": "Debloat_PwrHybridPlan_Desc",
+      "descFallback": "Clones the Windows Balanced plan (without overwriting it) with DISKIDLE=0, Wi-Fi Max Performance, CPU 5%-100%, AC timeouts (20m screen / never sleep/hibernate) and DC timeouts (10m / 30m / 1h).",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        {
+          "type": "powercfg",
+          "operation": "create_hybrid_plan"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pwr-usb-pcie-desktop-perf",
+      "category": "power",
+      "titleKey": "Debloat_PwrUsbPciePerf_Title",
+      "titleFallback": "Disable USB Selective Suspend & PCIe Link State Power Management",
+      "descKey": "Debloat_PwrUsbPciePerf_Desc",
+      "descFallback": "Sets USB Selective Suspend and PCIe ASPM to Disabled (0) to eliminate latency spikes on NVMe, GPUs, gaming peripherals, and remote desktop sessions.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "ask",
+        "ultraportable": "off"
+      },
+      "detect": [],
+      "apply": [
+        {
+          "type": "powercfg",
+          "operation": "setacdcvalue",
+          "subGroupGuid": "2a737441-1930-4402-8d77-b2bebba308a3",
+          "settingGuid": "48e6b7a6-50f5-4782-a5d4-53bb8f07e226",
+          "value": "0"
+        },
+        {
+          "type": "powercfg",
+          "operation": "setacdcvalue",
+          "subGroupGuid": "501a4d13-42af-4429-9fd1-a8218c268e20",
+          "settingGuid": "ee12f906-d277-404b-b6da-e5fa1a576df5",
+          "value": "0"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pwr-usb-pcie-mobile-balanced",
+      "category": "power",
+      "titleKey": "Debloat_PwrUsbPcieMobile_Title",
+      "titleFallback": "Enable USB Selective Suspend & Moderate PCIe Power Savings (Mobile)",
+      "descKey": "Debloat_PwrUsbPcieMobile_Desc",
+      "descFallback": "Configures USB Selective Suspend (Enabled) and PCIe Link State Power Management (Moderate) to maximize battery autonomy on laptops and ultraportables.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "off",
+        "workstation": "off",
+        "hybrid": "off",
+        "conventional": "off",
+        "laptop": "on",
+        "laptopGaming": "off",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        {
+          "type": "powercfg",
+          "operation": "setacdcvalue",
+          "subGroupGuid": "2a737441-1930-4402-8d77-b2bebba308a3",
+          "settingGuid": "48e6b7a6-50f5-4782-a5d4-53bb8f07e226",
+          "value": "1"
+        },
+        {
+          "type": "powercfg",
+          "operation": "setacdcvalue",
+          "subGroupGuid": "501a4d13-42af-4429-9fd1-a8218c268e20",
+          "settingGuid": "ee12f906-d277-404b-b6da-e5fa1a576df5",
+          "value": "1"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pwr-overlay-best-performance",
+      "category": "power",
+      "titleKey": "Debloat_PwrOverlayPerf_Title",
+      "titleFallback": "Set Windows Power Mode to Best Performance (AC)",
+      "descKey": "Debloat_PwrOverlayPerf_Desc",
+      "descFallback": "Activates the native Best Performance power overlay (ded574b5-45a0-4f42-8737-46345c09c238) while plugged in.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "ask",
+        "ultraportable": "off"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes",
+          "name": "ActiveOverlayAcPowerScheme",
+          "equals": "ded574b5-45a0-4f42-8737-46345c09c238"
+        }
+      ],
+      "apply": [
+        {
+          "type": "powercfg",
+          "operation": "overlay_best_performance"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pwr-energy-saver-off",
+      "category": "power",
+      "titleKey": "Debloat_PwrEnergySaverOff_Title",
+      "titleFallback": "Disable Energy Saver on Desktop PCs",
+      "descKey": "Debloat_PwrEnergySaverOff_Desc",
+      "descFallback": "Ensures Windows Energy Saver threshold is disabled (0%) on desktop machines.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "off"
+      },
+      "detect": [],
+      "apply": [
+        {
+          "type": "powercfg",
+          "operation": "setacdcvalue",
+          "subGroupGuid": "de830923-a562-41af-a086-e3a2c6bad2da",
+          "settingGuid": "e69653ca-cf7f-4f05-aa73-cb833fa90ad4",
+          "value": "0"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pwr-hibernation-off",
+      "category": "power",
+      "titleKey": "Debloat_PwrHibernateOff_Title",
+      "titleFallback": "Disable Hibernation (Remove hiberfil.sys)",
+      "descKey": "Debloat_PwrHibernateOff_Desc",
+      "descFallback": "Runs powercfg /h off on desktops and ultraportables to reclaim gigabytes of SSD/eMMC space and avoid Fast Startup kernel issues. Never enabled on standard/gaming laptops.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power",
+          "name": "HibernateEnabled",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "powercfg",
+          "operation": "hibernate",
+          "value": "0"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "pwr-mouse-accel-off",
+      "category": "power",
+      "titleKey": "Debloat_PwrMouseAccelOff_Title",
+      "titleFallback": "Disable Mouse Acceleration (1:1 Raw Linear Curve)",
+      "descKey": "Debloat_PwrMouseAccelOff_Desc",
+      "descFallback": "Sets MouseSpeed=0, MouseThreshold1=0, and MouseThreshold2=0 across active and default users for consistent 1:1 aiming in games.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "on",
+        "ultraportable": "off"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Control Panel\\Mouse",
+          "name": "MouseSpeed",
+          "equals": "0"
+        },
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Control Panel\\Mouse",
+          "name": "MouseThreshold1",
+          "equals": "0"
+        },
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Control Panel\\Mouse",
+          "name": "MouseThreshold2",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Control Panel\\Mouse",
+          "name": "MouseSpeed",
+          "kind": "String",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Control Panel\\Mouse",
+          "name": "MouseThreshold1",
+          "kind": "String",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Control Panel\\Mouse",
+          "name": "MouseThreshold2",
+          "kind": "String",
+          "value": "0",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    }
+  ]
+}

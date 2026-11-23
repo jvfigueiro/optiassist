@@ -1,4 +1,6 @@
 {
-  "DisableSelectionWarnings": false,
-  "HideUninstalledApps": true
+  "DisableSelectionWarnings": true,
+  "HideUninstalledApps": true,
+  "EnableBackup": true,
+  "CreateRestorePoint": false
 }

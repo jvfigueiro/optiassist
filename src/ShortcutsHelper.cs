@@ -236,7 +236,7 @@ namespace OptiAssist
                     outerFrame.Margin = new Thickness(0);
                     outerFrame.BorderThickness = isMax ? new Thickness(0) : new Thickness(1);
                     outerFrame.CornerRadius = isMax ? new CornerRadius(0) : new CornerRadius(8);
-                    btnMax.Content = isMax ? "❐" : "□";
+                    btnMax.Content = FluentIcons.CreateIconElement(isMax ? "❐" : "□", 11.0);
                 };
             }
 
@@ -264,13 +264,14 @@ namespace OptiAssist
 
             outerFrame.Child = shell;
             win.Content = outerFrame;
+            FluentIcons.UpgradeVisualTree(outerFrame);
         }
 
         private static Button CreateCaptionButton(string glyph)
         {
             Button btn = new Button
             {
-                Content = glyph,
+                Content = FluentIcons.CreateIconElement(glyph, 11.0),
                 Width = 40,
                 Height = 40,
                 FontSize = 12,
@@ -347,7 +348,7 @@ namespace OptiAssist
                 }
                 catch
                 {
-                    MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ToolOpenError", "Unable to start command '{0}': {1}"), command, ex.Message),
+                    OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_ToolOpenError", "Unable to start command '{0}': {1}"), command, ex.Message),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
@@ -373,7 +374,7 @@ namespace OptiAssist
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ToolOpenError", "Unable to start command '{0}': {1}"), "BitLocker", ex.Message),
+                        OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_ToolOpenError", "Unable to start command '{0}': {1}"), "BitLocker", ex.Message),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
@@ -413,7 +414,7 @@ namespace OptiAssist
                 }
                 catch
                 {
-                    MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_MsconfigError", "Unable to open msconfig: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_MsconfigError", "Unable to open msconfig: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -464,7 +465,7 @@ namespace OptiAssist
             }
             else
             {
-                MessageBox.Show(
+                OptiDialog.Show(
                     LocalizationHelper.Get("Msg_GpeditNotFound", "The Local Group Policy Editor (gpedit.msc) was not found on this machine.\n\nThis tool is native exclusively to Windows Pro, Enterprise, and Education editions.\nOn Windows Home / Single Language editions, gpedit is not pre-installed by Windows."),
                     "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -499,7 +500,7 @@ namespace OptiAssist
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(LocalizationHelper.Get("Msg_ChrisTitusError", "Error launching Chris Titus Tool: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show(string.Format(LocalizationHelper.Get("Msg_ChrisTitusError", "Error launching Chris Titus Tool: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -524,7 +525,7 @@ namespace OptiAssist
             }
 
             string expectedPath = Path.Combine(maintDir, @"CrystalDiskInfo\DiskInfo64.exe");
-            MessageBoxResult res = MessageBox.Show(
+            MessageBoxResult res = OptiDialog.Show(
                 string.Format(LocalizationHelper.Get("Msg_CrystalDiskNotFound", "Portable CrystalDiskInfo was not found at:\n{0}\n\nDo you want to open the 'Maintenance' folder to place portable tool files?"), expectedPath),
                 "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
@@ -554,7 +555,7 @@ namespace OptiAssist
             }
 
             string expectedPath = Path.Combine(maintDir, @"CPU-Z\cpuz_x64.exe");
-            MessageBoxResult res = MessageBox.Show(
+            MessageBoxResult res = OptiDialog.Show(
                 string.Format(LocalizationHelper.Get("Msg_CpuZNotFound", "Portable CPU-Z was not found at:\n{0}\n\nDo you want to open the 'Maintenance' folder to place portable tool files?"), expectedPath),
                 "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
@@ -703,6 +704,18 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             }
         }
 
+        public static bool IsPortableMode()
+        {
+            try
+            {
+                return !IsRunningFromInstalledLocation();
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
         public static string NormalizeDirectoryPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return string.Empty;
@@ -738,7 +751,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 {
                     if (showDialog)
                     {
-                        MessageBox.Show(
+                        OptiDialog.Show(
                             LocalizationHelper.Get("Msg_AutorunRootError", "Could not identify the root directory of the current drive."),
                             "AutoRun",
                             MessageBoxButton.OK,
@@ -790,7 +803,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
                 if (showDialog)
                 {
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         string.Format(LocalizationHelper.Get("Msg_AutorunCreated", "autorun.inf file created successfully at drive root ({0})!\n\nConfigured target: {1}\n\nNote: On modern Windows 10/11 systems, USB AutoRun execution is restricted by Microsoft for security, but the custom drive icon and label will be applied when reconnecting the USB drive."), driveRoot, relativeExePath),
                         "USB AutoRun Created",
                         MessageBoxButton.OK,
@@ -802,7 +815,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 if (log != null) log(string.Format("[AUTORUN ERROR] Failed to create autorun.inf: {0}", ex.Message));
                 if (showDialog)
                 {
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         string.Format(LocalizationHelper.Get("Msg_AutorunError", "Failed to create autorun.inf: {0}"), ex.Message),
                         "AutoRun",
                         MessageBoxButton.OK,
@@ -903,7 +916,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             bool result = ExecuteInstallationInternal(targetDir, isPortable, createShortcutsAndRegistry, createAutorun, selectedAddons, log, out errorMsg);
             if (!result && !string.IsNullOrEmpty(errorMsg))
             {
-                MessageBox.Show(errorMsg, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show(errorMsg, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             else if (result)
             {
@@ -911,7 +924,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 string successMsg = isPortable
                     ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), normTarget)
                     : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), normTarget);
-                MessageBox.Show(successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             return result;
         }
@@ -947,7 +960,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 {
                     selectedAddons = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                     {
-                        "Toolbox", "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport"
+                        "Toolbox", "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport", "PCAssist"
                     };
                 }
                 selectedAddons.Add("Toolbox");
@@ -1050,13 +1063,13 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
                 if (!IsAppInstalled() && !runningFromTarget)
                 {
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         LocalizationHelper.Get("Msg_NotInstalled", "OptiAssist is not installed on this device."),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
-                var confirm = MessageBox.Show(
+                var confirm = OptiDialog.Show(
                     LocalizationHelper.Get("Msg_UninstallConfirm", "Are you sure you want to uninstall OptiAssist from this device?\n\nThis will revert all installation actions (remove Desktop and Start Menu shortcuts, remove the Control Panel entry, and delete the installed files)."),
                     "OptiAssist - Uninstall", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                 if (confirm != MessageBoxResult.Yes) return;
@@ -1111,7 +1124,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                         UseShellExecute = false
                     });
 
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         LocalizationHelper.Get("Msg_UninstallSuccessClosing", "OptiAssist has been successfully uninstalled from this computer. The application will now close."),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                     Application.Current.Shutdown();
@@ -1123,7 +1136,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                         try { Directory.Delete(targetDir, true); } catch { }
                     }
 
-                    MessageBox.Show(
+                    OptiDialog.Show(
                         LocalizationHelper.Get("Msg_UninstallSuccess", "OptiAssist was successfully uninstalled from this computer!"),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -1131,21 +1144,24 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             catch (Exception ex)
             {
                 if (log != null) log("[UNINSTALL ERROR] " + ex.Message);
-                MessageBox.Show(
+                OptiDialog.Show(
                     string.Format(LocalizationHelper.Get("Msg_UninstallError", "Failed to uninstall OptiAssist: {0}"), ex.Message),
                     "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private static void DeployApplicationFiles(string sourceDir, string targetDir, HashSet<string> selectedAddons, Action<string> log)
+        public static void DeployApplicationFiles(string sourceDir, string targetDir, HashSet<string> selectedAddons, Action<string> log)
         {
-            // 1. Root application files
+            // 1. Root application & licensing compliance files
             string[] rootFilesToCopy = new string[]
             {
                 "OptiAssist.exe",
                 "OptiAssist.exe.config",
                 "app.ico",
-                "app.png"
+                "app.png",
+                "LICENSE",
+                "THIRD-PARTY-NOTICES.md",
+                "SOURCE-INFO.md"
             };
 
             foreach (string fileName in rootFilesToCopy)
@@ -1179,6 +1195,13 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 }
             }
             catch { }
+
+            // Also copy THIRD-PARTY license texts directory
+            string srcThirdPartyDir = Path.Combine(sourceDir, "THIRD-PARTY");
+            if (Directory.Exists(srcThirdPartyDir))
+            {
+                CopyDirectoryRecursiveSafe(srcThirdPartyDir, Path.Combine(targetDir, "THIRD-PARTY"), targetDir, log);
+            }
 
             // 2. Config directory
             string srcConfigDir = Path.Combine(sourceDir, "Config");
@@ -1216,6 +1239,17 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 catch { }
             }
 
+            // Data & Debloater catalogs (pci.ids.min, microarch.json, known_issues.json, OptiBoost rules)
+            string[] extraConfigDirs = new string[] { "Data", "Debloater" };
+            foreach (string cfgSub in extraConfigDirs)
+            {
+                string srcSub = Path.Combine(srcConfigDir, cfgSub);
+                if (Directory.Exists(srcSub))
+                {
+                    CopyDirectoryRecursiveSafe(srcSub, Path.Combine(dstConfigDir, cfgSub), targetDir, log);
+                }
+            }
+
             // Addons folder
             string srcAddonsDir = Path.Combine(srcConfigDir, "Addons");
             string dstAddonsDir = Path.Combine(dstConfigDir, "Addons");
@@ -1249,17 +1283,22 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 catch { }
             }
 
-            // 3. Auxiliary folders (Installers, Maintenance, Reports)
-            string[] auxFolders = new string[] { "Installers", "Maintenance", "Reports" };
-            foreach (string aux in auxFolders)
+            // 3. Auxiliary folders: only Installers & Maintenance are created for portable/USB deployments.
+            //    For PC installations, only Config\ is mandatory.
+            bool isPcInstall = string.Equals(NormalizeDirectoryPath(targetDir), NormalizeDirectoryPath(GetDefaultInstallDirectory()), StringComparison.OrdinalIgnoreCase);
+            if (!isPcInstall)
             {
-                string dstAux = Path.Combine(targetDir, aux);
-                if (!Directory.Exists(dstAux)) Directory.CreateDirectory(dstAux);
-
-                string srcReadme = Path.Combine(sourceDir, aux, "README.txt");
-                if (File.Exists(srcReadme))
+                string[] auxFolders = new string[] { "Installers", "Maintenance" };
+                foreach (string aux in auxFolders)
                 {
-                    try { File.Copy(srcReadme, Path.Combine(dstAux, "README.txt"), true); } catch { }
+                    string dstAux = Path.Combine(targetDir, aux);
+                    if (!Directory.Exists(dstAux)) Directory.CreateDirectory(dstAux);
+
+                    string srcReadme = Path.Combine(sourceDir, aux, "README.txt");
+                    if (File.Exists(srcReadme))
+                    {
+                        try { File.Copy(srcReadme, Path.Combine(dstAux, "README.txt"), true); } catch { }
+                    }
                 }
             }
         }
@@ -1374,7 +1413,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     if (key != null)
                     {
                         key.SetValue("DisplayName", "OptiAssist");
-                        key.SetValue("DisplayVersion", "1.2.S4");
+                        key.SetValue("DisplayVersion", "1.2.S7");
                         key.SetValue("Publisher", "João Figueiró");
                         key.SetValue("InstallLocation", installDir);
                         key.SetValue("DisplayIcon", exePath + ",0");
@@ -1423,11 +1462,9 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
             Window win = new Window
             {
-                Title = isFirstLaunch
-                    ? LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist")
-                    : LocalizationHelper.Get("InstallWin_Title", "📥 Install OptiAssist"),
+                Title = "OptiAssist Installer",
                 Width = 700,
-                Height = 560,
+                Height = 540,
                 WindowStartupLocation = (!isFirstLaunch && owner != null) ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
                 Owner = (!isFirstLaunch && owner != null) ? owner : null,
                 ResizeMode = ResizeMode.NoResize,
@@ -1439,7 +1476,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Step Content Host
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Wizard Footer Navigation
 
-            // Header (Title, Subtitle, Step Badge, Language ComboBox)
+            // Header (Title, Step Badge, Language ComboBox)
             StackPanel headerOuter = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
             Grid headerGrid = new Grid();
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1449,7 +1486,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             StackPanel titleRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             TextBlock tbTitle = new TextBlock
             {
-                Text = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist"),
+                Text = "OptiAssist Installer",
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
                 VerticalAlignment = VerticalAlignment.Center
@@ -1478,12 +1515,9 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
             TextBlock tbSub = new TextBlock
             {
-                Text = LocalizationHelper.Get("Welcome_Subtitle", "Modular System Maintenance, Diagnostic, and Post-Install Assistant"),
-                FontSize = 11,
-                Margin = new Thickness(0, 3, 0, 0),
-                TextWrapping = TextWrapping.Wrap
+                Text = "",
+                Visibility = Visibility.Collapsed
             };
-            tbSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             headerStack.Children.Add(tbSub);
             Grid.SetColumn(headerStack, 0);
             headerGrid.Children.Add(headerStack);
@@ -1675,9 +1709,9 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             };
             rbRunAsIs.SetResourceReference(RadioButton.ForegroundProperty, "BrushTextPrimary");
             StackPanel spRunAsIs = new StackPanel();
-            TextBlock tbHeadRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)"), FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
+            TextBlock tbHeadRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableMode", "Portable Mode"), FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
             tbHeadRun.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
-            TextBlock tbDescRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs the application directly from the current folder without moving files or registering system shortcuts."), FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
+            TextBlock tbDescRun = new TextBlock { Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs directly from the current folder with all modules enabled, without installing or creating system shortcuts."), FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
             tbDescRun.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
             spRunAsIs.Children.Add(tbHeadRun);
             spRunAsIs.Children.Add(tbDescRun);
@@ -1814,7 +1848,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
             spModulesList.Children.Add(chkToolbox);
             addonCheckboxes["Toolbox"] = chkToolbox;
 
-            string[] knownAddons = new string[] { "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport" };
+            string[] knownAddons = new string[] { "AppManager", "SystemCleaner", "StartupManager", "MaintenanceReport", "PCAssist" };
             foreach (var mod in knownAddons)
             {
                 CheckBox chk = new CheckBox
@@ -1964,9 +1998,9 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 MainWindow mw = owner as MainWindow;
                 if (mw != null) mw.SetLanguage(newLang);
 
-                win.Title = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist");
-                tbTitle.Text = LocalizationHelper.Get("Welcome_Title", "Welcome to OptiAssist");
-                tbSub.Text = LocalizationHelper.Get("Welcome_Subtitle", "Modular System Maintenance, Diagnostic, and Post-Install Assistant");
+                win.Title = "OptiAssist Installer";
+                tbTitle.Text = "OptiAssist Installer";
+                tbSub.Text = "";
                 lblLang.Text = LocalizationHelper.Get("InstallWin_Label_Language", "🌐 Language:");
                 lblWarnTitle.Text = LocalizationHelper.Get("Welcome_Notice_Title", "1. Safety Warning & System Operation Risks");
                 tbWarnText.Text = LocalizationHelper.Get("Welcome_Notice_Text", "OptiAssist is a powerful toolkit designed for IT professionals and power users that performs deep system administrative operations (including system integrity checks, DISM/SFC repairs, system cleaning, and startup adjustments). Administrative commands modify low-level Windows settings. Ensure you review and understand actions prior to executing them.");
@@ -1974,8 +2008,8 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 txtTerms.Text = GetFullTermsAndConditionsText();
                 chkAccept.Content = LocalizationHelper.Get("Welcome_License_Chk", "I have read and agree to the Terms of Use and Software License (GNU GPLv3)");
                 lblModeTitle.Text = LocalizationHelper.Get("Welcome_Mode_Title", "3. How would you like to use OptiAssist?");
-                tbHeadRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableRun", "Simply run as-is (Standalone Portable Mode)");
-                tbDescRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs the application directly from the current folder without moving files or registering system shortcuts.");
+                tbHeadRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableMode", "Portable Mode");
+                tbDescRun.Text = LocalizationHelper.Get("Welcome_Mode_PortableRunDesc", "Runs directly from the current folder with all modules enabled, without installing or creating system shortcuts.");
                 tbHeadPC.Text = LocalizationHelper.Get("Welcome_Mode_InstallPC", "Install on this PC (Recommended for daily use)");
                 tbDescPC.Text = LocalizationHelper.Get("Welcome_Mode_InstallPCDesc", "Installs OptiAssist to local drive (C:\\Program Files\\OptiAssist), creates Desktop and Start Menu shortcuts, and registers in Control Panel.");
                 tbHeadUsb.Text = LocalizationHelper.Get("Welcome_Mode_Usb", "Install to USB drive / External media");
@@ -2007,9 +2041,33 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                 }
                 if (currentStep == 2)
                 {
+                    if (rbRunAsIs.IsChecked == true)
+                    {
+                        // Portable Mode: enable ALL modules, ensure portable folders, save, and launch OptiAssist immediately
+                        if (settings != null)
+                        {
+                            if (settings.DisabledAddons == null) settings.DisabledAddons = new List<string>();
+                            settings.DisabledAddons.Clear();
+                            settings.FreshStart = "false";
+                            SettingsHelper.Save(settings);
+                        }
+                        try
+                        {
+                            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                            string instDir = Path.Combine(baseDir, "Installers");
+                            string maintDir = Path.Combine(baseDir, "Maintenance");
+                            if (!Directory.Exists(instDir)) Directory.CreateDirectory(instDir);
+                            if (!Directory.Exists(maintDir)) Directory.CreateDirectory(maintDir);
+                        }
+                        catch { }
+                        success = true;
+                        win.DialogResult = true;
+                        win.Close();
+                        return;
+                    }
                     if (rbInstallUsb.IsChecked == true && string.IsNullOrWhiteSpace(txtUsbDir.Text))
                     {
-                        MessageBox.Show(win,
+                        OptiDialog.Show(win,
                             LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory."),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
@@ -2058,7 +2116,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
 
                     if (string.IsNullOrWhiteSpace(targetDir))
                     {
-                        MessageBox.Show(win,
+                        OptiDialog.Show(win,
                             LocalizationHelper.Get("InstallWin_Msg_DirRequired", "Please specify a valid destination directory."),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
@@ -2106,7 +2164,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                             ? string.Format(LocalizationHelper.Get("Msg_PortableInstallSuccess", "OptiAssist portable installation completed successfully at:\n{0}"), normTarget)
                             : string.Format(LocalizationHelper.Get("Msg_InstallSuccess", "OptiAssist was successfully installed on this computer!\nLocation: {0}\nShortcuts have been created on your Desktop and Start Menu."), normTarget);
 
-                        MessageBox.Show(win, successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        OptiDialog.Show(win, successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
 
                         success = true;
                         win.DialogResult = true;
@@ -2114,7 +2172,7 @@ OptiAssist provides system optimization, maintenance automation, and administrat
                     }
                     else if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        MessageBox.Show(win, errorMessage, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        OptiDialog.Show(win, errorMessage, "OptiAssist - Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
             };

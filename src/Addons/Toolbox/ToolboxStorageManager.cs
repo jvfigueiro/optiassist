@@ -483,66 +483,6 @@ namespace OptiAssist.Addons.Toolbox
 
             presets.Add(new ToolboxCommandItem()
             {
-                id = "preset-disable-bitlocker",
-                title = "Desativar Criptografia BitLocker (Unidade C:)",
-                description = "Descriptografa a partição do sistema e desativa a proteção BitLocker no disco C:",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Disable-BitLocker -MountPoint $Env:SystemDrive; Write-Host 'Descriptografia BitLocker solicitada com sucesso na unidade C:.'\"",
-                category = "Tweaks Essenciais",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-end-task-rightclick",
-                title = "Ativar \"Finalizar Tarefa\" no Clique Direito da Barra de Tarefas",
-                description = "Habilita a opção nativa do Windows 11 para encerrar programas diretamente pela barra de tarefas",
-                command = "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings\" /v TaskbarEndTask /t REG_DWORD /d 1 /f",
-                category = "Tweaks Essenciais",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-hibernation",
-                title = "Desativar Hibernação do Sistema (Liberar hiberfil.sys)",
-                description = "Desliga a hibernação, remove o arquivo hiberfil.sys e libera gigabytes de espaço no disco C:",
-                command = "powercfg.exe /hibernate off && reg add \"HKLM\\System\\CurrentControlSet\\Control\\Session Manager\\Power\" /v HibernateEnabled /t REG_DWORD /d 0 /f && reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FlyoutMenuSettings\" /v ShowHibernateOption /t REG_DWORD /d 0 /f",
-                category = "Tweaks Essenciais",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-optimize-services-manual",
-                title = "Otimizar Serviços em Segundo Plano e Limite SvcHost",
-                description = "Configura serviços não essenciais (CscService, DiagTrack, MapsBroker, StorSvc) e ajusta SvcHostSplitThresholdInKB conforme a RAM",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Service CscService, SharedAccess -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue; Get-Service DiagTrack -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue; Get-Service MapsBroker, StorSvc -ErrorAction SilentlyContinue | Set-Service -StartupType Manual -ErrorAction SilentlyContinue; $memKB = [math]::Round(((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1KB)); Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control' -Name SvcHostSplitThresholdInKB -Value $memKB -Type DWord -Force; Write-Host \\\"Servicos configurados e SvcHostSplitThreshold ajustado para $memKB KB.\\\"\"",
-                category = "Tweaks Essenciais",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 60
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
                 id = "preset-disable-storage-sense",
                 title = "Desativar Sensor de Armazenamento Automático (Storage Sense)",
                 description = "Desativa a exclusão automática de arquivos temporários e downloads executada pelo Sensor de Armazenamento",
@@ -556,68 +496,7 @@ namespace OptiAssist.Addons.Toolbox
                 timeout_seconds = 30
             });
 
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-reserved-storage",
-                title = "Desativar Armazenamento Reservado (Liberar 7-10 GB)",
-                description = "Desativa o Armazenamento Reservado do Windows via DISM para liberar de 7 a 10 GB de espaço em disco",
-                command = "DISM /Online /Set-ReservedStorageState /State:Disabled",
-                category = "Tweaks Avançados",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 120
-            });
-
-            // Preferências e Interface
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-optimize-visual-fx",
-                title = "Otimizar Efeitos Visuais para Máximo Desempenho",
-                description = "Configura animações para melhor desempenho, reduz MenuShowDelay para 50ms e melhora a resposta do sistema",
-                command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop\\WindowMetrics' -Name MinAnimate -Value 0; Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name MenuShowDelay -Value 50; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name VisualFXSetting -Value 2; Write-Host 'Efeitos visuais otimizados com sucesso!'\"",
-                category = "Preferências e Interface",
-                shell = ToolboxShellType.PowerShell,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = false,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-disable-mouse-acceleration",
-                title = "Desativar Aceleração do Mouse (Movimento 1:1 Preciso)",
-                description = "Remove a aceleração de ponteiro para garantir movimento linear e precisão consistente no cursor",
-                command = "reg add \"HKCU\\Control Panel\\Mouse\" /v MouseSpeed /t REG_SZ /d \"0\" /f && reg add \"HKCU\\Control Panel\\Mouse\" /v MouseThreshold1 /t REG_SZ /d \"0\" /f && reg add \"HKCU\\Control Panel\\Mouse\" /v MouseThreshold2 /t REG_SZ /d \"0\" /f",
-                category = "Preferências e Interface",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 30
-            });
-
             // Otimização e Desempenho
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-clean-temp-files",
-                title = "Limpar Pastas de Arquivos Temporários (%TEMP% e Temp)",
-                description = "Remove arquivos temporários residuais em %TEMP% e C:\\Windows\\Temp",
-                command = "cmd.exe /c \"del /q /f /s \\\"%TEMP%\\*.*\\\" 2>nul & del /q /f /s \\\"C:\\Windows\\Temp\\*.*\\\" 2>nul & echo Limpeza de temporarios concluida!\"",
-                category = "Otimização e Desempenho",
-                shell = ToolboxShellType.Cmd,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 120
-            });
-
             presets.Add(new ToolboxCommandItem()
             {
                 id = "preset-clean-update-cache",
@@ -646,21 +525,6 @@ namespace OptiAssist.Addons.Toolbox
                 requires_admin = true,
                 open_external_logs = true,
                 timeout_seconds = 60
-            });
-
-            presets.Add(new ToolboxCommandItem()
-            {
-                id = "preset-compactos-always",
-                title = "Compactar Binários do Windows (CompactOS)",
-                description = "Reduz o tamanho em disco da instalação do Windows compactando binários do sistema sem perda de performance",
-                command = "compact.exe /CompactOS:always",
-                category = "Otimização e Desempenho",
-                shell = ToolboxShellType.Binary,
-                wait_for_exit = true,
-                capture_output = true,
-                requires_admin = true,
-                open_external_logs = true,
-                timeout_seconds = 1800
             });
 
             presets.Add(new ToolboxCommandItem()

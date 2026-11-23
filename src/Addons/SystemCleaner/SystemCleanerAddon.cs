@@ -96,6 +96,8 @@ namespace OptiAssist.Addons.SystemCleaner
         public string DeepScanRootPath { get; set; }
         public int DeepScanMaxDepth { get; set; }
         public bool IsProcessElevated { get; set; }
+        public bool EnableBackup { get; set; }
+        public CleanerBackupSession BackupSession { get; set; }
         public Action<string> Logger { get; set; }
 
         public CleanerContext()
@@ -103,6 +105,7 @@ namespace OptiAssist.Addons.SystemCleaner
             DeepScanRootPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             DeepScanMaxDepth = 5;
             IsProcessElevated = CheckIsAdministrator();
+            EnableBackup = true;
         }
 
         public void Log(string message)
@@ -127,6 +130,434 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 return false;
             }
+        }
+    }
+
+    public class BackupFileItem
+    {
+        public string OriginalPath { get; set; }
+        public string BackupFileName { get; set; }
+        public long FileSize { get; set; }
+    }
+
+    public class CleanerBackupSession
+    {
+        public string SessionId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string SessionDir { get; set; }
+        public string FilesDir { get; set; }
+        public int TotalFiles { get; set; }
+        public long TotalBytes { get; set; }
+        public bool IsRestored { get; set; }
+        public List<BackupFileItem> Files { get; set; }
+
+        private readonly object _sync = new object();
+        private int _fileCounter = 0;
+
+        public CleanerBackupSession(string sessionId, string sessionDir)
+        {
+            SessionId = sessionId;
+            SessionDir = sessionDir;
+            CreatedAt = DateTime.Now;
+            FilesDir = Path.Combine(sessionDir, "files");
+            Files = new List<BackupFileItem>();
+            TotalFiles = 0;
+            TotalBytes = 0;
+            IsRestored = false;
+
+            try
+            {
+                if (!Directory.Exists(FilesDir))
+                {
+                    Directory.CreateDirectory(FilesDir);
+                }
+            }
+            catch { }
+        }
+
+        public bool BackupFile(string sourceFilePath, long fileSize)
+        {
+            if (string.IsNullOrEmpty(sourceFilePath) || !File.Exists(sourceFilePath)) return false;
+
+            // Skip individual files over 250 MB to prevent backup exhaustion
+            if (fileSize > 250L * 1024 * 1024) return false;
+
+            try
+            {
+                // Ensure at least 1 GB free space on backup drive
+                string root = Path.GetPathRoot(FilesDir);
+                if (!string.IsNullOrEmpty(root))
+                {
+                    DriveInfo di = new DriveInfo(root);
+                    if (di.IsReady && di.AvailableFreeSpace < 1024L * 1024 * 1024)
+                    {
+                        return false;
+                    }
+                }
+
+                lock (_sync)
+                {
+                    _fileCounter++;
+                    string fname = Path.GetFileName(sourceFilePath);
+                    foreach (char c in Path.GetInvalidFileNameChars())
+                    {
+                        fname = fname.Replace(c, '_');
+                    }
+                    string backupName = string.Format("{0:D6}_{1}", _fileCounter, fname);
+                    string destPath = Path.Combine(FilesDir, backupName);
+
+                    File.Copy(sourceFilePath, destPath, true);
+
+                    Files.Add(new BackupFileItem
+                    {
+                        OriginalPath = sourceFilePath,
+                        BackupFileName = backupName,
+                        FileSize = fileSize
+                    });
+                    TotalFiles++;
+                    TotalBytes += fileSize;
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public void FinalizeSession()
+        {
+            try
+            {
+                if (TotalFiles == 0)
+                {
+                    if (Directory.Exists(SessionDir))
+                    {
+                        Directory.Delete(SessionDir, true);
+                    }
+                    return;
+                }
+
+                SaveManifest();
+            }
+            catch { }
+        }
+
+        public void SaveManifest()
+        {
+            try
+            {
+                string manifestPath = Path.Combine(SessionDir, "manifest.json");
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("{");
+                sb.AppendLine(string.Format("  \"sessionId\": \"{0}\",", SessionId));
+                sb.AppendLine(string.Format("  \"createdAt\": \"{0:O}\",", CreatedAt));
+                sb.AppendLine(string.Format("  \"totalFiles\": {0},", TotalFiles));
+                sb.AppendLine(string.Format("  \"totalBytes\": {0},", TotalBytes));
+                sb.AppendLine(string.Format("  \"isRestored\": {0},", IsRestored ? "true" : "false"));
+                sb.AppendLine("  \"files\": [");
+                for (int i = 0; i < Files.Count; i++)
+                {
+                    BackupFileItem item = Files[i];
+                    sb.Append("    { ");
+                    sb.Append(string.Format("\"originalPath\": \"{0}\", ", EscapeJson(item.OriginalPath)));
+                    sb.Append(string.Format("\"backupFileName\": \"{0}\", ", EscapeJson(item.BackupFileName)));
+                    sb.Append(string.Format("\"fileSize\": {0}", item.FileSize));
+                    sb.Append(" }");
+                    if (i < Files.Count - 1) sb.Append(",");
+                    sb.AppendLine();
+                }
+                sb.AppendLine("  ]");
+                sb.AppendLine("}");
+
+                File.WriteAllText(manifestPath, sb.ToString(), new UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        private static string EscapeJson(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
+        }
+    }
+
+    public static class CleanerBackupManager
+    {
+        public static string GetBackupBaseDirectory()
+        {
+            try
+            {
+                string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "OptiAssist", "Backups", "Cleaner");
+                if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+                return path;
+            }
+            catch
+            {
+                string alt = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups", "Cleaner");
+                if (!Directory.Exists(alt)) Directory.CreateDirectory(alt);
+                return alt;
+            }
+        }
+
+        public static CleanerBackupSession CreateSession()
+        {
+            try
+            {
+                string baseDir = GetBackupBaseDirectory();
+                string sessionId = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string sessionDir = Path.Combine(baseDir, sessionId);
+                return new CleanerBackupSession(sessionId, sessionDir);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static List<CleanerBackupSession> LoadAllSessions()
+        {
+            List<CleanerBackupSession> list = new List<CleanerBackupSession>();
+            try
+            {
+                string baseDir = GetBackupBaseDirectory();
+                if (!Directory.Exists(baseDir)) return list;
+
+                string[] dirs = Directory.GetDirectories(baseDir);
+                foreach (string d in dirs)
+                {
+                    string manifest = Path.Combine(d, "manifest.json");
+                    if (File.Exists(manifest))
+                    {
+                        CleanerBackupSession s = LoadSessionFromDirectory(d);
+                        if (s != null && s.TotalFiles > 0)
+                        {
+                            list.Add(s);
+                        }
+                    }
+                }
+                list.Sort((a, b) => b.CreatedAt.CompareTo(a.CreatedAt));
+            }
+            catch { }
+            return list;
+        }
+
+        public static CleanerBackupSession LoadSessionFromDirectory(string sessionDir)
+        {
+            try
+            {
+                string manifest = Path.Combine(sessionDir, "manifest.json");
+                if (!File.Exists(manifest)) return null;
+
+                string sessionId = Path.GetFileName(sessionDir);
+                CleanerBackupSession session = new CleanerBackupSession(sessionId, sessionDir);
+
+                string[] lines = File.ReadAllLines(manifest, Encoding.UTF8);
+                foreach (string rawLine in lines)
+                {
+                    string line = rawLine.Trim();
+                    if (line.StartsWith("\"createdAt\":", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string dtStr = ExtractJsonStringValue(line);
+                        DateTime dt;
+                        if (DateTime.TryParse(dtStr, out dt)) session.CreatedAt = dt;
+                    }
+                    else if (line.StartsWith("\"totalFiles\":", StringComparison.OrdinalIgnoreCase))
+                    {
+                        session.TotalFiles = (int)ExtractJsonLongValue(line);
+                    }
+                    else if (line.StartsWith("\"totalBytes\":", StringComparison.OrdinalIgnoreCase))
+                    {
+                        session.TotalBytes = ExtractJsonLongValue(line);
+                    }
+                    else if (line.StartsWith("\"isRestored\":", StringComparison.OrdinalIgnoreCase))
+                    {
+                        session.IsRestored = line.IndexOf("true", StringComparison.OrdinalIgnoreCase) >= 0;
+                    }
+                    else if (line.Contains("\"originalPath\":") && line.Contains("\"backupFileName\":"))
+                    {
+                        string orig = ExtractJsonKeyValue(line, "originalPath");
+                        string bName = ExtractJsonKeyValue(line, "backupFileName");
+                        long size = ExtractJsonKeyLong(line, "fileSize");
+                        if (!string.IsNullOrEmpty(orig) && !string.IsNullOrEmpty(bName))
+                        {
+                            session.Files.Add(new BackupFileItem
+                            {
+                                OriginalPath = orig,
+                                BackupFileName = bName,
+                                FileSize = size
+                            });
+                        }
+                    }
+                }
+                return session;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static bool RollbackSession(CleanerBackupSession session, out int restoredFiles, out long restoredBytes, out string error)
+        {
+            restoredFiles = 0;
+            restoredBytes = 0;
+            error = null;
+
+            if (session == null || !Directory.Exists(session.SessionDir))
+            {
+                error = "Backup session not found.";
+                return false;
+            }
+
+            try
+            {
+                foreach (BackupFileItem f in session.Files)
+                {
+                    try
+                    {
+                        string src = Path.Combine(session.FilesDir, f.BackupFileName);
+                        if (File.Exists(src))
+                        {
+                            string dir = Path.GetDirectoryName(f.OriginalPath);
+                            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                            {
+                                Directory.CreateDirectory(dir);
+                            }
+                            File.Copy(src, f.OriginalPath, true);
+                            restoredFiles++;
+                            restoredBytes += f.FileSize;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore locked or inaccessible targets
+                    }
+                }
+
+                session.IsRestored = true;
+                session.SaveManifest();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        public static void DeleteSession(CleanerBackupSession session)
+        {
+            try
+            {
+                if (session != null && Directory.Exists(session.SessionDir))
+                {
+                    Directory.Delete(session.SessionDir, true);
+                }
+            }
+            catch { }
+        }
+
+        public static void DeleteAllSessions()
+        {
+            try
+            {
+                string baseDir = GetBackupBaseDirectory();
+                if (Directory.Exists(baseDir))
+                {
+                    foreach (string d in Directory.GetDirectories(baseDir))
+                    {
+                        try { Directory.Delete(d, true); } catch { }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static string ExtractJsonStringValue(string line)
+        {
+            int colon = line.IndexOf(':');
+            if (colon < 0) return "";
+            int q1 = line.IndexOf('"', colon);
+            if (q1 < 0) return "";
+            int q2 = line.IndexOf('"', q1 + 1);
+            if (q2 < 0) return "";
+            return line.Substring(q1 + 1, q2 - q1 - 1);
+        }
+
+        private static long ExtractJsonLongValue(string line)
+        {
+            int colon = line.IndexOf(':');
+            if (colon < 0) return 0;
+            string numStr = line.Substring(colon + 1).Trim().TrimEnd(',');
+            long val;
+            long.TryParse(numStr, out val);
+            return val;
+        }
+
+        private static string ExtractJsonKeyValue(string line, string key)
+        {
+            string target = "\"" + key + "\":";
+            int idx = line.IndexOf(target, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return "";
+            int q1 = line.IndexOf('"', idx + target.Length);
+            if (q1 < 0) return "";
+            int q2 = q1 + 1;
+            while (q2 < line.Length)
+            {
+                if (line[q2] == '"' && line[q2 - 1] != '\\') break;
+                q2++;
+            }
+            if (q2 >= line.Length) return "";
+            string val = line.Substring(q1 + 1, q2 - q1 - 1);
+            return val.Replace("\\\"", "\"").Replace("\\\\", "\\");
+        }
+
+        private static long ExtractJsonKeyLong(string line, string key)
+        {
+            string target = "\"" + key + "\":";
+            int idx = line.IndexOf(target, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return 0;
+            int start = idx + target.Length;
+            int end = line.IndexOfAny(new char[] { ',', '}', ' ' }, start);
+            string sub = end > start ? line.Substring(start, end - start) : line.Substring(start);
+            long val;
+            long.TryParse(sub.Trim(), out val);
+            return val;
+        }
+    }
+
+    public static class SystemRestoreHelper
+    {
+        public static void CreateRestorePointAsync(Action<string> logger)
+        {
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    if (logger != null) logger("[RESTORE POINT] Initiating Windows System Restore Point creation...");
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'OptiAssist Pre-Clean' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction SilentlyContinue\"",
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    using (Process p = Process.Start(psi))
+                    {
+                        if (p != null)
+                        {
+                            p.WaitForExit(15000);
+                            if (logger != null) logger("[RESTORE POINT] Windows System Restore Point complete.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (logger != null) logger("[RESTORE POINT] Notice: Could not create restore point (" + ex.Message + ").");
+                }
+            });
         }
     }
 
@@ -421,7 +852,7 @@ namespace OptiAssist.Addons.SystemCleaner
             return string.Format("{0:0.##} {1}", d, suffixes[idx]);
         }
 
-        public static void DeleteFileSafe(string filePath, CleanResult result)
+        public static void DeleteFileSafe(string filePath, CleanResult result, CleanerContext context = null)
         {
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) return;
             if (!PathSanitizer.IsSafeToDelete(filePath))
@@ -434,6 +865,12 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 FileInfo fi = new FileInfo(filePath);
                 long len = fi.Exists ? fi.Length : 0;
+
+                if (context != null && context.EnableBackup && context.BackupSession != null)
+                {
+                    context.BackupSession.BackupFile(filePath, len);
+                }
+
                 File.SetAttributes(filePath, FileAttributes.Normal);
                 File.Delete(filePath);
                 result.FreedBytes += len;
@@ -925,7 +1362,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     ScanDeepRecursive(root, 0, maxDepth, act, sr);
                     foreach (string f in sr.FoundItems)
                     {
-                        DeleteFileSafe(f, res);
+                        DeleteFileSafe(f, res, context);
                     }
                 }
                 return;
@@ -940,7 +1377,7 @@ namespace OptiAssist.Addons.SystemCleaner
             {
                 foreach (string f in matchedFiles)
                 {
-                    DeleteFileSafe(f, res);
+                    DeleteFileSafe(f, res, context);
                 }
 
                 // Remove subdirectories bottom-up when walk.all, walk.top, or glob directory deletion is specified
@@ -985,7 +1422,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         }
                         else if (!NativeCleanerHelper.IsFileLocked(f))
                         {
-                            DeleteFileSafe(f, res);
+                            DeleteFileSafe(f, res, context);
                         }
                         else
                         {
@@ -994,7 +1431,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     }
                     else
                     {
-                        DeleteFileSafe(f, res);
+                        DeleteFileSafe(f, res, context);
                     }
                 }
             }
@@ -1619,7 +2056,6 @@ namespace OptiAssist.Addons.SystemCleaner
             "windows_defender",
             "microsoft_edge",
             "internet_explorer",
-            "windows_media_player",
             "paint",
             "wordpad",
             "deepscan"
@@ -1636,7 +2072,6 @@ namespace OptiAssist.Addons.SystemCleaner
             "crash_reports",
             "thumbnails",
             "mru",
-            "recent_documents",
             "run",
             "search_history",
             "history"
@@ -1651,7 +2086,13 @@ namespace OptiAssist.Addons.SystemCleaner
             "site_data",
             "sync",
             "quarantine",
-            "backup"
+            "backup",
+            "bak",
+            "recent_documents",
+            "automatic_destinations",
+            "node_modules",
+            "venv",
+            "pycache"
         };
 
         public static string GetCleanersDirectory()
@@ -2018,14 +2459,13 @@ namespace OptiAssist.Addons.SystemCleaner
                 catch { }
             }
 
-            // Order Windows tab sections logically: Microsoft Edge, Windows Explorer, Windows Defender, Internet Explorer, Media Player, Paint, WordPad, Deep Scan
+            // Order Windows tab sections logically: Windows Explorer, Windows Defender, Microsoft Edge, Internet Explorer, Paint, WordPad, Deep Scan
             string[] preferredWinOrder = new string[]
             {
-                "microsoft_edge",
                 "windows_explorer",
                 "windows_defender",
+                "microsoft_edge",
                 "internet_explorer",
-                "windows_media_player",
                 "paint",
                 "wordpad",
                 "deepscan"
@@ -2145,8 +2585,9 @@ namespace OptiAssist.Addons.SystemCleaner
             // Parse <option id="...">
             List<CleanerMlAction> allCleanerActions = new List<CleanerMlAction>();
             bool isWinCore = WindowsCoreCleanerIds.Contains(cleanerId);
-            string tabId = isWinCore ? "windows" : "apps";
-            string sectionId = string.Equals(cleanerId, "deepscan", StringComparison.OrdinalIgnoreCase) ? "deep_scan" : cleanerId;
+            bool isDeepScan = string.Equals(cleanerId, "deepscan", StringComparison.OrdinalIgnoreCase);
+            string tabId = isDeepScan ? "options" : (isWinCore ? "windows" : "apps");
+            string sectionId = isDeepScan ? "deep_scan" : cleanerId;
             string sectionIcon = GetCleanerIcon(cleanerId);
 
             foreach (XmlNode node in cleanerEl.ChildNodes)
@@ -2480,9 +2921,16 @@ namespace OptiAssist.Addons.SystemCleaner
                 case "Most recently used": return "Arquivos usados recentemente (MRU)";
                 case "Recent documents": return "Documentos recentes";
                 case "Recent documents list": return "Lista de documentos recentes";
+                case "Jump Lists & Pinned Destinations": return "Destinos Fixados e Atalhos (Jump Lists)";
                 case "Run": return "Executar (Win+R)";
-                case "Shellbags": return "Shellbags (Visualização de pastas)";
                 case "Thumbnails": return "Cache de miniaturas (Thumbnails)";
+                case "Thumbs.db cache files": return "Bancos de miniaturas (Thumbs.db)";
+                case "Temporary files (.tmp)": return "Arquivos temporários (.tmp)";
+                case "Backup files (.bak)": return "Arquivos de backup (.bak)";
+                case ".DS_Store metadata files": return "Metadados do macOS (.DS_Store)";
+                case "Node.js Dependencies (node_modules)": return "Dependências Node.js (node_modules)";
+                case "Python Virtual Environments (venv)": return "Ambientes Virtuais Python (venv)";
+                case "Python Bytecode Cache (__pycache__ / .pyc)": return "Cache de Bytecode Python (__pycache__ / .pyc)";
                 case "Quarantine": return "Arquivos em quarentena";
                 case "Installers": return "Instaladores em cache";
                 case "Statistics": return "Estatísticas";
@@ -2522,10 +2970,20 @@ namespace OptiAssist.Addons.SystemCleaner
                 case "Reset the search engine usage history and delete non-factory search engines, some of which are added automatically": return "Redefinir o histórico de mecanismos de busca e excluir mecanismos adicionados automaticamente";
                 case "Delete the most recently used list": return "Excluir a lista de arquivos usados recentemente (MRU)";
                 case "Delete the list of recently used documents": return "Excluir a lista de documentos abertos recentemente";
+                case "Delete the list of recently opened files and documents": return "Excluir a lista de documentos abertos recentemente";
+                case "Delete taskbar jump lists and reset pinned Quick Access locations to defaults": return "Excluir atalhos da barra de tarefas e redefinir pastas fixadas no Acesso Rápido";
                 case "Delete the Start menu's Run history": return "Excluir o histórico do comando Executar (Win+R)";
+                case "Delete the Start menu Run (Win+R) history": return "Excluir o histórico do comando Executar (Win+R)";
                 case "Delete the search history": return "Excluir o histórico de pesquisas";
-                case "Delete the folder view settings, window sizes, and positions": return "Excluir configurações de visualização de pastas, tamanhos e posições de janelas";
+                case "Delete the thumbnail cache": return "Excluir o cache de miniaturas de imagens e vídeos";
                 case "Delete the thumbnails of pictures and videos": return "Excluir o cache de miniaturas de imagens e vídeos";
+                case "Delete temporary files scattered across user directories": return "Excluir arquivos temporários espalhados pelas pastas do usuário";
+                case "Delete backup files generated by text editors and applications": return "Excluir arquivos de backup gerados por editores e aplicativos (.bak)";
+                case "Delete hidden Windows thumbnail database cache files": return "Excluir arquivos ocultos de banco de miniaturas do Windows (Thumbs.db)";
+                case "Delete legacy macOS metadata files leftover from transfers": return "Excluir arquivos de metadados legados do macOS (.DS_Store)";
+                case "Delete node_modules dependency packages in developer workspaces": return "Excluir pacotes de dependências node_modules em projetos de desenvolvimento";
+                case "Delete Python virtual environment folders (.venv / venv)": return "Excluir pastas de ambientes virtuais Python (.venv / venv)";
+                case "Delete compiled Python bytecode directories and .pyc files": return "Excluir pastas de bytecode compilado __pycache__ e arquivos .pyc";
                 case "Delete quarantined files": return "Excluir arquivos colocados em quarentena pelo Windows Defender";
                 case "Delete the AI models": return "Excluir modelos locais de inteligência artificial";
                 default: return rawDesc;
@@ -2535,6 +2993,64 @@ namespace OptiAssist.Addons.SystemCleaner
         public static string TranslateWarningText(string rawWarning, string optId, string langCode)
         {
             bool pt = IsPortuguese(langCode);
+            string id = (optId ?? "").ToLowerInvariant();
+
+            if (id == "passwords")
+            {
+                return pt
+                    ? "ALERTA: Esta opção excluirá permanentemente suas senhas salvas neste navegador. Todos os logins automáticos serão perdidos e você precisará redigitar suas credenciais."
+                    : "WARNING: This option will permanently delete your saved passwords in this browser. All automatic logins will be lost and you will need to re-enter your credentials.";
+            }
+
+            if (id == "session" || id == "sessionjson")
+            {
+                return pt
+                    ? "ALERTA: Esta opção encerrará as sessões ativas e fechará as abas abertas salvas neste navegador."
+                    : "WARNING: This option will close all active sessions and saved open tabs in this browser.";
+            }
+
+            if (id == "cookies" || id == "site_data")
+            {
+                return pt
+                    ? "Esta opção limpará cookies e dados de sites, desconectando você de contas e logins ativos na web."
+                    : "This option will clear cookies and website data, signing you out of active web accounts.";
+            }
+
+            if (id == "automatic_destinations")
+            {
+                return pt
+                    ? "AVISO: Esta opção redefinirá os atalhos e pastas fixadas na Barra de Tarefas e no Acesso Rápido para os padrões do Windows."
+                    : "WARNING: This option will reset pinned locations and Jump Lists in the taskbar and Quick Access to defaults.";
+            }
+
+            if (id == "node_modules")
+            {
+                return pt
+                    ? "ALERTA CRÍTICO DE DESENVOLVIMENTO: Esta opção apagará todas as pastas 'node_modules' de dependências em projetos de desenvolvimento. Será necessário executar 'npm install' ou 'yarn' para restaurá-las."
+                    : "CRITICAL DEVELOPMENT WARNING: This option will delete all 'node_modules' dependency folders in software projects. Running 'npm install' or 'yarn' will be required to restore them.";
+            }
+
+            if (id == "venv")
+            {
+                return pt
+                    ? "ALERTA CRÍTICO DE DESENVOLVIMENTO: Esta opção apagará ambientes virtuais do Python (.venv / venv) nos projetos de programação. Eles precisarão ser recriados."
+                    : "CRITICAL DEVELOPMENT WARNING: This option will delete Python virtual environments (.venv / venv) in developer projects. They will need to be recreated.";
+            }
+
+            if (id == "pycache")
+            {
+                return pt
+                    ? "ALERTA DE DESENVOLVIMENTO: Esta opção apagará caches de bytecode compilado (__pycache__ e .pyc) em projetos Python."
+                    : "DEVELOPMENT WARNING: This option will delete compiled Python bytecode caches (__pycache__ and .pyc) in Python projects.";
+            }
+
+            if (id == "bak" || id == "backup")
+            {
+                return pt
+                    ? "Verifique a lista antes de prosseguir. Esta opção removerá arquivos de backup com extensão .bak e arquivos temporários ~."
+                    : "Inspect the preview before cleaning. This will delete .bak and ~ backup files.";
+            }
+
             if (!string.IsNullOrEmpty(rawWarning))
             {
                 if (pt)
@@ -2542,7 +3058,7 @@ namespace OptiAssist.Addons.SystemCleaner
                     if (rawWarning.IndexOf("delete your saved passwords", StringComparison.OrdinalIgnoreCase) >= 0)
                         return "Esta opção excluirá suas senhas salvas.";
                     if (rawWarning.IndexOf("slow", StringComparison.OrdinalIgnoreCase) >= 0)
-                        return "Esta operação realiza uma varredura profunda e pode levar alguns minutos.";
+                        return "Esta operação realiza uma varredura profunda no disco e pode levar alguns minutos.";
                 }
                 return rawWarning;
             }
@@ -2583,18 +3099,48 @@ namespace OptiAssist.Addons.SystemCleaner
         private TextBlock _tabWindowsText;
         private Border _tabAppsBorder;
         private TextBlock _tabAppsText;
+        private Border _tabOptionsBorder;
+        private TextBlock _tabOptionsText;
         private Button _btnSelectAll;
         private Button _btnDeselectAll;
         private Button _btnSelectRecommended;
+        private Border _quickBar;
+        private ScrollViewer _svCategories;
+        private ScrollViewer _svLeftOptions;
+        private TextBlock _txtSidebarBackupsCount;
+        private TextBlock _txtSidebarBackupsSize;
         private CheckBox _chkHideUninstalled;
         private CheckBox _chkDisableWarnings;
+        private CheckBox _chkEnableBackup;
+        private CheckBox _chkCreateRestorePoint;
         private StackPanel _pnlCategoriesContainer;
         private TextBox _txtDeepScanRoot;
         private Button _btnBrowseDeepScan;
 
         // UI Controls - Right Pane Top Bar
+        private Border _topProgressBorder;
         private ProgressBar _pbProgress;
         private TextBlock _txtPercent;
+
+        // UI Controls - Right Pane Bottom Action Bar
+        private Border _bottomBar;
+        private Button _btnLeftAction;  // "Analyze" or "Cancel"
+        private Button _btnRightAction; // "Run Cleaner"
+
+        // UI Controls - Options Panel & Backups
+        private ScrollViewer _pnlOptionsView;
+        private StackPanel _pnlBackupsList;
+        private TextBlock _txtOptionsPrefsTitle;
+        private TextBlock _txtOptionsSafetyTitle;
+        private TextBlock _txtOptionsBackupsTitle;
+        private TextBlock _txtOptionsBackupsDesc;
+        private TextBlock _lblHideUninstalledDesc;
+        private TextBlock _lblDisableWarningsDesc;
+        private TextBlock _lblEnableBackupDesc;
+        private TextBlock _lblCreateRestorePointDesc;
+
+        private bool _enableBackup = true;
+        private bool _createRestorePoint = false;
 
         // UI Controls - Right Pane Center (4 States)
         private enum ViewMode { Idle, Running, Scanned, Cleaned }
@@ -2617,16 +3163,12 @@ namespace OptiAssist.Addons.SystemCleaner
         private TextBlock _txtCleanHeader;
         private TextBlock _txtCleanSub;
         private StackPanel _pnlCleanedItemsList;
-
-        // UI Controls - Right Pane Bottom Action Bar
-        private Button _btnLeftAction;  // "Analyze" or "Cancel"
-        private Button _btnRightAction; // "Run Cleaner"
         private bool _hasAnalyzed = false;
 
         public string Id { get { return "system-cleaner"; } }
         public string Name { get { return T("Nav_SystemCleaner", "System Cleaner"); } }
         public string Description { get { return T("Cleaner_Subtitle", "BleachBit CleanerML-driven dry-run analysis and safe cleaning for Windows and applications"); } }
-        public string Version { get { return "1.2.S4"; } }
+        public string Version { get { return "1.2.S7"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🧹"; } }
 
@@ -2725,6 +3267,28 @@ namespace OptiAssist.Addons.SystemCleaner
                     {
                         _hideUninstalledApps = true;
                     }
+
+                    if (json.IndexOf("\"EnableBackup\": false", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        json.IndexOf("\"EnableBackup\":false", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _enableBackup = false;
+                    }
+                    else if (json.IndexOf("\"EnableBackup\": true", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             json.IndexOf("\"EnableBackup\":true", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _enableBackup = true;
+                    }
+
+                    if (json.IndexOf("\"CreateRestorePoint\": true", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        json.IndexOf("\"CreateRestorePoint\":true", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _createRestorePoint = true;
+                    }
+                    else if (json.IndexOf("\"CreateRestorePoint\": false", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             json.IndexOf("\"CreateRestorePoint\":false", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _createRestorePoint = false;
+                    }
                 }
             }
             catch { }
@@ -2737,8 +3301,12 @@ namespace OptiAssist.Addons.SystemCleaner
                 string path = GetCleanerSettingsPath();
                 if (!string.IsNullOrEmpty(path))
                 {
-                    string json = "{\r\n  \"DisableSelectionWarnings\": " + (_disableSelectionWarnings ? "true" : "false") +
-                                  ",\r\n  \"HideUninstalledApps\": " + (_hideUninstalledApps ? "true" : "false") + "\r\n}";
+                    string json = "{\r\n" +
+                                  "  \"DisableSelectionWarnings\": " + (_disableSelectionWarnings ? "true" : "false") + ",\r\n" +
+                                  "  \"HideUninstalledApps\": " + (_hideUninstalledApps ? "true" : "false") + ",\r\n" +
+                                  "  \"EnableBackup\": " + (_enableBackup ? "true" : "false") + ",\r\n" +
+                                  "  \"CreateRestorePoint\": " + (_createRestorePoint ? "true" : "false") + "\r\n" +
+                                  "}";
                     File.WriteAllText(path, json, new UTF8Encoding(false));
                 }
             }
@@ -2757,7 +3325,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 Margin = new Thickness(0)
             };
 
-            root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
+            root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             // -------------------------------------------------------------
@@ -2777,8 +3345,9 @@ namespace OptiAssist.Addons.SystemCleaner
             leftGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Row 1: Quick actions
             leftGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Row 2: Categories tree
 
-            // Row 0: Tabs Header ("Windows" vs "Applications")
+            // Row 0: Tabs Header ("Windows" vs "Applications" vs "Options")
             Grid tabsGrid = new Grid();
+            tabsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             tabsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             tabsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -2795,7 +3364,7 @@ namespace OptiAssist.Addons.SystemCleaner
             _tabWindowsText = new TextBlock
             {
                 Text = T("Cleaner_Tab_Windows", "Windows"),
-                FontSize = 12,
+                FontSize = 11.5,
                 FontWeight = FontWeights.Bold,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
@@ -2811,7 +3380,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 Height = 36,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 BorderThickness = new Thickness(0),
-                CornerRadius = new CornerRadius(0, 5, 0, 0)
+                CornerRadius = new CornerRadius(0)
             };
             _tabAppsBorder.SetResourceReference(Border.BorderBrushProperty, "Transparent");
             _tabAppsBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
@@ -2819,7 +3388,7 @@ namespace OptiAssist.Addons.SystemCleaner
             _tabAppsText = new TextBlock
             {
                 Text = T("Cleaner_Tab_Apps", "Applications"),
-                FontSize = 12,
+                FontSize = 11.5,
                 FontWeight = FontWeights.Normal,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
@@ -2830,17 +3399,41 @@ namespace OptiAssist.Addons.SystemCleaner
             Grid.SetColumn(_tabAppsBorder, 1);
             tabsGrid.Children.Add(_tabAppsBorder);
 
+            _tabOptionsBorder = new Border
+            {
+                Height = 36,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(0, 5, 0, 0)
+            };
+            _tabOptionsBorder.SetResourceReference(Border.BorderBrushProperty, "Transparent");
+            _tabOptionsBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+
+            _tabOptionsText = new TextBlock
+            {
+                Text = T("Cleaner_Tab_Options", "Options"),
+                FontSize = 11.5,
+                FontWeight = FontWeights.Normal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _tabOptionsText.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            _tabOptionsBorder.Child = _tabOptionsText;
+            _tabOptionsBorder.MouseLeftButtonDown += (s, e) => SetActiveTab("options");
+            Grid.SetColumn(_tabOptionsBorder, 2);
+            tabsGrid.Children.Add(_tabOptionsBorder);
+
             Grid.SetRow(tabsGrid, 0);
             leftGrid.Children.Add(tabsGrid);
 
             // Row 1: Quick Actions Toolbar
-            Border quickBar = new Border
+            _quickBar = new Border
             {
                 BorderThickness = new Thickness(0, 1, 0, 1),
                 Padding = new Thickness(6, 6, 6, 6)
             };
-            quickBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-            quickBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+            _quickBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            _quickBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
 
             StackPanel spQuickContainer = new StackPanel();
 
@@ -2917,50 +3510,103 @@ namespace OptiAssist.Addons.SystemCleaner
             spQuick.Children.Add(_btnSelectRecommended);
             spQuickContainer.Children.Add(spQuick);
 
-            _chkHideUninstalled = new CheckBox
-            {
-                Content = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
-                    ? "Ocultar apps não instalados"
-                    : "Hide uninstalled applications",
-                FontSize = 10.5,
-                IsChecked = _hideUninstalledApps,
-                Margin = new Thickness(4, 6, 4, 0),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Cursor = Cursors.Hand
-            };
-            _chkHideUninstalled.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextSecondary");
-            _chkHideUninstalled.Checked += (s, e) =>
-            {
-                _hideUninstalledApps = true;
-                SaveCleanerSettings();
-                BuildCategoriesTree();
-                UpdateSelectedSummary();
-            };
-            _chkHideUninstalled.Unchecked += (s, e) =>
-            {
-                _hideUninstalledApps = false;
-                SaveCleanerSettings();
-                BuildCategoriesTree();
-                UpdateSelectedSummary();
-            };
-            spQuickContainer.Children.Add(_chkHideUninstalled);
+            _quickBar.Child = spQuickContainer;
 
-            quickBar.Child = spQuickContainer;
-
-            Grid.SetRow(quickBar, 1);
-            leftGrid.Children.Add(quickBar);
+            Grid.SetRow(_quickBar, 1);
+            leftGrid.Children.Add(_quickBar);
 
             // Row 2: Scrollable Categories Tree
-            ScrollViewer svCategories = new ScrollViewer
+            _svCategories = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Padding = new Thickness(8, 6, 8, 8)
             };
             _pnlCategoriesContainer = new StackPanel();
-            svCategories.Content = _pnlCategoriesContainer;
-            Grid.SetRow(svCategories, 2);
-            leftGrid.Children.Add(svCategories);
+            _svCategories.Content = _pnlCategoriesContainer;
+            Grid.SetRow(_svCategories, 2);
+            leftGrid.Children.Add(_svCategories);
+
+            // Row 2: Options Sidebar Summary
+            _svLeftOptions = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Padding = new Thickness(12, 10, 12, 10),
+                Visibility = Visibility.Collapsed
+            };
+            StackPanel spLeftOpt = new StackPanel();
+
+            TextBlock txtOptLeftTitle = new TextBlock
+            {
+                Text = T("Cleaner_Sidebar_Options_Title", "Options & Backups"),
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            txtOptLeftTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            spLeftOpt.Children.Add(txtOptLeftTitle);
+
+            TextBlock txtOptLeftDesc = new TextBlock
+            {
+                Text = T("Cleaner_Sidebar_Options_Desc", "Manage preferences, system safety, and revert previous cleanup sessions."),
+                FontSize = 10.5,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            txtOptLeftDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spLeftOpt.Children.Add(txtOptLeftDesc);
+
+            Border divider = new Border { Height = 1, Margin = new Thickness(0, 0, 0, 12) };
+            divider.SetResourceReference(Border.BackgroundProperty, "BrushBorderCard");
+            spLeftOpt.Children.Add(divider);
+
+            _txtSidebarBackupsCount = new TextBlock
+            {
+                Text = "0 backups",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 2)
+            };
+            _txtSidebarBackupsCount.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            spLeftOpt.Children.Add(_txtSidebarBackupsCount);
+
+            _txtSidebarBackupsSize = new TextBlock
+            {
+                Text = "0 B",
+                FontSize = 10.5,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            _txtSidebarBackupsSize.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spLeftOpt.Children.Add(_txtSidebarBackupsSize);
+
+            Button btnClearAll = new Button
+            {
+                Content = T("Cleaner_Btn_ClearAllBackups", "🗑️ Clear All Backups"),
+                FontSize = 11,
+                Height = 30,
+                Padding = new Thickness(10, 4, 10, 4),
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 6),
+                Cursor = Cursors.Hand
+            };
+            btnClearAll.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnClearAll.Click += (s, e) =>
+            {
+                string msg = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                    ? "Tem certeza de que deseja excluir permanentemente todos os backups de limpeza armazenados?"
+                    : "Are you sure you want to permanently delete all stored cleanup backups?";
+                if (OptiDialog.Show(msg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    CleanerBackupManager.DeleteAllSessions();
+                    RefreshBackupsList();
+                }
+            };
+            spLeftOpt.Children.Add(btnClearAll);
+
+            _svLeftOptions.Content = spLeftOpt;
+            Grid.SetRow(_svLeftOptions, 2);
+            leftGrid.Children.Add(_svLeftOptions);
 
             leftBorder.Child = leftGrid;
             Grid.SetColumn(leftBorder, 0);
@@ -2983,14 +3629,14 @@ namespace OptiAssist.Addons.SystemCleaner
             rightGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Row 2: Action Bar
 
             // Row 0: Progress Bar & Percentage
-            Border topProgressBorder = new Border
+            _topProgressBorder = new Border
             {
                 BorderThickness = new Thickness(0, 0, 0, 1),
                 Padding = new Thickness(14, 10, 14, 10),
                 CornerRadius = new CornerRadius(5, 5, 0, 0)
             };
-            topProgressBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-            topProgressBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+            _topProgressBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            _topProgressBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
 
             Grid topProgressGrid = new Grid();
             topProgressGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -3024,9 +3670,9 @@ namespace OptiAssist.Addons.SystemCleaner
             Grid.SetColumn(_txtPercent, 1);
             topProgressGrid.Children.Add(_txtPercent);
 
-            topProgressBorder.Child = topProgressGrid;
-            Grid.SetRow(topProgressBorder, 0);
-            rightGrid.Children.Add(topProgressBorder);
+            _topProgressBorder.Child = topProgressGrid;
+            Grid.SetRow(_topProgressBorder, 0);
+            rightGrid.Children.Add(_topProgressBorder);
 
             // Row 1: Center Display
             Grid centerGrid = new Grid { Margin = new Thickness(16, 12, 16, 12) };
@@ -3204,18 +3850,394 @@ namespace OptiAssist.Addons.SystemCleaner
             _pnlStateCleaned.Content = spCleanedContent;
             centerGrid.Children.Add(_pnlStateCleaned);
 
+            // 1.5 Options & Backups Panel
+            _pnlOptionsView = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Visibility = Visibility.Collapsed,
+                Padding = new Thickness(6, 0, 6, 0)
+            };
+            _pnlOptionsView.PreviewMouseWheel += (s, e) =>
+            {
+                ScrollViewer sv = s as ScrollViewer;
+                if (sv != null)
+                {
+                    sv.ScrollToVerticalOffset(sv.VerticalOffset - e.Delta);
+                    e.Handled = true;
+                }
+            };
+
+            StackPanel spOptionsContent = new StackPanel();
+
+            // Card 1: Preferences
+            Border cardPrefs = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            cardPrefs.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            cardPrefs.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spPrefs = new StackPanel();
+            _txtOptionsPrefsTitle = new TextBlock
+            {
+                Text = T("Cleaner_Options_Prefs_Title", "Cleaner Preferences"),
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            _txtOptionsPrefsTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            spPrefs.Children.Add(_txtOptionsPrefsTitle);
+
+            _chkHideUninstalled = new CheckBox
+            {
+                Content = T("Cleaner_Chk_HideUninstalled", "Hide uninstalled applications"),
+                FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold,
+                IsChecked = _hideUninstalledApps,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            _chkHideUninstalled.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            _chkHideUninstalled.Checked += (s, e) =>
+            {
+                _hideUninstalledApps = true;
+                SaveCleanerSettings();
+                BuildCategoriesTree();
+                UpdateSelectedSummary();
+            };
+            _chkHideUninstalled.Unchecked += (s, e) =>
+            {
+                _hideUninstalledApps = false;
+                SaveCleanerSettings();
+                BuildCategoriesTree();
+                UpdateSelectedSummary();
+            };
+            spPrefs.Children.Add(_chkHideUninstalled);
+
+            _lblHideUninstalledDesc = new TextBlock
+            {
+                Text = T("Cleaner_Chk_HideUninstalled_Desc", "Only show applications installed on this system"),
+                FontSize = 10.5,
+                Margin = new Thickness(20, 0, 0, 10)
+            };
+            _lblHideUninstalledDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spPrefs.Children.Add(_lblHideUninstalledDesc);
+
+            _chkDisableWarnings = new CheckBox
+            {
+                Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items"),
+                FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold,
+                IsChecked = _disableSelectionWarnings,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            _chkDisableWarnings.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            _chkDisableWarnings.Checked += (s, e) =>
+            {
+                _disableSelectionWarnings = true;
+                SaveCleanerSettings();
+            };
+            _chkDisableWarnings.Unchecked += (s, e) =>
+            {
+                _disableSelectionWarnings = false;
+                SaveCleanerSettings();
+            };
+            spPrefs.Children.Add(_chkDisableWarnings);
+
+            _lblDisableWarningsDesc = new TextBlock
+            {
+                Text = T("Cleaner_Chk_DisableWarnings_Desc", "Do not show confirmation dialogs when selecting sensitive cleaner options"),
+                FontSize = 10.5,
+                Margin = new Thickness(20, 0, 0, 4)
+            };
+            _lblDisableWarningsDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spPrefs.Children.Add(_lblDisableWarningsDesc);
+
+            cardPrefs.Child = spPrefs;
+            spOptionsContent.Children.Add(cardPrefs);
+
+            // Card 2: Safety & Rollback
+            Border cardSafety = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            cardSafety.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            cardSafety.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spSafety = new StackPanel();
+            _txtOptionsSafetyTitle = new TextBlock
+            {
+                Text = T("Cleaner_Options_Safety_Title", "Safety & Rollback Protection"),
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            _txtOptionsSafetyTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            spSafety.Children.Add(_txtOptionsSafetyTitle);
+
+            _chkEnableBackup = new CheckBox
+            {
+                Content = T("Cleaner_Chk_EnableBackup", "Create backup before cleaning to allow rollback"),
+                FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold,
+                IsChecked = _enableBackup,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            _chkEnableBackup.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            _chkEnableBackup.Checked += (s, e) =>
+            {
+                _enableBackup = true;
+                SaveCleanerSettings();
+            };
+            _chkEnableBackup.Unchecked += (s, e) =>
+            {
+                _enableBackup = false;
+                SaveCleanerSettings();
+            };
+            spSafety.Children.Add(_chkEnableBackup);
+
+            _lblEnableBackupDesc = new TextBlock
+            {
+                Text = T("Cleaner_Chk_EnableBackup_Desc", "Safely saves removed files into a quarantine folder so you can revert any cleanup if needed"),
+                FontSize = 10.5,
+                Margin = new Thickness(20, 0, 0, 10)
+            };
+            _lblEnableBackupDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spSafety.Children.Add(_lblEnableBackupDesc);
+
+            _chkCreateRestorePoint = new CheckBox
+            {
+                Content = T("Cleaner_Chk_CreateRestorePoint", "Create Windows System Restore Point"),
+                FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold,
+                IsChecked = _createRestorePoint,
+                Cursor = Cursors.Hand,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            _chkCreateRestorePoint.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+            _chkCreateRestorePoint.Checked += (s, e) =>
+            {
+                _createRestorePoint = true;
+                SaveCleanerSettings();
+            };
+            _chkCreateRestorePoint.Unchecked += (s, e) =>
+            {
+                _createRestorePoint = false;
+                SaveCleanerSettings();
+            };
+            spSafety.Children.Add(_chkCreateRestorePoint);
+
+            _lblCreateRestorePointDesc = new TextBlock
+            {
+                Text = T("Cleaner_Chk_CreateRestorePoint_Desc", "Triggers an operating system restore point before running cleanup"),
+                FontSize = 10.5,
+                Margin = new Thickness(20, 0, 0, 4)
+            };
+            _lblCreateRestorePointDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spSafety.Children.Add(_lblCreateRestorePointDesc);
+
+            cardSafety.Child = spSafety;
+            spOptionsContent.Children.Add(cardSafety);
+
+            // Card 2b: Deep Scan (Advanced) — moved into Options tab
+            Border cardDeepScan = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            cardDeepScan.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            cardDeepScan.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spDeepOpt = new StackPanel();
+            TextBlock tbDeepTitle = new TextBlock
+            {
+                Text = "🔎 " + T("Cleaner_Options_DeepScan_Title", "Deep Scan (Advanced Recursive Cleanup)"),
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            tbDeepTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            spDeepOpt.Children.Add(tbDeepTitle);
+
+            TextBlock tbDeepSub = new TextBlock
+            {
+                Text = T("Cleaner_Options_DeepScan_Desc", "Recursively scans a chosen directory for residual files (.tmp, .bak, Thumbs.db, etc.). Select items below to include them in Analyze / Run Cleaner."),
+                FontSize = 10.5,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            tbDeepSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spDeepOpt.Children.Add(tbDeepSub);
+
+            Grid gridDeepPicker = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            gridDeepPicker.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            gridDeepPicker.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _txtDeepScanRoot = new TextBox
+            {
+                Text = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                Height = 28,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            _txtDeepScanRoot.SetResourceReference(TextBox.BackgroundProperty, "BrushBgApp");
+            _txtDeepScanRoot.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
+            _txtDeepScanRoot.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderCard");
+            Grid.SetColumn(_txtDeepScanRoot, 0);
+
+            _btnBrowseDeepScan = new Button
+            {
+                Content = "📁 " + T("Btn_Browse", "Browse..."),
+                Height = 28,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11,
+                Cursor = Cursors.Hand
+            };
+            _btnBrowseDeepScan.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            _btnBrowseDeepScan.Click += BtnBrowseDeepScan_Click;
+            Grid.SetColumn(_btnBrowseDeepScan, 1);
+
+            gridDeepPicker.Children.Add(_txtDeepScanRoot);
+            gridDeepPicker.Children.Add(_btnBrowseDeepScan);
+            spDeepOpt.Children.Add(gridDeepPicker);
+
+            WrapPanel wpDeepChecks = new WrapPanel { Orientation = Orientation.Horizontal };
+            if (_allCleaners != null)
+            {
+                for (int d = 0; d < _allCleaners.Count; d++)
+                {
+                    BaseCleaner dc = _allCleaners[d];
+                    if (dc == null || !string.Equals(dc.SectionId, "deep_scan", StringComparison.OrdinalIgnoreCase)) continue;
+                    BaseCleaner capturedDc = dc;
+                    CheckBox chkDeep = new CheckBox
+                    {
+                        Content = dc.Name,
+                        IsChecked = dc.IsSelected,
+                        FontSize = 11,
+                        Margin = new Thickness(0, 3, 14, 3),
+                        Cursor = Cursors.Hand,
+                        ToolTip = dc.Description
+                    };
+                    chkDeep.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
+                    chkDeep.Checked += (s, e) => { capturedDc.IsSelected = true; };
+                    chkDeep.Unchecked += (s, e) => { capturedDc.IsSelected = false; };
+                    wpDeepChecks.Children.Add(chkDeep);
+                }
+            }
+            spDeepOpt.Children.Add(wpDeepChecks);
+
+            cardDeepScan.Child = spDeepOpt;
+            spOptionsContent.Children.Add(cardDeepScan);
+
+            // Card 3: Backups & Rollback History
+            Border cardBackups = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(14)
+            };
+            cardBackups.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
+            cardBackups.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+            StackPanel spBackups = new StackPanel();
+
+            Grid gridBackupsHeader = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            gridBackupsHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            gridBackupsHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _txtOptionsBackupsTitle = new TextBlock
+            {
+                Text = T("Cleaner_Options_Backups_Title", "Cleanup Backups & Rollback History"),
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _txtOptionsBackupsTitle.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+            Grid.SetColumn(_txtOptionsBackupsTitle, 0);
+            gridBackupsHeader.Children.Add(_txtOptionsBackupsTitle);
+
+            StackPanel spBackupActions = new StackPanel { Orientation = Orientation.Horizontal };
+
+            Button btnOpenBackupDir = new Button
+            {
+                Content = T("Cleaner_Btn_OpenBackupDir", "📂 Open Folder"),
+                FontSize = 10.5,
+                Height = 24,
+                Padding = new Thickness(10, 0, 10, 0),
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            btnOpenBackupDir.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnOpenBackupDir.Click += (s, e) =>
+            {
+                try
+                {
+                    string dir = CleanerBackupManager.GetBackupBaseDirectory();
+                    Process.Start(new ProcessStartInfo("explorer.exe", dir));
+                }
+                catch { }
+            };
+            spBackupActions.Children.Add(btnOpenBackupDir);
+
+            Button btnRefreshBackups = new Button
+            {
+                Content = "🔄",
+                FontSize = 11,
+                Height = 24,
+                Width = 28,
+                Padding = new Thickness(0)
+            };
+            btnRefreshBackups.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnRefreshBackups.Click += (s, e) => RefreshBackupsList();
+            spBackupActions.Children.Add(btnRefreshBackups);
+
+            Grid.SetColumn(spBackupActions, 1);
+            gridBackupsHeader.Children.Add(spBackupActions);
+
+            spBackups.Children.Add(gridBackupsHeader);
+
+            _txtOptionsBackupsDesc = new TextBlock
+            {
+                Text = T("Cleaner_Options_Backups_Desc", "Restore previous cleanups to their original state or delete backups to free disk space."),
+                FontSize = 10.5,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            _txtOptionsBackupsDesc.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+            spBackups.Children.Add(_txtOptionsBackupsDesc);
+
+            _pnlBackupsList = new StackPanel();
+            spBackups.Children.Add(_pnlBackupsList);
+
+            cardBackups.Child = spBackups;
+            spOptionsContent.Children.Add(cardBackups);
+
+            _pnlOptionsView.Content = spOptionsContent;
+            centerGrid.Children.Add(_pnlOptionsView);
+
             Grid.SetRow(centerGrid, 1);
             rightGrid.Children.Add(centerGrid);
 
             // Row 2: Bottom Action Bar
-            Border bottomBar = new Border
+            _bottomBar = new Border
             {
                 BorderThickness = new Thickness(0, 1, 0, 0),
                 Padding = new Thickness(14, 10, 14, 10),
                 CornerRadius = new CornerRadius(0, 0, 5, 5)
             };
-            bottomBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
-            bottomBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+            _bottomBar.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+            _bottomBar.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
 
             Grid bottomGrid = new Grid();
             bottomGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -3259,10 +4281,10 @@ namespace OptiAssist.Addons.SystemCleaner
 
             bottomGrid.Children.Add(_btnLeftAction);
             bottomGrid.Children.Add(_btnRightAction);
-            bottomBar.Child = bottomGrid;
+            _bottomBar.Child = bottomGrid;
 
-            Grid.SetRow(bottomBar, 2);
-            rightGrid.Children.Add(bottomBar);
+            Grid.SetRow(_bottomBar, 2);
+            rightGrid.Children.Add(_bottomBar);
 
             rightBorder.Child = rightGrid;
             Grid.SetColumn(rightBorder, 1);
@@ -3277,6 +4299,8 @@ namespace OptiAssist.Addons.SystemCleaner
         {
             _activeTab = tabId;
             bool isWindows = string.Equals(tabId, "windows", StringComparison.OrdinalIgnoreCase);
+            bool isApps = string.Equals(tabId, "apps", StringComparison.OrdinalIgnoreCase);
+            bool isOptions = string.Equals(tabId, "options", StringComparison.OrdinalIgnoreCase);
 
             if (_tabWindowsBorder != null)
             {
@@ -3292,22 +4316,268 @@ namespace OptiAssist.Addons.SystemCleaner
 
             if (_tabAppsBorder != null)
             {
-                _tabAppsBorder.BorderThickness = !isWindows ? new Thickness(0, 3, 0, 0) : new Thickness(0);
-                _tabAppsBorder.SetResourceReference(Border.BorderBrushProperty, !isWindows ? "BrushAccent" : "Transparent");
-                _tabAppsBorder.SetResourceReference(Border.BackgroundProperty, !isWindows ? "BrushBgCard" : "BrushBgSidebar");
+                _tabAppsBorder.BorderThickness = isApps ? new Thickness(0, 3, 0, 0) : new Thickness(0);
+                _tabAppsBorder.SetResourceReference(Border.BorderBrushProperty, isApps ? "BrushAccent" : "Transparent");
+                _tabAppsBorder.SetResourceReference(Border.BackgroundProperty, isApps ? "BrushBgCard" : "BrushBgSidebar");
             }
             if (_tabAppsText != null)
             {
-                _tabAppsText.FontWeight = !isWindows ? FontWeights.Bold : FontWeights.Normal;
-                _tabAppsText.SetResourceReference(TextBlock.ForegroundProperty, !isWindows ? "BrushTextPrimary" : "BrushTextSecondary");
+                _tabAppsText.FontWeight = isApps ? FontWeights.Bold : FontWeights.Normal;
+                _tabAppsText.SetResourceReference(TextBlock.ForegroundProperty, isApps ? "BrushTextPrimary" : "BrushTextSecondary");
             }
 
-            if (_chkHideUninstalled != null)
+            if (_tabOptionsBorder != null)
             {
-                _chkHideUninstalled.Visibility = isWindows ? Visibility.Collapsed : Visibility.Visible;
+                _tabOptionsBorder.BorderThickness = isOptions ? new Thickness(0, 3, 0, 0) : new Thickness(0);
+                _tabOptionsBorder.SetResourceReference(Border.BorderBrushProperty, isOptions ? "BrushAccent" : "Transparent");
+                _tabOptionsBorder.SetResourceReference(Border.BackgroundProperty, isOptions ? "BrushBgCard" : "BrushBgSidebar");
+            }
+            if (_tabOptionsText != null)
+            {
+                _tabOptionsText.FontWeight = isOptions ? FontWeights.Bold : FontWeights.Normal;
+                _tabOptionsText.SetResourceReference(TextBlock.ForegroundProperty, isOptions ? "BrushTextPrimary" : "BrushTextSecondary");
             }
 
-            BuildCategoriesTree();
+            if (_quickBar != null)
+            {
+                _quickBar.Visibility = isOptions ? Visibility.Collapsed : Visibility.Visible;
+            }
+            if (_svCategories != null)
+            {
+                _svCategories.Visibility = isOptions ? Visibility.Collapsed : Visibility.Visible;
+            }
+            if (_svLeftOptions != null)
+            {
+                _svLeftOptions.Visibility = isOptions ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            if (_topProgressBorder != null)
+            {
+                _topProgressBorder.Visibility = isOptions ? Visibility.Collapsed : Visibility.Visible;
+            }
+            if (_bottomBar != null)
+            {
+                _bottomBar.Visibility = isOptions ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            if (isOptions)
+            {
+                if (_pnlStateIdle != null) _pnlStateIdle.Visibility = Visibility.Collapsed;
+                if (_pnlStateRunning != null) _pnlStateRunning.Visibility = Visibility.Collapsed;
+                if (_pnlStateScanned != null) _pnlStateScanned.Visibility = Visibility.Collapsed;
+                if (_pnlStateCleaned != null) _pnlStateCleaned.Visibility = Visibility.Collapsed;
+                if (_pnlOptionsView != null)
+                {
+                    _pnlOptionsView.Visibility = Visibility.Visible;
+                    RefreshBackupsList();
+                }
+            }
+            else
+            {
+                if (_pnlOptionsView != null)
+                {
+                    _pnlOptionsView.Visibility = Visibility.Collapsed;
+                }
+                ShowViewMode(_currentViewMode);
+                BuildCategoriesTree();
+            }
+        }
+
+        private void RefreshBackupsList()
+        {
+            if (_pnlBackupsList == null) return;
+            _pnlBackupsList.Children.Clear();
+
+            List<CleanerBackupSession> sessions = CleanerBackupManager.LoadAllSessions();
+
+            long totalBytes = 0;
+            for (int i = 0; i < sessions.Count; i++)
+            {
+                totalBytes += sessions[i].TotalBytes;
+            }
+
+            if (_txtSidebarBackupsCount != null)
+            {
+                _txtSidebarBackupsCount.Text = sessions.Count + (_currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase) ? " backups salvos" : " backups saved");
+            }
+            if (_txtSidebarBackupsSize != null)
+            {
+                _txtSidebarBackupsSize.Text = BaseCleaner.FormatBytes(totalBytes) + (_currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase) ? " em quarentena" : " in quarantine");
+            }
+
+            if (sessions.Count == 0)
+            {
+                Border emptyBox = new Border
+                {
+                    Padding = new Thickness(14),
+                    Margin = new Thickness(0, 4, 0, 4),
+                    CornerRadius = new CornerRadius(5),
+                    BorderThickness = new Thickness(1)
+                };
+                emptyBox.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                emptyBox.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                TextBlock txtEmpty = new TextBlock
+                {
+                    Text = T("Cleaner_Backup_Empty", "No cleanup backups recorded yet. Enable 'Create backup before cleaning' to allow restoring deleted files here."),
+                    FontSize = 11,
+                    TextWrapping = TextWrapping.Wrap,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    TextAlignment = TextAlignment.Center
+                };
+                txtEmpty.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                emptyBox.Child = txtEmpty;
+                _pnlBackupsList.Children.Add(emptyBox);
+                return;
+            }
+
+            for (int i = 0; i < sessions.Count; i++)
+            {
+                CleanerBackupSession s = sessions[i];
+
+                Border itemBorder = new Border
+                {
+                    Margin = new Thickness(0, 0, 0, 8),
+                    Padding = new Thickness(12, 10, 12, 10),
+                    CornerRadius = new CornerRadius(5),
+                    BorderThickness = new Thickness(1)
+                };
+                itemBorder.SetResourceReference(Border.BackgroundProperty, "BrushBgSidebar");
+                itemBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
+
+                Grid itemGrid = new Grid();
+                itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                StackPanel spInfo = new StackPanel();
+
+                StackPanel spTitleRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
+                TextBlock txtDate = new TextBlock
+                {
+                    Text = s.CreatedAt.ToString("g"),
+                    FontSize = 12,
+                    FontWeight = FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 8, 0)
+                };
+                txtDate.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                spTitleRow.Children.Add(txtDate);
+
+                Border badge = new Border
+                {
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(6, 1, 6, 2),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                TextBlock badgeTxt = new TextBlock
+                {
+                    FontSize = 9.5,
+                    FontWeight = FontWeights.SemiBold
+                };
+                if (s.IsRestored)
+                {
+                    badge.Background = new SolidColorBrush(Color.FromArgb(40, 46, 204, 113));
+                    badgeTxt.Foreground = new SolidColorBrush(Color.FromRgb(46, 204, 113));
+                    badgeTxt.Text = "✅ " + T("Cleaner_Backup_Restored", "Restored");
+                }
+                else
+                {
+                    badge.SetResourceReference(Border.BackgroundProperty, "BrushAccent");
+                    badgeTxt.Foreground = Brushes.White;
+                    badgeTxt.Text = "📦 " + T("Cleaner_Backup_Available", "Available");
+                }
+                badge.Child = badgeTxt;
+                spTitleRow.Children.Add(badge);
+                spInfo.Children.Add(spTitleRow);
+
+                TextBlock txtDetails = new TextBlock
+                {
+                    Text = string.Format("{0} {1} • {2}",
+                        s.TotalFiles,
+                        _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase) ? "arquivos" : "files",
+                        BaseCleaner.FormatBytes(s.TotalBytes)),
+                    FontSize = 10.5
+                };
+                txtDetails.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                spInfo.Children.Add(txtDetails);
+
+                Grid.SetColumn(spInfo, 0);
+                itemGrid.Children.Add(spInfo);
+
+                StackPanel spButtons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+                Button btnRollback = new Button
+                {
+                    Content = T("Cleaner_Btn_Rollback", "↩️ Rollback"),
+                    Height = 26,
+                    Padding = new Thickness(10, 0, 10, 0),
+                    FontSize = 11,
+                    FontWeight = FontWeights.SemiBold,
+                    Margin = new Thickness(0, 0, 6, 0),
+                    Cursor = Cursors.Hand,
+                    IsEnabled = !_isBusy
+                };
+                btnRollback.SetResourceReference(Button.StyleProperty, "BtnAccent");
+                CleanerBackupSession sessionRef = s;
+                btnRollback.Click += (btnSender, btnArgs) =>
+                {
+                    if (_isBusy) return;
+                    string confirmPrompt = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                        ? string.Format("Deseja reverter esta limpeza e restaurar {0} arquivos ({1}) para seus locais originais?", sessionRef.TotalFiles, BaseCleaner.FormatBytes(sessionRef.TotalBytes))
+                        : string.Format("Do you want to restore {0} files ({1}) from this cleanup to their original locations?", sessionRef.TotalFiles, BaseCleaner.FormatBytes(sessionRef.TotalBytes));
+
+                    if (OptiDialog.Show(confirmPrompt, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        int restoredCount;
+                        long restoredBytes;
+                        string err;
+                        bool ok = CleanerBackupManager.RollbackSession(sessionRef, out restoredCount, out restoredBytes, out err);
+                        if (ok)
+                        {
+                            string successMsg = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                                ? string.Format("Reversão concluída com sucesso!\n• Arquivos restaurados: {0}\n• Tamanho restaurado: {1}", restoredCount, BaseCleaner.FormatBytes(restoredBytes))
+                                : string.Format("Rollback completed successfully!\n• Files restored: {0}\n• Size restored: {1}", restoredCount, BaseCleaner.FormatBytes(restoredBytes));
+                            OptiDialog.Show(successMsg, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            OptiDialog.Show("Rollback error: " + err, "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                        RefreshBackupsList();
+                    }
+                };
+                spButtons.Children.Add(btnRollback);
+
+                Button btnDelete = new Button
+                {
+                    Content = T("Cleaner_Btn_DeleteBackup", "🗑️ Delete"),
+                    Height = 26,
+                    Padding = new Thickness(8, 0, 8, 0),
+                    FontSize = 11,
+                    Cursor = Cursors.Hand,
+                    IsEnabled = !_isBusy
+                };
+                btnDelete.SetResourceReference(Button.StyleProperty, "BtnDefault");
+                btnDelete.Click += (btnSender, btnArgs) =>
+                {
+                    if (_isBusy) return;
+                    string delPrompt = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
+                        ? "Deseja excluir permanentemente este backup?"
+                        : "Do you want to permanently delete this backup?";
+                    if (OptiDialog.Show(delPrompt, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                    {
+                        CleanerBackupManager.DeleteSession(sessionRef);
+                        RefreshBackupsList();
+                    }
+                };
+                spButtons.Children.Add(btnDelete);
+
+                Grid.SetColumn(spButtons, 1);
+                itemGrid.Children.Add(spButtons);
+
+                itemBorder.Child = itemGrid;
+                _pnlBackupsList.Children.Add(itemBorder);
+            }
         }
 
         private void BuildCategoriesTree()
@@ -3444,30 +4714,9 @@ namespace OptiAssist.Addons.SystemCleaner
                     _pnlCategoriesContainer.Children.Add(cb);
                 }
 
-                // If Deep Scan section, add root folder picker row and Disable Warnings checkbox
+                // If Deep Scan section, add root folder picker row
                 if (string.Equals(secId, "deep_scan", StringComparison.OrdinalIgnoreCase))
                 {
-                    _chkDisableWarnings = new CheckBox
-                    {
-                        Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items"),
-                        FontSize = 11,
-                        IsChecked = _disableSelectionWarnings,
-                        Margin = new Thickness(18, 4, 0, 2),
-                        Cursor = System.Windows.Input.Cursors.Hand
-                    };
-                    _chkDisableWarnings.SetResourceReference(CheckBox.ForegroundProperty, "BrushTextPrimary");
-                    _chkDisableWarnings.Checked += (s, e) =>
-                    {
-                        _disableSelectionWarnings = true;
-                        SaveCleanerSettings();
-                    };
-                    _chkDisableWarnings.Unchecked += (s, e) =>
-                    {
-                        _disableSelectionWarnings = false;
-                        SaveCleanerSettings();
-                    };
-                    _pnlCategoriesContainer.Children.Add(_chkDisableWarnings);
-
                     Border deepScanBox = new Border
                     {
                         Margin = new Thickness(18, 6, 0, 4),
@@ -3522,8 +4771,11 @@ namespace OptiAssist.Addons.SystemCleaner
             }
         }
 
+        private ViewMode _currentViewMode = ViewMode.Idle;
+
         private void ShowViewMode(ViewMode mode)
         {
+            _currentViewMode = mode;
             if (_pnlStateIdle != null) _pnlStateIdle.Visibility = mode == ViewMode.Idle ? Visibility.Visible : Visibility.Collapsed;
             if (_pnlStateRunning != null) _pnlStateRunning.Visibility = mode == ViewMode.Running ? Visibility.Visible : Visibility.Collapsed;
             if (_pnlStateScanned != null) _pnlStateScanned.Visibility = mode == ViewMode.Scanned ? Visibility.Visible : Visibility.Collapsed;
@@ -3636,7 +4888,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
             if (selected.Count == 0)
             {
-                MessageBox.Show(T("Msg_NoCleanerItemsSelected", "Please select at least one category to scan or clean."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(T("Msg_NoCleanerItemsSelected", "Please select at least one category to scan or clean."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -3704,7 +4956,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         _txtPercent.Text = "0%";
                         ShowViewMode(ViewMode.Idle);
                         Log("[SCAN CANCELLED] Operation cancelled by user.");
-                        MessageBox.Show(T("Cleaner_Status_Cancelled", "Operation cancelled by user."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        OptiDialog.Show(T("Cleaner_Status_Cancelled", "Operation cancelled by user."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                         return;
                     }
 
@@ -3888,7 +5140,7 @@ namespace OptiAssist.Addons.SystemCleaner
                                             sb.AppendLine(fe.SizeDisplay + "\t" + fe.Path);
                                         }
                                         Clipboard.SetText(sb.ToString());
-                                        MessageBox.Show(T("Cleaner_Msg_Copied", "File paths copied to clipboard!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                                        OptiDialog.Show(T("Cleaner_Msg_Copied", "File paths copied to clipboard!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                                     }
                                     catch { }
                                 };
@@ -4082,7 +5334,7 @@ namespace OptiAssist.Addons.SystemCleaner
             if (_isBusy || _allCleaners == null) return;
             if (!_hasAnalyzed)
             {
-                MessageBox.Show(T("Msg_CleanerAnalyzeFirst", "Please click 'Analyze' first to review what will be removed before running the cleaner."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(T("Msg_CleanerAnalyzeFirst", "Please click 'Analyze' first to review what will be removed before running the cleaner."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -4105,7 +5357,7 @@ namespace OptiAssist.Addons.SystemCleaner
 
             if (selected.Count == 0)
             {
-                MessageBox.Show(T("Msg_NoCleanerItemsSelected", "Please select at least one category to clean."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(T("Msg_NoCleanerItemsSelected", "Please select at least one category to clean."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -4116,7 +5368,7 @@ namespace OptiAssist.Addons.SystemCleaner
                 string browserMsg = string.Format(
                     T("Msg_CleanerBrowserRunning", "The following applications are currently running:\n• {0}\n\nOpen databases (Cookies, History, SQLite Vacuum) may be locked. Close the application first for a complete cleanup, or click Yes to continue and skip locked files."),
                     string.Join("\n• ", runningApps.ToArray()));
-                if (MessageBox.Show(browserMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                if (OptiDialog.Show(browserMsg, "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 {
                     return;
                 }
@@ -4142,12 +5394,25 @@ namespace OptiAssist.Addons.SystemCleaner
                 }
             }
 
-            if (MessageBox.Show(confirmSb.ToString(), confirmTitle, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            string backupCheckboxText = T("Msg_CleanerBackupOption", "💾 Create a backup of cleaned files before removing (allows rollback)");
+            bool wantBackup;
+            if (OptiDialog.ShowWithCheckbox(confirmSb.ToString(), confirmTitle, backupCheckboxText, _enableBackup, out wantBackup, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             {
                 return;
             }
 
+            if (_createRestorePoint)
+            {
+                SystemRestoreHelper.CreateRestorePointAsync(msg => Log(msg));
+            }
+
             CleanerContext ctx = CreateExecutionContext();
+            ctx.EnableBackup = wantBackup;
+            if (wantBackup)
+            {
+                ctx.BackupSession = CleanerBackupManager.CreateSession();
+            }
+
             _isBusy = true;
             _cts = new CancellationTokenSource();
             _pbProgress.Value = 0;
@@ -4196,6 +5461,16 @@ namespace OptiAssist.Addons.SystemCleaner
                     cleanedItems.Add(cleaner);
                 }
 
+                if (ctx.BackupSession != null)
+                {
+                    ctx.BackupSession.FinalizeSession();
+                    if (ctx.BackupSession.TotalFiles > 0)
+                    {
+                        Log(string.Format("   [BACKUP] {0} files safely preserved in quarantine for rollback ({1}).",
+                            ctx.BackupSession.TotalFiles, BaseCleaner.FormatBytes(ctx.BackupSession.TotalBytes)));
+                    }
+                }
+
                 Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     _isBusy = false;
@@ -4205,7 +5480,7 @@ namespace OptiAssist.Addons.SystemCleaner
                         _txtPercent.Text = "0%";
                         ShowViewMode(ViewMode.Idle);
                         Log("[CLEAN CANCELLED] Operation cancelled by user.");
-                        MessageBox.Show(T("Cleaner_Status_Cancelled", "Operation cancelled by user."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        OptiDialog.Show(T("Cleaner_Status_Cancelled", "Operation cancelled by user."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                         return;
                     }
 
@@ -4466,16 +5741,22 @@ namespace OptiAssist.Addons.SystemCleaner
 
             if (_tabWindowsText != null) _tabWindowsText.Text = T("Cleaner_Tab_Windows", "Windows");
             if (_tabAppsText != null) _tabAppsText.Text = T("Cleaner_Tab_Apps", "Applications");
+            if (_tabOptionsText != null) _tabOptionsText.Text = T("Cleaner_Tab_Options", "Options");
             if (_btnSelectAll != null) _btnSelectAll.Content = T("Cleaner_Quick_All", "Select All");
             if (_btnDeselectAll != null) _btnDeselectAll.Content = T("Cleaner_Quick_None", "Deselect All");
             if (_btnSelectRecommended != null) _btnSelectRecommended.Content = T("Cleaner_Quick_Default", "Defaults");
-            if (_chkHideUninstalled != null)
-            {
-                _chkHideUninstalled.Content = _currentLang.StartsWith("pt", StringComparison.OrdinalIgnoreCase)
-                    ? "Ocultar apps não instalados"
-                    : "Hide uninstalled applications";
-            }
+            if (_chkHideUninstalled != null) _chkHideUninstalled.Content = T("Cleaner_Chk_HideUninstalled", "Hide uninstalled applications");
             if (_chkDisableWarnings != null) _chkDisableWarnings.Content = T("Cleaner_Chk_DisableWarnings", "Disable warnings when selecting items");
+            if (_chkEnableBackup != null) _chkEnableBackup.Content = T("Cleaner_Chk_EnableBackup", "Create backup before cleaning to allow rollback");
+            if (_chkCreateRestorePoint != null) _chkCreateRestorePoint.Content = T("Cleaner_Chk_CreateRestorePoint", "Create Windows System Restore Point");
+            if (_txtOptionsPrefsTitle != null) _txtOptionsPrefsTitle.Text = T("Cleaner_Options_Prefs_Title", "Cleaner Preferences");
+            if (_txtOptionsSafetyTitle != null) _txtOptionsSafetyTitle.Text = T("Cleaner_Options_Safety_Title", "Safety & Rollback Protection");
+            if (_txtOptionsBackupsTitle != null) _txtOptionsBackupsTitle.Text = T("Cleaner_Options_Backups_Title", "Cleanup Backups & Rollback History");
+            if (_txtOptionsBackupsDesc != null) _txtOptionsBackupsDesc.Text = T("Cleaner_Options_Backups_Desc", "Restore previous cleanups to their original state or delete backups to free disk space.");
+            if (_lblHideUninstalledDesc != null) _lblHideUninstalledDesc.Text = T("Cleaner_Chk_HideUninstalled_Desc", "Only show applications installed on this system");
+            if (_lblDisableWarningsDesc != null) _lblDisableWarningsDesc.Text = T("Cleaner_Chk_DisableWarnings_Desc", "Do not show confirmation dialogs when selecting sensitive cleaner options");
+            if (_lblEnableBackupDesc != null) _lblEnableBackupDesc.Text = T("Cleaner_Chk_EnableBackup_Desc", "Safely saves removed files into a quarantine folder so you can revert any cleanup if needed");
+            if (_lblCreateRestorePointDesc != null) _lblCreateRestorePointDesc.Text = T("Cleaner_Chk_CreateRestorePoint_Desc", "Triggers an operating system restore point before running cleanup");
             if (_txtIdleTitle != null) _txtIdleTitle.Text = T("Cleaner_Status_Idle_Title", "System Cleaner & Optimizer");
             if (_txtIdleDesc != null) _txtIdleDesc.Text = T("Cleaner_Status_Idle_Desc", "Select the items you wish to clean on the left, then click 'Analyze' to check cleanable space or 'Run Cleaner' to begin.");
             if (_btnLeftAction != null && !_isBusy) _btnLeftAction.Content = T("Btn_CleanerAnalyze", "🔍 Analyze");
@@ -4484,6 +5765,7 @@ namespace OptiAssist.Addons.SystemCleaner
             ApplyLocalizedMetadata();
             BuildCategoriesTree();
             UpdateSelectedSummary();
+            RefreshBackupsList();
         }
 
         private void ApplyLocalizedMetadata()

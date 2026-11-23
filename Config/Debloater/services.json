@@ -1,0 +1,246 @@
+{
+  "version": "2.0.F3",
+  "category": "services",
+  "tweaks": [
+    {
+      "id": "svc-diagtrack-wersvc",
+      "category": "services",
+      "titleKey": "Debloat_SvcDiagTrackWer_Title",
+      "titleFallback": "Disable Telemetry & Error Reporting Services (DiagTrack & WerSvc)",
+      "descKey": "Debloat_SvcDiagTrackWer_Desc",
+      "descFallback": "Stops and disables Connected User Experiences and Telemetry (DiagTrack) and Windows Error Reporting (WerSvc) across all profiles.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "service", "name": "DiagTrack", "equals": "4" },
+        { "type": "service", "name": "WerSvc", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "DiagTrack", "startupType": "Disabled", "stopService": true },
+        { "type": "service", "name": "WerSvc", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "svc-trkwks",
+      "category": "services",
+      "titleKey": "Debloat_SvcTrkWks_Title",
+      "titleFallback": "Disable Distributed Link Tracking Client (TrkWks)",
+      "descKey": "Debloat_SvcTrkWks_Desc",
+      "descFallback": "Disables TrkWks background NTFS link tracking on optimized standalone PCs.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "ask",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "service", "name": "TrkWks", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "TrkWks", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "svc-lfsvc",
+      "category": "services",
+      "titleKey": "Debloat_SvcLfsvc_Title",
+      "titleFallback": "Disable Geolocation Service (lfsvc — Desktops Only)",
+      "descKey": "Debloat_SvcLfsvc_Desc",
+      "descFallback": "Stops and disables the Geolocation Service on desktop PCs. Automatically hidden on laptops to preserve automatic timezone and Find My Device.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "off"
+      },
+      "detect": [
+        { "type": "service", "name": "lfsvc", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "lfsvc", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "svc-sysmain-ssd",
+      "category": "services",
+      "titleKey": "Debloat_SvcSysMainSsd_Title",
+      "titleFallback": "Disable SysMain / Superfetch (SSD / NVMe Only)",
+      "descKey": "Debloat_SvcSysMainSsd_Desc",
+      "descFallback": "Disables SysMain background preloading only when the system drive is confirmed to be SSD/NVMe. Automatically blocked on mechanical HDDs and eMMC.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "ssd_only"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "ask",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "service", "name": "SysMain", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "SysMain", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "svc-spooler",
+      "category": "services",
+      "titleKey": "Debloat_SvcSpooler_Title",
+      "titleFallback": "Disable Print Spooler Service (No-Printer Machines)",
+      "descKey": "Debloat_SvcSpooler_Desc",
+      "descFallback": "Disables Print Spooler in Gaming, Hybrid, and Gaming Laptop profiles. Opt-in only on Workstation, Laptop, Conventional Desktop, and Ultraportable.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "ask",
+        "laptop": "ask",
+        "laptopGaming": "on",
+        "ultraportable": "ask"
+      },
+      "detect": [
+        { "type": "service", "name": "Spooler", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "Spooler", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Disabling Print Spooler prevents local printing and Microsoft Print to PDF."
+      ],
+      "needsReboot": false
+    },
+    {
+      "id": "svc-wsearch",
+      "category": "services",
+      "titleKey": "Debloat_SvcWSearch_Title",
+      "titleFallback": "Disable Windows Search Indexing Service (WSearch)",
+      "descKey": "Debloat_SvcWSearch_Desc",
+      "descFallback": "Disables background file indexing in Gaming, Hybrid, and Ultraportable profiles. Kept intact on Workstation, Laptop, and Conventional Desktop.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "off",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "ask",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "service", "name": "WSearch", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "WSearch", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Disabling Windows Search affects Outlook instant search and Start Menu file indexing."
+      ],
+      "needsReboot": false
+    },
+    {
+      "id": "svc-themes-advanced",
+      "category": "services",
+      "titleKey": "Debloat_SvcThemes_Title",
+      "titleFallback": "Disable Themes Service [Advanced Opt-In]",
+      "descKey": "Debloat_SvcThemes_Desc",
+      "descFallback": "Advanced opt-in tweak that stops the Windows Themes service to save minimal RAM on legacy/ultraportable hardware. May alter classic Win32 UI rendering.",
+      "risk": "high",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "ask",
+        "workstation": "off",
+        "hybrid": "ask",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "ask"
+      },
+      "detect": [
+        { "type": "service", "name": "Themes", "equals": "4" }
+      ],
+      "apply": [
+        { "type": "service", "name": "Themes", "startupType": "Disabled", "stopService": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Disabling Themes can break dark mode / custom styling in certain Win32 applications."
+      ],
+      "needsReboot": false
+    }
+  ]
+}

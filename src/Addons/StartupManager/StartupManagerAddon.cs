@@ -68,7 +68,7 @@ namespace OptiAssist.Addons.StartupManager
         public string Id { get { return "startup-manager"; } }
         public string Name { get { return T("Nav_StartupManager", "Startup Manager"); } }
         public string Description { get { return T("Startup_Subtitle", "Monitor, enable, disable, or remove startup applications and scheduled tasks"); } }
-        public string Version { get { return "1.2.S4"; } }
+        public string Version { get { return "1.2.S7"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "🚀"; } }
 
@@ -286,7 +286,7 @@ namespace OptiAssist.Addons.StartupManager
             _chkHideMicrosoft.Unchecked += (s, e) =>
             {
                 if (_suppressHideMsEvent) return;
-                MessageBoxResult res = MessageBox.Show(
+                MessageBoxResult res = OptiDialog.Show(
                     T("Startup_Msg_ShowMicrosoftWarning", "⚠️ Warning: Showing native Microsoft and Windows scheduled tasks will expose critical operating system tasks.\n\nDisabling, modifying, or deleting native Windows scheduled tasks can cause severe system instability, break Windows features, or prevent Windows from functioning properly.\n\nAre you sure you want to display native Microsoft / Windows entries?"),
                     T("Startup_Title_ShowMicrosoftWarning", "System Safety Warning"),
                     MessageBoxButton.YesNo,
@@ -650,7 +650,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.ToggleStartupProgram(prog, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ToggleFailed", "Could not toggle startup entry: {0}"), err),
+                    OptiDialog.Show(string.Format(T("Startup_Msg_ToggleFailed", "Could not toggle startup entry: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -871,7 +871,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.ToggleTask(task, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_ToggleFailed", "Could not toggle scheduled task: {0}"), err),
+                    OptiDialog.Show(string.Format(T("Startup_Msg_ToggleFailed", "Could not toggle scheduled task: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -1295,13 +1295,13 @@ namespace OptiAssist.Addons.StartupManager
                 T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete '{0}' from Windows startup?\n\nThis will not uninstall the application, but will prevent it from launching automatically."),
                 prog.Name);
 
-            if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
+            if (OptiDialog.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Startup Entry Deletion"),
                 MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 string err;
                 if (!StartupEngine.DeleteStartupProgram(prog, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
+                    OptiDialog.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete startup entry: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -1319,13 +1319,13 @@ namespace OptiAssist.Addons.StartupManager
                 T("Startup_Confirm_Delete_Msg", "Are you sure you want to permanently delete scheduled task '{0}'?"),
                 task.Name);
 
-            if (MessageBox.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
+            if (OptiDialog.Show(msg, T("Startup_Confirm_Delete_Title", "Confirm Scheduled Task Deletion"),
                 MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 string err;
                 if (!StartupEngine.DeleteTask(task, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
+                    OptiDialog.Show(string.Format(T("Startup_Msg_DeleteFailed", "Could not delete scheduled task: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
@@ -1387,11 +1387,11 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.RunTask(_editingTask, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunError", "Error running task: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                    OptiDialog.Show(string.Format(T("Startup_Msg_TaskRunError", "Error running task: {0}"), err), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_TaskRunSuccess", "Task '{0}' started successfully."), _editingTask.Name), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    OptiDialog.Show(string.Format(T("Startup_Msg_TaskRunSuccess", "Task '{0}' started successfully."), _editingTask.Name), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
         }
@@ -1405,7 +1405,7 @@ namespace OptiAssist.Addons.StartupManager
 
                 if (string.IsNullOrEmpty(newPath))
                 {
-                    MessageBox.Show(T("Startup_Msg_PathRequired", "Please specify the action path for the scheduled task."),
+                    OptiDialog.Show(T("Startup_Msg_PathRequired", "Please specify the action path for the scheduled task."),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -1413,7 +1413,7 @@ namespace OptiAssist.Addons.StartupManager
                 string err;
                 if (!StartupEngine.UpdateTask(_editingTask, newPath, newArgs, out err))
                 {
-                    MessageBox.Show(string.Format(T("Startup_Msg_TaskUpdateError", "Error updating scheduled task: {0}"), err),
+                    OptiDialog.Show(string.Format(T("Startup_Msg_TaskUpdateError", "Error updating scheduled task: {0}"), err),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -1429,7 +1429,7 @@ namespace OptiAssist.Addons.StartupManager
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(path))
             {
-                MessageBox.Show(T("Startup_Msg_NameAndPathRequired", "Please specify both the Name and Path for the program."),
+                OptiDialog.Show(T("Startup_Msg_NameAndPathRequired", "Please specify both the Name and Path for the program."),
                     "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -1452,7 +1452,7 @@ namespace OptiAssist.Addons.StartupManager
             string errProg;
             if (!StartupEngine.AddOrUpdateStartupProgram(name, path, scope, oldName, out errProg))
             {
-                MessageBox.Show(string.Format(T("Startup_Msg_SaveError", "Error saving startup program: {0}"), errProg), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
+                OptiDialog.Show(string.Format(T("Startup_Msg_SaveError", "Error saving startup program: {0}"), errProg), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 

@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "version": "1.0",
+  "issues": [
+    {
+      "id": "ki-nforce-transparency",
+      "severity": "Warning",
+      "titleKey": "Issue_NForceTransparency_Title",
+      "titleFallback": "NVIDIA nForce Chipset DWM Transparency Stutter",
+      "descKey": "Issue_NForceTransparency_Desc",
+      "descFallback": "Legacy NVIDIA nForce chipset detected on Windows 10/11. Desktop Window Manager (DWM) acrylic and transparency effects cause significant GUI stuttering and potential system freezes.",
+      "match": {
+        "pciVendors": ["10de"],
+        "pciDevices": ["0369", "03f0", "0aa3"],
+        "chipsetKeywords": ["nforce"],
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "registry",
+        "actionLabel": "Disable Transparency",
+        "actionTag": "fix_transparency",
+        "targetPath": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+        "valueName": "EnableTransparency",
+        "kind": "DWord",
+        "value": "0"
+      }
+    },
+    {
+      "id": "ki-sis-via-powervr-bsod",
+      "severity": "Critical",
+      "titleKey": "Issue_SisViaPowerVr_Title",
+      "titleFallback": "Legacy SiS / VIA / PowerVR GPU (WDDM Incompatibility)",
+      "descKey": "Issue_SisViaPowerVr_Desc",
+      "descFallback": "Legacy display hardware from SiS, VIA, or PowerVR (Intel GMA 500/600/3600) detected without official WDDM 1.2+ drivers. May cause blue screens or display crash loops under modern Windows 10/11.",
+      "match": {
+        "pciVendors": ["1039", "1106", "8086"],
+        "pciDevices": ["8108", "0be1", "0671", "6330", "6351", "6326", "3157", "3230", "3344", "3371"],
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "View Advisory",
+        "actionTag": "os_downgrade_advice",
+        "notes": "Recommend Microsoft Basic Display Adapter or remaining on Windows 7 / 8.1."
+      }
+    },
+    {
+      "id": "ki-intel-gma-legacy",
+      "severity": "Warning",
+      "titleKey": "Issue_IntelGmaLegacy_Title",
+      "titleFallback": "Legacy Intel GMA Graphics (950 / X3100 / G31 / G33)",
+      "descKey": "Issue_IntelGmaLegacy_Desc",
+      "descFallback": "Legacy Intel GMA 950 / X3100 / G31 / G33 detected. Operates via legacy XDDM/WDDM 1.0 fallback drivers, leading to high CPU usage by DWM.exe and unresponsive UI.",
+      "match": {
+        "pciVendors": ["8086"],
+        "pciDevices": ["2772", "27a2", "29c2", "2a02", "2e12", "2e22"],
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "registry",
+        "actionLabel": "Optimize UI for Legacy GMA",
+        "actionTag": "fix_gma_ui",
+        "targetPath": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+        "valueName": "EnableTransparency",
+        "kind": "DWord",
+        "value": "0"
+      }
+    },
+    {
+      "id": "ki-broadcom-wifi-win10",
+      "severity": "Warning",
+      "titleKey": "Issue_BroadcomWifi_Title",
+      "titleFallback": "Broadcom BCM43xx Wi-Fi DPC Latency & Dropouts",
+      "descKey": "Issue_BroadcomWifi_Desc",
+      "descFallback": "Broadcom BCM43xx 802.11 wireless controller detected. Generic Windows 10/11 inbox drivers frequently introduce severe DPC latency spikes, packet loss, or random disconnection.",
+      "match": {
+        "pciVendors": ["14e4"],
+        "pciDevices": ["4311", "4312", "4313", "4315", "4328", "4365", "4727"],
+        "minBuild": 17763
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "Driver Advice",
+        "actionTag": "inspect_drivers",
+        "notes": "Use Broadcom driver version 6.30.223.256 from Microsoft Update Catalog for stable operation."
+      }
+    },
+    {
+      "id": "ki-idt-sigmatel-audio",
+      "severity": "Warning",
+      "titleKey": "Issue_IdtSigmatelAudio_Title",
+      "titleFallback": "IDT / Sigmatel Audio Device Failure",
+      "descKey": "Issue_IdtSigmatelAudio_Desc",
+      "descFallback": "IDT / Sigmatel High Definition Audio Codec detected. Often loses audio output or produces severe crackling after cumulative Windows Updates.",
+      "match": {
+        "pciVendors": ["111d"],
+        "pciDevices": ["7603", "7608", "7675", "7676", "7695", "76e5"],
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "Audio Fix Guide",
+        "actionTag": "inspect_drivers",
+        "notes": "In Device Manager, update driver manually to 'High Definition Audio Device' (generic Microsoft driver)."
+      }
+    },
+    {
+      "id": "ki-amd-switchable-dgpu-freeze",
+      "severity": "Critical",
+      "titleKey": "Issue_AmdSwitchableDgpu_Title",
+      "titleFallback": "AMD Mobile dGPU Switchable Graphics Black Screen",
+      "descKey": "Issue_AmdSwitchableDgpu_Desc",
+      "descFallback": "Dual-graphics laptop with AMD Radeon mobile GPU detected. ULPS (Ultra Low Power State) and Fast Startup can cause permanent black screen hangs on boot or waking from sleep.",
+      "match": {
+        "pciVendors": ["1002"],
+        "pciDevices": ["6610", "6611", "6900", "6818", "6819"],
+        "isLaptop": true,
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "registry_ulps",
+        "actionLabel": "Disable ULPS & Fast Startup",
+        "actionTag": "fix_ulps",
+        "targetPath": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}",
+        "valueName": "EnableUlps",
+        "kind": "DWord",
+        "value": "0"
+      }
+    },
+    {
+      "id": "ki-abnt2-scancode-map",
+      "severity": "Info",
+      "titleKey": "Issue_Abnt2Keyboard_Title",
+      "titleFallback": "ABNT2 Keyboard Slash & Question Mark Key Mapping",
+      "descKey": "Issue_Abnt2Keyboard_Desc",
+      "descFallback": "On Brazilian ABNT2 keyboards installed on foreign laptop chassis or generic replacements, the '/ ?' key next to Right Shift may fail to produce characters.",
+      "match": {
+        "systemLocale": "pt-BR",
+        "formFactors": ["laptop", "ultraportable"]
+      },
+      "remediation": {
+        "actionType": "registry",
+        "actionLabel": "Apply ABNT2 Scancode Map",
+        "actionTag": "fix_abnt2_key",
+        "targetPath": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout",
+        "valueName": "Scancode Map",
+        "kind": "Binary",
+        "value": "0000000000000000020000007300350000000000"
+      }
+    },
+    {
+      "id": "ki-radeon-hd5000-hd6000-ulps",
+      "severity": "Critical",
+      "titleKey": "Issue_RadeonHd5000Ulps_Title",
+      "titleFallback": "AMD Radeon HD 5000 / 6000 Slow Boot Hang (ULPS)",
+      "descKey": "Issue_RadeonHd5000Ulps_Desc",
+      "descFallback": "AMD Radeon HD 5000 / 6000 TeraScale GPU detected. Enabled ULPS causes a 60-120 second black screen freeze before the Windows logon prompt appears.",
+      "match": {
+        "pciVendors": ["1002"],
+        "pciDevices": ["6718", "6719", "6738", "6739", "6758", "6759", "6779", "6889", "6898", "6899", "68b8", "68b9", "68d8", "68d9", "68f9"],
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "registry_ulps",
+        "actionLabel": "Set EnableUlps = 0",
+        "actionTag": "fix_ulps",
+        "targetPath": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}",
+        "valueName": "EnableUlps",
+        "kind": "DWord",
+        "value": "0"
+      }
+    },
+    {
+      "id": "ki-lenovo-bt-energy-management",
+      "severity": "Warning",
+      "titleKey": "Issue_LenovoBtEnergy_Title",
+      "titleFallback": "Lenovo ACPI Energy Management / Bluetooth Missing",
+      "descKey": "Issue_LenovoBtEnergy_Desc",
+      "descFallback": "Lenovo laptop detected without Lenovo ACPI Virtual Power Controller driver (VPC2004). May cause Bluetooth radio to stay turned off and battery threshold features to be disabled.",
+      "match": {
+        "oemKeywords": ["lenovo"],
+        "formFactors": ["laptop", "ultraportable", "laptopGaming"]
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "Open Device Manager",
+        "actionTag": "inspect_drivers",
+        "notes": "Install Lenovo Energy Management or Vantage ACPI Driver to restore hardware control."
+      }
+    },
+    {
+      "id": "ki-hp-pavilion-x360-txe",
+      "severity": "Warning",
+      "titleKey": "Issue_HpPavilionTxe_Title",
+      "titleFallback": "HP Pavilion x360 11 (2014) Intel TXE Driver Issue",
+      "descKey": "Issue_HpPavilionTxe_Desc",
+      "descFallback": "HP Pavilion x360 11 Bay Trail detected. Missing or incompatible Intel TXE (Trusted Execution Engine) driver leads to severe shutdown delays (3+ minutes) and power button unresponsiveness.",
+      "match": {
+        "oemKeywords": ["hp", "hewlett-packard"],
+        "modelKeywords": ["pavilion x360", "x360 11"],
+        "cpuMicroarch": "Silvermont"
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "Driver Advisory",
+        "actionTag": "inspect_drivers",
+        "notes": "Install Intel TXE Driver version 1.1.0.1064 to fix system shutdown hang."
+      }
+    },
+    {
+      "id": "ki-intel-ac7260-bluetooth",
+      "severity": "Warning",
+      "titleKey": "Issue_IntelAc7260Bt_Title",
+      "titleFallback": "Intel AC 7260 / 7265 Bluetooth Selective Suspend",
+      "descKey": "Issue_IntelAc7260Bt_Desc",
+      "descFallback": "Intel Wireless-AC 7260/7265/3160/3165 detected. USB selective suspend can cause the Bluetooth sub-device to disconnect entirely after waking from sleep or cold reboot.",
+      "match": {
+        "pciVendors": ["8086"],
+        "pciDevices": ["08b1", "08b2", "095a", "095b", "3165", "3166"],
+        "minBuild": 10240
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "Fix Bluetooth Power",
+        "actionTag": "inspect_drivers",
+        "notes": "In Device Manager > Bluetooth > Intel Wireless Bluetooth > Power Management, uncheck 'Allow computer to turn off this device'."
+      }
+    },
+    {
+      "id": "ki-acer-e5-553g-win11-block",
+      "severity": "Critical",
+      "titleKey": "Issue_AcerE5553GWin11_Title",
+      "titleFallback": "Acer Aspire E5-553G Dual-Graphics Incompatibility on Win11",
+      "descKey": "Issue_AcerE5553GWin11_Desc",
+      "descFallback": "Acer Aspire E5-553G with AMD A10-9600P / A12-9700P APU and Radeon R7 M440 discrete graphics detected. Under Windows 11, the AMD dual-graphics driver crashes into THREAD_STUCK_IN_DEVICE_DRIVER BSOD.",
+      "match": {
+        "oemKeywords": ["acer"],
+        "modelKeywords": ["e5-553g", "e5-553"],
+        "pciVendors": ["1002"],
+        "pciDevices": ["6900"]
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "Stay on Windows 10",
+        "actionTag": "os_downgrade_advice",
+        "notes": "Do not upgrade to Windows 11. Windows 10 22H2 or Windows 10 IoT LTSC 2021 is strongly advised."
+      }
+    },
+    {
+      "id": "ki-hp-mediatek-ralink-win11",
+      "severity": "Critical",
+      "titleKey": "Issue_HpMediaTekRalinkWin11_Title",
+      "titleFallback": "HP Laptop with Ralink / MediaTek PCIe Wi-Fi Crash on Win11",
+      "descKey": "Issue_HpMediaTekRalinkWin11_Desc",
+      "descFallback": "HP laptop with older Ralink/MediaTek PCIe Wi-Fi (RT3290 / MT7902) detected. Windows 11 kernel generates frequent SYSTEM_THREAD_EXCEPTION_NOT_HANDLED crashes with netr28x.sys.",
+      "match": {
+        "oemKeywords": ["hp", "hewlett-packard"],
+        "pciVendors": ["1814", "14c3"],
+        "pciDevices": ["3290", "3298", "7902"]
+      },
+      "remediation": {
+        "actionType": "info",
+        "actionLabel": "View Advisory",
+        "actionTag": "os_downgrade_advice",
+        "notes": "Replace internal PCIe card with Intel AX200/AX210, use a USB Wi-Fi dongle, or remain on Windows 10."
+      }
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "version": "2.0.F3",
+  "category": "security_best_effort",
+  "tweaks": [
+    {
+      "id": "sec-hvci-memory-integrity",
+      "category": "security_best_effort",
+      "titleKey": "Debloat_SecHvci_Title",
+      "titleFallback": "Disable Memory Integrity (HVCI) for Maximum Gaming FPS",
+      "descKey": "Debloat_SecHvci_Desc",
+      "descFallback": "Sets HypervisorEnforcedCodeIntegrity\\Enabled=0 to eliminate VBS/HVCI overhead in games. Requires reboot. Never modifies Secure Boot or TPM.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "ask",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "on",
+        "ultraportable": "off"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity", "name": "Enabled", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity", "name": "Enabled", "kind": "DWord", "value": "0" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Reduces kernel code integrity isolation in exchange for higher gaming frame rates. Reboot required."
+      ],
+      "needsReboot": true
+    },
+    {
+      "id": "sec-kernel-shadow-stacks",
+      "category": "security_best_effort",
+      "titleKey": "Debloat_SecKernelShadow_Title",
+      "titleFallback": "Disable Kernel-mode Hardware-enforced Stack Protection",
+      "descKey": "Debloat_SecKernelShadow_Desc",
+      "descFallback": "Sets KernelShadowStacks\\Enabled=0 (Win11 22H2+) to resolve legacy anti-cheat incompatibilities and reduce kernel overhead. Reboot required.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 22621,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "off",
+        "hybrid": "ask",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "on",
+        "ultraportable": "off"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\KernelShadowStacks", "name": "Enabled", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\KernelShadowStacks", "name": "Enabled", "kind": "DWord", "value": "0" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Disables hardware-enforced kernel shadow stacks. Reboot required."
+      ],
+      "needsReboot": true
+    },
+    {
+      "id": "sec-defender-best-effort",
+      "category": "security_best_effort",
+      "titleKey": "Debloat_SecDefenderBestEffort_Title",
+      "titleFallback": "Tune Windows Defender CPU Throttling & Cloud Samples (Best Effort)",
+      "descKey": "Debloat_SecDefenderBestEffort_Desc",
+      "descFallback": "Applies WindowsDefender.admx policies: AvgCPULoadFactor=5, LowCpuPriority=1, disables catch-up scans, and sets SpynetReporting=0 / SubmitSamplesConsent=2 when Tamper Protection allows.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "tamper_protection_best_effort"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Scan", "name": "AvgCPULoadFactor", "equals": "5" },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Scan", "name": "LowCpuPriority", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Scan", "name": "AvgCPULoadFactor", "kind": "DWord", "value": "5" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Scan", "name": "LowCpuPriority", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Scan", "name": "DisableCatchupFullScan", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Scan", "name": "DisableCatchupQuickScan", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Spynet", "name": "SpynetReporting", "kind": "DWord", "value": "0", "skipIfTamperProtected": true },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Spynet", "name": "SubmitSamplesConsent", "kind": "DWord", "value": "2", "skipIfTamperProtected": true }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "sec-smart-app-control",
+      "category": "security_best_effort",
+      "titleKey": "Debloat_SecSmartAppControl_Title",
+      "titleFallback": "Disable Smart App Control [Irreversible — Double Confirmation]",
+      "descKey": "Debloat_SecSmartAppControl_Desc",
+      "descFallback": "Sets CI\\Policy\\VerifiedAndReputablePolicyState=0. Always opt-in across all profiles. Once disabled, Smart App Control CANNOT be re-enabled without a full Windows reset/reinstall.",
+      "risk": "high",
+      "doubleConfirm": true,
+      "appliesTo": {
+        "minBuild": 22621,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "ask",
+        "workstation": "ask",
+        "hybrid": "ask",
+        "conventional": "ask",
+        "laptop": "ask",
+        "laptopGaming": "ask",
+        "ultraportable": "ask"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\CI\\Policy", "name": "VerifiedAndReputablePolicyState", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\CI\\Policy", "name": "VerifiedAndReputablePolicyState", "kind": "DWord", "value": "0" }
+      ],
+      "revert": "manual",
+      "warnings": [
+        "IRREVERSIBLE: Disabling Smart App Control cannot be undone without resetting or reinstalling Windows!"
+      ],
+      "needsReboot": true
+    },
+    {
+      "id": "sec-bitlocker-prevent-auto",
+      "category": "security_best_effort",
+      "titleKey": "Debloat_SecBitLockerPreventAuto_Title",
+      "titleFallback": "Prevent Automatic BitLocker Device Encryption (Desktops & Ultraportable)",
+      "descKey": "Debloat_SecBitLockerPreventAuto_Desc",
+      "descFallback": "Sets BitLocker\\PreventDeviceEncryption=1 on desktops and ultraportables to prevent silent automatic encryption. Never enabled on standard laptops and never runs manage-bde -off.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\BitLocker", "name": "PreventDeviceEncryption", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\BitLocker", "name": "PreventDeviceEncryption", "kind": "DWord", "value": "1" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    }
+  ]
+}

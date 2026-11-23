@@ -56,6 +56,50 @@
     <Compile Include="src\LocalizationHelper.cs" />
     <Compile Include="src\AddonHelper.cs" />
     <Compile Include="src\LogWindow.cs" />
+    <Compile Include="src\OptiDialog.cs" />
+    <Compile Include="src\FluentIcons.cs" />
+    <Compile Include="src\Platform\PlatformInfo.cs" />
+    <Compile Include="src\Platform\MicroarchDatabase.cs" />
+    <Compile Include="src\Platform\PciIdsDatabase.cs" />
+    <Compile Include="src\Platform\PlatformProfiler.cs" />
+    <Compile Include="src\Platform\ProfileRecommender.cs" />
+    <Compile Include="src\Platform\Win11CompatAdvisor.cs" />
+    <Compile Include="src\Platform\KnownIssuesEngine.cs" />
+    <Compile Include="src\Platform\PlatformDiagnosticService.cs" />
+    <Compile Include="src\Debloater\DebloaterCatalog.cs" />
+    <Compile Include="src\Debloater\DebloaterEngine.cs" />
+    <Compile Include="src\Debloater\SystemRestoreHelper.cs" />
+    <Compile Include="src\Debloater\WindowsToolsTabsBuilder.cs" />
+    <Content Include="Config\Data\microarch.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Data\pci.ids.min">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Data\known_issues.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\power.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\appearance_ui.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\services.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\features_capabilities.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\policies_gpo.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\security_best_effort.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Debloater\apps_ctt.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Resource Include="src\app.ico" />
     <Resource Include="src\app.png" />
   </ItemGroup>

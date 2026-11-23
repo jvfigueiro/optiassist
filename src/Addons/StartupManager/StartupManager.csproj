@@ -9,6 +9,7 @@
     <OutputPath>..\..\..\Config\Addons\StartupManager\</OutputPath>
     <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

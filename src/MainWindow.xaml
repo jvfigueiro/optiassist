@@ -37,7 +37,9 @@
                         <Border x:Name="border"
                                 Background="{TemplateBinding Background}"
                                 CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter Content="{TemplateBinding Content, Converter={StaticResource FluentContentConverter}}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -60,7 +62,9 @@
                         <Border x:Name="border"
                                 Background="{TemplateBinding Background}"
                                 CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter Content="{TemplateBinding Content, Converter={StaticResource FluentContentConverter}}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -237,7 +241,7 @@
                                          Click="NavButton_Click"/>
                             <RadioButton x:Name="rbNavTerminal"
                                          GroupName="SidebarNavGroup"
-                                         Content="📜  Logs"
+                                         Content=">_  Terminal"
                                          Style="{StaticResource BtnNav}"
                                          Click="NavButton_Click"/>
 
@@ -285,7 +289,7 @@
                                 CornerRadius="10"
                                 Padding="10,2"
                                 VerticalAlignment="Center">
-                            <TextBlock Text="1.2.S4"
+                            <TextBlock Text="1.2.S7"
                                        FontSize="10.5"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource BrushTextSecondary}"/>
@@ -320,54 +324,101 @@
                     <!-- TAB 0: OVERVIEW (DASHBOARD - SPARKLE BENTO GRID) -->
                     <!-- ================================================ -->
                     <StackPanel x:Name="panelDashboard" Visibility="Visible" Margin="4">
-                        <!-- Section Header -->
-                        <Grid Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock x:Name="txtDashboardTitle"
-                                           Text="Welcome to OptiAssist!"
-                                           FontSize="20"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource BrushTextPrimary}"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock x:Name="txtDashboardSubtitle"
-                                           Text="The ultimate tool to keep your system in shape"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource BrushTextSecondary}"
-                                           Margin="0,3,0,0"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="btnDashboardInstallPc"
-                                        Content="📥 Install on PC"
-                                        Style="{StaticResource BtnAccent}"
-                                        Height="34"
-                                        Padding="12,0"
-                                        FontSize="11"
-                                        Margin="0,0,8,0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="Install OptiAssist on this computer with Desktop and Start Menu shortcuts"
-                                        Visibility="Collapsed"
-                                        Click="BtnDashboardInstallPc_Click"/>
-                                <Button x:Name="btnDashboardThemeToggle"
-                                        Style="{StaticResource BtnDefault}"
-                                        Width="34"
-                                        Height="34"
-                                        Padding="0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="Toggle Dark / Light Mode"
-                                        Click="BtnToggleTheme_Click">
-                                    <TextBlock x:Name="txtDashboardThemeIcon"
-                                               Text="🌙"
-                                               FontSize="15"
+                        <!-- Hidden legacy title elements for localization compatibility -->
+                        <TextBlock x:Name="txtDashboardTitle" Text="" Visibility="Collapsed"/>
+                        <TextBlock x:Name="txtDashboardSubtitle" Text="" Visibility="Collapsed"/>
+
+                        <!-- ======================================================== -->
+                        <!-- HERO CARD: PC HEALTH SCORE, HEADLINE, RECS & TOP BUTTONS -->
+                        <!-- ======================================================== -->
+                        <Border x:Name="cardHealthHero"
+                                Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="18,16"
+                                Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Circular Score Ring (Percentage) -->
+                                <Grid Grid.Column="0" Width="88" Height="88" Margin="0,0,20,0" VerticalAlignment="Center">
+                                    <Ellipse Width="84" Height="84"
+                                             Stroke="{DynamicResource BrushBorderCard}"
+                                             StrokeThickness="7"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"/>
+                                    <Canvas Width="88" Height="88">
+                                        <Path x:Name="pathHealthArc"
+                                              Stroke="#22C55E"
+                                              StrokeThickness="7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"/>
+                                    </Canvas>
+                                    <TextBlock x:Name="txtHealthScore"
+                                               Text="--%"
+                                               FontSize="20"
+                                               FontWeight="Bold"
                                                HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Button>
-                            </StackPanel>
-                        </Grid>
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource BrushTextPrimary}"/>
+                                </Grid>
+
+                                <!-- Right Column next to Circular Ring: Top Row (Headline + Buttons) & Recommendations below -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock x:Name="txtHealthHeadline"
+                                                   Grid.Column="0"
+                                                   Text="Analyzing system health..."
+                                                   FontSize="17"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   TextWrapping="Wrap"/>
+
+                                        <!-- Top-Right Hero Controls: Install on PC & Theme Toggle -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                            <Button x:Name="btnDashboardInstallPc"
+                                                    Content="📥 Install on PC"
+                                                    Style="{StaticResource BtnAccent}"
+                                                    Height="32"
+                                                    Padding="12,0"
+                                                    FontSize="11"
+                                                    Margin="0,0,8,0"
+                                                    VerticalAlignment="Center"
+                                                    ToolTip="Install OptiAssist on this computer with Desktop and Start Menu shortcuts"
+                                                    Visibility="Collapsed"
+                                                    Click="BtnDashboardInstallPc_Click"/>
+                                            <Button x:Name="btnDashboardThemeToggle"
+                                                    Style="{StaticResource BtnDefault}"
+                                                    Width="32"
+                                                    Height="32"
+                                                    Padding="0"
+                                                    VerticalAlignment="Center"
+                                                    ToolTip="Toggle Dark / Light Mode"
+                                                    Click="BtnToggleTheme_Click">
+                                                <TextBlock x:Name="txtDashboardThemeIcon"
+                                                           Text="🌙"
+                                                           FontSize="15"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Integrated Recommendations & Attention Strips (right next to the circular bar) -->
+                                    <StackPanel x:Name="pnlHeroAttentionList" Margin="0,6,0,0" Visibility="Collapsed"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
 
                         <!-- Row 1: 2-Column Bento Grid (Hardware Info & Operating System) -->
                         <Grid Margin="0,0,0,10" HorizontalAlignment="Stretch">
@@ -392,7 +443,7 @@
                                     <StackPanel Grid.Row="0">
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                             <Border Width="34" Height="34" CornerRadius="8" Background="#1E3A8A" Margin="0,0,10,0">
-                                                <TextBlock Text="🧠" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <TextBlock Text="🧠" FontSize="16" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock x:Name="txtHwCardTitle" Text="Hardware Info" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
@@ -457,7 +508,7 @@
                                     <StackPanel Grid.Row="0">
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                             <Border Width="34" Height="34" CornerRadius="8" Background="#991B1B" Margin="0,0,10,0">
-                                                <TextBlock Text="🪟" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <TextBlock Text="🪟" FontSize="16" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock x:Name="txtOsCardTitle" Text="Operating System" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
@@ -520,7 +571,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <Border Width="34" Height="34" CornerRadius="8" Background="#92400E" Margin="0,0,10,0">
-                                        <TextBlock Text="💾" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="💾" FontSize="16" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock x:Name="txtStorageCardTitle" Text="Storage" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
@@ -540,7 +591,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Row 3 (Full Width): Common Tasks -->
+                        <!-- Row 3 (Full Width): Common Tasks (below Storage, Personalize button left & below) -->
                         <Border Background="{DynamicResource BrushBgCard}"
                                 BorderBrush="{DynamicResource BrushBorderCard}"
                                 BorderThickness="1"
@@ -549,60 +600,34 @@
                                 Margin="0,0,0,10"
                                 HorizontalAlignment="Stretch">
                             <StackPanel>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="txtCommonTasksTitle"
-                                               Grid.Column="0"
-                                               Text="⚡ Common Tasks"
-                                               FontWeight="Bold"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource BrushAccent}"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <Button x:Name="btnCustomizeCommonTasks"
-                                            Grid.Column="1"
-                                            Content="⚙️ Customize"
-                                            Style="{StaticResource BtnDefault}"
-                                            Height="24"
-                                            Padding="10,0"
-                                            FontSize="10.5"
-                                            ToolTip="Customize shortcuts, add new tools, reorganize or remove tasks"
-                                            Click="BtnCustomizeCommonTasks_Click"/>
-                                </Grid>
+                                <TextBlock x:Name="txtCommonTasksTitle" Text="" Visibility="Collapsed"/>
                                 <TextBlock x:Name="txtCommonTasksEmpty"
-                                           Text="No common tasks configured. Click 'Customize' to add or restore default tasks."
+                                           Text="No common tasks configured. Click 'Personalize Common Tasks...' to add or restore default tasks."
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextMuted}"
                                            Margin="2,2,0,6"
                                            TextWrapping="Wrap"
                                            Visibility="Collapsed"/>
                                 <UniformGrid x:Name="ugCommonTasks" Columns="3" HorizontalAlignment="Stretch"/>
+                                <Button x:Name="btnCustomizeCommonTasks"
+                                        Content="⚙️ Personalize Common Tasks..."
+                                        Style="{StaticResource BtnDefault}"
+                                        Height="26"
+                                        Padding="12,0"
+                                        FontSize="10.5"
+                                        Margin="3,10,0,0"
+                                        HorizontalAlignment="Left"
+                                        ToolTip="Customize shortcuts, add new tools, reorganize or remove tasks"
+                                        Click="BtnCustomizeCommonTasks_Click"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- Row 4 (Full Width): Recommendations -->
-                        <Border x:Name="borderRecommendations"
-                                Background="{DynamicResource BrushBgCard}"
-                                BorderBrush="{DynamicResource BrushBorderCard}"
-                                BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="14"
-                                Margin="0,0,0,8"
-                                HorizontalAlignment="Stretch">
+                        <!-- Standalone Recommendations card removed (integrated inside Hero Card) -->
+                        <Border x:Name="borderRecommendations" Visibility="Collapsed">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Border Width="34" Height="34" CornerRadius="8" Background="#065F46" Margin="0,0,10,0">
-                                        <TextBlock Text="💡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock x:Name="txtRecommendationsTitle" Text="Recommendations" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                        <TextBlock x:Name="txtRecommendationsSubtitle" Text="System &amp; Hardware Advice" FontSize="11" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                                <StackPanel x:Name="pnlRecommendationsList" />
+                                <TextBlock x:Name="txtRecommendationsTitle" Visibility="Collapsed"/>
+                                <TextBlock x:Name="txtRecommendationsSubtitle" Visibility="Collapsed"/>
+                                <StackPanel x:Name="pnlRecommendationsList" Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -624,13 +649,69 @@
                                            Foreground="{DynamicResource BrushTextPrimary}"
                                            TextTrimming="CharacterEllipsis"/>
                                 <TextBlock x:Name="txtToolsSubtitle"
-                                           Text="Instant access to native Windows administrative tools and portable utilities"
+                                           Text="Instant access to native Windows administrative tools, OptiBoost, and Compatibility Checker"
                                            FontSize="11"
                                            Foreground="{DynamicResource BrushTextSecondary}"
                                            Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                         </Grid>
+
+                        <!-- Windows Tools Sub-Tabs Bar (Administrative Tools | Windows Debloater | Compatibility Checker) -->
+                        <Border Background="{DynamicResource BrushBgCard}"
+                                BorderBrush="{DynamicResource BrushBorderCard}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="8,0,8,0"
+                                Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                                <Border x:Name="tabToolsAdmin"
+                                        Padding="14,10,14,10"
+                                        Margin="0,0,6,0"
+                                        BorderThickness="0,0,0,2.5"
+                                        BorderBrush="{DynamicResource BrushAccent}"
+                                        Background="Transparent"
+                                        Cursor="Hand"
+                                        MouseLeftButtonDown="TabToolsAdmin_Click">
+                                    <TextBlock x:Name="txtTabToolsAdmin"
+                                               Text="🛠️  Windows Administrative Tools"
+                                               FontSize="12"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource BrushAccent}"/>
+                                </Border>
+                                <Border x:Name="tabToolsDebloater"
+                                        Padding="14,10,14,10"
+                                        Margin="0,0,6,0"
+                                        BorderThickness="0,0,0,2.5"
+                                        BorderBrush="Transparent"
+                                        Background="Transparent"
+                                        Cursor="Hand"
+                                        MouseLeftButtonDown="TabToolsDebloater_Click">
+                                    <TextBlock x:Name="txtTabToolsDebloater"
+                                               Text="✨  OptiBoost"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrushTextSecondary}"/>
+                                </Border>
+                                <Border x:Name="tabToolsCompat"
+                                        Padding="14,10,14,10"
+                                        Margin="0,0,6,0"
+                                        BorderThickness="0,0,0,2.5"
+                                        BorderBrush="Transparent"
+                                        Background="Transparent"
+                                        Cursor="Hand"
+                                        MouseLeftButtonDown="TabToolsCompat_Click">
+                                    <TextBlock x:Name="txtTabToolsCompat"
+                                               Text="✅  Compatibility Checker"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrushTextSecondary}"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-Tab 1: Administrative Tools & Portable Utilities -->
+                        <StackPanel x:Name="pnlToolsAdminContent" Visibility="Visible">
 
                         <!-- Administrative Tools Grid -->
                         <Border Background="{DynamicResource BrushBgCard}"
@@ -720,6 +801,13 @@
                                 HorizontalAlignment="Stretch"
                                 Click="BtnOpenMaintenanceFolder_Click"
                                 ToolTip="Access local Maintenance folder containing portable tools"/>
+                        </StackPanel>
+
+                        <!-- Sub-Tab 2: Windows Debloater 2.0 -->
+                        <ContentControl x:Name="ccToolsDebloaterContent" Visibility="Collapsed" />
+
+                        <!-- Sub-Tab 3: Windows Compatibility Checker -->
+                        <ContentControl x:Name="ccToolsCompatContent" Visibility="Collapsed" />
                     </StackPanel>
 
                     <!-- ================================================ -->
@@ -1030,11 +1118,11 @@
                                                     </Grid.ColumnDefinitions>
 
                                                     <!-- Icon -->
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding Icon}"
-                                                               FontSize="24"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,12,0"/>
+                                                    <ContentControl Grid.Column="0"
+                                                                    Content="{Binding Icon, Converter={StaticResource FluentContentConverter}, ConverterParameter=22}"
+                                                                    Foreground="{DynamicResource BrushAccent}"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="0,0,12,0"/>
 
                                                     <!-- Info & AssemblyInfo Metadata -->
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -1175,7 +1263,7 @@
                                            Margin="0,0,14,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock x:Name="txtAboutVersion"
-                                                   Text="OptiAssist v1.2.S4"
+                                                   Text="OptiAssist v1.2.S7"
                                                    FontSize="16"
                                                    FontWeight="Bold"
                                                    Foreground="{DynamicResource BrushAccent}"
@@ -1186,29 +1274,6 @@
                                                    Foreground="{DynamicResource BrushTextPrimary}"/>
                                     </StackPanel>
                                 </StackPanel>
-
-                                <!-- Acknowledgments & Credits to Chris Titus -->
-                                <Border Background="{DynamicResource BrushBgPrimary}"
-                                        BorderBrush="{DynamicResource BrushBorderCard}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="12"
-                                        Margin="0,0,0,12">
-                                    <StackPanel>
-                                        <TextBlock x:Name="txtAboutCreditsTitle"
-                                                   Text="🤝 Acknowledgments &amp; Credits"
-                                                   FontSize="12"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource BrushTextPrimary}"
-                                                   Margin="0,0,0,4"/>
-                                        <TextBlock x:Name="txtAboutCreditsText"
-                                                   TextWrapping="Wrap"
-                                                   FontSize="11"
-                                                   LineHeight="16"
-                                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                                   Text="Special thanks and credit to Chris Titus Tech and the open-source community behind WinUtil, whose work served as an essential inspiration and foundation for the implementation of several system maintenance and optimization features in OptiAssist."/>
-                                    </StackPanel>
-                                </Border>
 
                                 <!-- Official Links / Buttons -->
                                 <WrapPanel>
@@ -1283,11 +1348,11 @@
                                                     </Grid.ColumnDefinitions>
 
                                                     <!-- Icon -->
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding Icon}"
-                                                               FontSize="22"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,12,0"/>
+                                                    <ContentControl Grid.Column="0"
+                                                                    Content="{Binding Icon, Converter={StaticResource FluentContentConverter}, ConverterParameter=20}"
+                                                                    Foreground="{DynamicResource BrushAccent}"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="0,0,12,0"/>
 
                                                     <!-- Summary + AssemblyInfo Metadata -->
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">

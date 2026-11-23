@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 João Figueiró (OptiAssist).
+-->
+<cleaner id="adobe_cache" os="windows">
+  <label>Adobe Media &amp; Disk Cache</label>
+  <description>Adobe Premiere Pro, After Effects and Media Encoder temporary files</description>
+  <running type="exe" os="windows">Adobe Premiere Pro.exe</running>
+  <running type="exe" os="windows">AfterFX.exe</running>
+  <running type="exe" os="windows">Adobe Media Encoder.exe</running>
+  <option id="media_cache">
+    <label>Media Cache Files</label>
+    <description>Delete compiled peak files and conformed audio/video media caches</description>
+    <action command="delete" search="walk.all" path="%AppData%\Adobe\Common\Media Cache Files"/>
+    <action command="delete" search="walk.all" path="%AppData%\Adobe\Common\Media Cache"/>
+    <action command="delete" search="walk.all" path="%AppData%\Adobe\Common\Peak Files"/>
+  </option>
+  <option id="disk_cache">
+    <label>After Effects Disk Cache</label>
+    <description>Delete rendered composition preview disk frames</description>
+    <action command="delete" search="walk.all" path="%LocalAppData%\Adobe\After Effects"/>
+  </option>
+  <option id="crashes">
+    <label>Crash Logs</label>
+    <description>Delete Adobe crash logs and dump reports</description>
+    <action command="delete" search="walk.files" path="%LocalAppData%\Adobe\CRLogs"/>
+  </option>
+</cleaner>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 João Figueiró (OptiAssist).
+-->
+<cleaner id="onedrive" os="windows">
+  <label>Microsoft OneDrive</label>
+  <description>Cloud storage sync client telemetry and setup logs</description>
+  <running type="exe" os="windows">OneDrive.exe</running>
+  <option id="logs">
+    <label>Logs</label>
+    <description>Delete sync telemetry, setup and operational logs</description>
+    <action command="delete" search="walk.files" path="%LocalAppData%\Microsoft\OneDrive\logs"/>
+    <action command="delete" search="walk.files" path="%LocalAppData%\Microsoft\OneDrive\setup\logs"/>
+  </option>
+</cleaner>

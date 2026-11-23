@@ -1,22 +1,22 @@
 [
   {
-    "Name": "Google Chrome",
-    "PreSelected": true,
-    "InstallType": "Local",
-    "WingetId": "Google.Chrome",
-    "SilentArgs": "/silent /install"
-  },
-  {
     "Name": "7-Zip",
     "PreSelected": true,
-    "InstallType": "Local",
+    "InstallType": "Winget",
     "WingetId": "7zip.7zip",
     "SilentArgs": "/S"
   },
   {
+    "Name": "Google Chrome",
+    "PreSelected": true,
+    "InstallType": "Winget",
+    "WingetId": "Google.Chrome",
+    "SilentArgs": "/silent /install"
+  },
+  {
     "Name": "Microsoft Office",
     "PreSelected": true,
-    "InstallType": "Local",
+    "InstallType": "Winget",
     "WingetId": "Microsoft.Office",
     "SilentArgs": ""
   },

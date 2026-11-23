@@ -18,7 +18,7 @@ To compile OptiAssist and all decoupled add-on modules from source, the developm
   ```
   Or Visual Studio 2019/2022 Build Tools.
 - **Archiver (for packaging)**: 7-Zip CLI (`7z.exe`) or NanaZip (`7z.exe`).
-- **External Dependencies**: Zero. No NuGet packages or package restores are required.
+- **Third-Party Build-Time Dependencies**: Stored in `lib/LibreHardwareMonitor/*.dll` (`LibreHardwareMonitorLib 0.9.6.0` and its transitive dependencies) and copied automatically to `Config/Addons/PCAssist/` during compilation. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) and [SOURCE-INFO.md](../SOURCE-INFO.md).
 
 ---
 
@@ -69,38 +69,51 @@ To compile only the main host executable without recompiling the add-on modules:
 
 To generate the official standalone distribution archive (`OptiAssist-v1.1.0.0.7z` ~504 KB):
 
-### 3.1 Distribution Folder Layout
-Assemble the release files into a clean staging folder:
+### 3.1 Distribution Folder Layout (Runtime vs. Development)
+Assemble the release files into a clean staging folder.
+
+**Development-only files (excluded from final runtime release packages):**
+- `src/`, `lib/`, `tests/`, `Docs/`, `OptiAssist.csproj`, `OptiAssist.sln`, `build.bat`, `Config/Addons/SystemCleaner/cleaners/Makefile*`
+
+**Required runtime & compliance layout:**
 ```text
 OptiAssist/
-|-- OptiAssist.exe                 # Compiled host executable (v1.1.0.0)
+|-- OptiAssist.exe                 # Compiled host executable (v1.2.S7)
 |-- LICENSE                        # GNU General Public License v3.0
+|-- THIRD-PARTY-NOTICES.md         # Third-party attributions, licenses, and obligations
+|-- SOURCE-INFO.md                 # Upstream provenance, commits, and source locations
+|-- THIRD-PARTY/                   # Full third-party license texts
+|   |-- MPL-2.0.txt
+|   |-- Apache-2.0.txt
+|   |-- BSD-3-Clause.txt
+|   `-- MIT.txt
 |-- README.md                      # Project documentation
-|-- Config/                        # Configuration files and plugins
+|-- Config/                        # Configuration files, databases, and plugins
 |   |-- settings.json              # Fresh user preferences (freshstart: "true")
 |   |-- custom_shortcuts.json      # Customizable Dashboard common tasks
-|   |-- Languages/                 # Dynamic multi-language dictionaries
-|   |   |-- en-US.json
-|   |   `-- pt-BR.json
-|   `-- Addons/                    # Compiled decoupled add-on DLLs & catalogs
+|   |-- Data/                      # Hardware & compatibility databases
+|   |   |-- pci.ids.min            # Curated PCI IDs (BSD-3-Clause)
+|   |   |-- microarch.json
+|   |   `-- known_issues.json
+|   |-- Debloater/                 # OptiBoost declarative tweak catalogs
+|   |-- Languages/                 # Dynamic multi-language dictionaries (en-US, pt-BR)
+|   `-- Addons/                    # Compiled decoupled add-on DLLs & runtime dependencies
 |       |-- AppManager/
 |       |-- MaintenanceReport/
+|       |-- PCAssist/              # PCAssist.dll + 9 LibreHardwareMonitor runtime DLLs
 |       |-- StartupManager/
-|       |-- SystemCleaner/
+|       |-- SystemCleaner/         # SystemCleaner.dll + cleaners/*.xml
 |       `-- Toolbox/
-|-- Maintenance/                   # Auxiliary portable diagnostic utilities
-|   `-- README.txt
-|-- Installers/                    # Local technician installer repository
-|   `-- README.txt
-`-- Reports/                       # Default maintenance report export directory
-    `-- README.txt
 ```
 
-### 3.2 Compression Command
-Compress with maximum LZMA2 solid compression:
+### 3.2 Compression & Automated Release Validation
+Compress with maximum LZMA2 solid compression and validate the staging directory or `.7z` archive with `tests\Verify-ReleasePackage.ps1`:
 ```powershell
-7z a -t7z -mx=9 "OptiAssist-v1.1.0.0.7z" ".\release_stage\OptiAssist"
+.\tests\Verify-ReleasePackage.ps1 -PackagePath ".\release_stage\OptiAssist"
+7z a -t7z -mx=9 "OptiAssist-v1.2.S7.7z" ".\release_stage\OptiAssist"
+.\tests\Verify-ReleasePackage.ps1 -PackagePath ".\OptiAssist-v1.2.S7.7z"
 ```
+`Verify-ReleasePackage.ps1` exits with code `1` if `OptiAssist.exe`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `SOURCE-INFO.md`, `THIRD-PARTY\*.txt`, `pci.ids.min`, any add-on DLL, or any of the 9 `PCAssist` runtime dependency DLLs are missing or empty.
 
 ---
 

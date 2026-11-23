@@ -415,23 +415,50 @@ namespace OptiAssist
 
                 try
                 {
-                    int cDiskIndex = 0;
+                    int cDiskIndex = -1;
+                    string sysDriveStr = Environment.GetEnvironmentVariable("SystemDrive");
+                    if (string.IsNullOrEmpty(sysDriveStr)) sysDriveStr = "C:";
+                    char sysDriveChar = sysDriveStr[0];
+
+                    // 0a. Primary: MSFT_Partition (accurate for GPT / NVMe / multi-disk)
                     try
                     {
-                        using (ManagementObjectSearcher partSearcher = new ManagementObjectSearcher(
-                            "ASSOCIATORS OF {Win32_LogicalDisk.DeviceID='C:'} WHERE AssocClass=Win32_LogicalDiskToPartition"))
+                        using (ManagementObjectSearcher mpSearcher = new ManagementObjectSearcher(
+                            @"root\Microsoft\Windows\Storage",
+                            string.Format("SELECT DiskNumber FROM MSFT_Partition WHERE DriveLetter = '{0}'", sysDriveChar)))
                         {
-                            foreach (ManagementObject part in partSearcher.Get())
+                            foreach (ManagementObject mp in mpSearcher.Get())
                             {
-                                if (part["DiskIndex"] != null)
+                                if (mp["DiskNumber"] != null)
                                 {
-                                    cDiskIndex = Convert.ToInt32(part["DiskIndex"]);
+                                    cDiskIndex = Convert.ToInt32(mp["DiskNumber"]);
                                     break;
                                 }
                             }
                         }
                     }
                     catch { }
+
+                    // 0b. Fallback: Win32_LogicalDiskToPartition
+                    if (cDiskIndex < 0)
+                    {
+                        try
+                        {
+                            using (ManagementObjectSearcher partSearcher = new ManagementObjectSearcher(
+                                string.Format("ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{0}:'}} WHERE AssocClass=Win32_LogicalDiskToPartition", sysDriveChar)))
+                            {
+                                foreach (ManagementObject part in partSearcher.Get())
+                                {
+                                    if (part["DiskIndex"] != null)
+                                    {
+                                        cDiskIndex = Convert.ToInt32(part["DiskIndex"]);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
 
                     // 1. Check MSFT_PhysicalDisk (Windows Storage Management API) for accurate MediaType / BusType / SpindleSpeed
                     try
@@ -440,13 +467,12 @@ namespace OptiAssist
                             @"root\Microsoft\Windows\Storage",
                             "SELECT DeviceId, FriendlyName, Model, MediaType, BusType, SpindleSpeed FROM MSFT_PhysicalDisk"))
                         {
+                            string fallbackType = "";
                             foreach (ManagementObject phy in phySearcher.Get())
                             {
                                 string devId = phy["DeviceId"] != null ? phy["DeviceId"].ToString().Trim() : "";
                                 int diskId = -1;
                                 int.TryParse(devId, out diskId);
-                                if (diskId >= 0 && diskId != cDiskIndex && !string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
-                                    continue;
 
                                 int mediaType = phy["MediaType"] != null ? Convert.ToInt32(phy["MediaType"]) : 0;
                                 int busType = phy["BusType"] != null ? Convert.ToInt32(phy["BusType"]) : 0;
@@ -454,6 +480,7 @@ namespace OptiAssist
                                 string friendly = phy["FriendlyName"] != null ? phy["FriendlyName"].ToString() : "";
                                 string phyModel = phy["Model"] != null ? phy["Model"].ToString() : "";
 
+                                string detected = "";
                                 // MediaType: 3 = HDD, 4 = SSD, 5 = SCM; BusType: 17 = NVMe
                                 if (mediaType == 4 || mediaType == 5 || busType == 17 ||
                                     friendly.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -461,19 +488,30 @@ namespace OptiAssist
                                     phyModel.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                     phyModel.IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
-                                    summary.PrimaryDiskMediaType = "SSD";
+                                    detected = "SSD";
                                 }
                                 else if (mediaType == 3 || (spindle > 0 && spindle <= 30000))
                                 {
-                                    summary.PrimaryDiskMediaType = "HDD";
+                                    detected = "HDD";
                                 }
                                 else if (spindle == 0)
                                 {
-                                    summary.PrimaryDiskMediaType = "SSD";
+                                    detected = "SSD";
                                 }
 
-                                if (diskId == cDiskIndex && !string.IsNullOrEmpty(summary.PrimaryDiskMediaType))
+                                if (cDiskIndex >= 0 && diskId == cDiskIndex && !string.IsNullOrEmpty(detected))
+                                {
+                                    summary.PrimaryDiskMediaType = detected;
                                     break;
+                                }
+                                if (string.IsNullOrEmpty(fallbackType) && !string.IsNullOrEmpty(detected))
+                                {
+                                    fallbackType = detected;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(summary.PrimaryDiskMediaType) && !string.IsNullOrEmpty(fallbackType))
+                            {
+                                summary.PrimaryDiskMediaType = fallbackType;
                             }
                         }
                     }

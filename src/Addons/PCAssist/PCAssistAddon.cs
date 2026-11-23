@@ -16,6 +16,9 @@ namespace OptiAssist.Addons.PCAssist
     {
         private IOptiAssistHost _host;
         private HardwareMonitorService _monitorService;
+        private LibreHardwareEngine _lhmEngine;
+        private LibreTelemetrySnapshot _lastLhmSnapshot;
+        private bool _isSamplingLhm = false;
         private BatteryDiagnosticService _batteryService;
         private BenchEngineService _benchService;
         private DeviceInventoryService _inventoryService;
@@ -26,12 +29,14 @@ namespace OptiAssist.Addons.PCAssist
         private CancellationTokenSource _benchCts;
         private int _tickCount = 0;
 
-        // UI Tabs
-        private enum PCAssistTab { Summary, Devices, Battery, Bench }
+        // UI Tabs (5 Tabs: Summary | Sensors | Devices | Battery | Bench)
+        private enum PCAssistTab { Summary, Sensors, Devices, Battery, Bench }
         private PCAssistTab _currentTab = PCAssistTab.Summary;
 
         private Border _tabSummaryBorder;
         private TextBlock _tabSummaryText;
+        private Border _tabSensorsBorder;
+        private TextBlock _tabSensorsText;
         private Border _tabDevicesBorder;
         private TextBlock _tabDevicesText;
         private Border _tabBatteryBorder;
@@ -40,9 +45,19 @@ namespace OptiAssist.Addons.PCAssist
         private TextBlock _tabBenchText;
 
         private ScrollViewer _pnlTabSummary;
+        private ScrollViewer _pnlTabSensors;
         private ScrollViewer _pnlTabDevices;
         private ScrollViewer _pnlTabBattery;
         private ScrollViewer _pnlTabBench;
+
+        // Tab 2: Live Sensors (LibreHardwareMonitor) Controls
+        private Border _bannerPawnIo;
+        private TextBlock _txtPawnIoStatus;
+        private Button _btnInstallPawnIo;
+        private TextBox _txtSensorsSearch;
+        private StackPanel _pnlSensorsContainer;
+        private TextBlock _txtGpuLiveMetrics;
+        private TextBlock _txtBenchLiveTelemetry;
 
         // Header controls
         private TextBlock _txtTitle;
@@ -131,14 +146,57 @@ namespace OptiAssist.Addons.PCAssist
         public string Id { get { return "hardware-monitor"; } }
         public string Name { get { return T("Nav_HardwareMonitor", "Hardware Monitor"); } }
         public string Description { get { return T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics"); } }
-        public string Version { get { return "1.2.S4"; } }
+        public string Version { get { return "1.2.S7"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "⚡"; } }
+
+        static PCAssistAddon()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (s, args) =>
+            {
+                try
+                {
+                    if (args == null || string.IsNullOrEmpty(args.Name)) return null;
+                    string simple = new System.Reflection.AssemblyName(args.Name).Name;
+                    if (string.IsNullOrEmpty(simple) || simple.EndsWith(".resources", StringComparison.OrdinalIgnoreCase)) return null;
+
+                    System.Reflection.Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
+                    for (int i = 0; i < loaded.Length; i++)
+                    {
+                        try
+                        {
+                            if (string.Equals(loaded[i].GetName().Name, simple, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return loaded[i];
+                            }
+                        }
+                        catch { }
+                    }
+
+                    string pcDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Addons", "PCAssist");
+                    string cand = Path.Combine(pcDir, simple + ".dll");
+                    if (File.Exists(cand))
+                    {
+                        return System.Reflection.Assembly.Load(File.ReadAllBytes(cand));
+                    }
+                }
+                catch { }
+                return null;
+            };
+        }
 
         public void Initialize(IOptiAssistHost host)
         {
             _host = host;
             _monitorService = new HardwareMonitorService();
+            try
+            {
+                _lhmEngine = new LibreHardwareEngine(msg => { if (_host != null) _host.Log(msg); });
+            }
+            catch (Exception ex)
+            {
+                if (_host != null) _host.Log("[PCAssist:LHM Init] " + ex.Message);
+            }
             _batteryService = new BatteryDiagnosticService();
             _benchService = new BenchEngineService();
             _inventoryService = new DeviceInventoryService();
@@ -234,12 +292,17 @@ namespace OptiAssist.Addons.PCAssist
             _tabSummaryBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Summary);
             tabsPanel.Children.Add(_tabSummaryBorder);
 
+            _tabSensorsBorder = CreateTabButton("🌡️ " + T("PCAssist_Tab_Sensors", "Sensors"), false, out _tabSensorsText);
+            _tabSensorsBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Sensors);
+            tabsPanel.Children.Add(_tabSensorsBorder);
+
             _tabDevicesBorder = CreateTabButton("🔌 " + T("PCAssist_Tab_Devices", "Devices & Peripherals"), false, out _tabDevicesText);
             _tabDevicesBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Devices);
             tabsPanel.Children.Add(_tabDevicesBorder);
 
             _tabBatteryBorder = CreateTabButton("🔋 " + T("PCAssist_Tab_Battery", "Battery & Power"), false, out _tabBatteryText);
-            _tabBatteryBorder.Visibility = Visibility.Collapsed; // Hidden by default; only displayed when notebook/tablet with battery is detected
+            bool quickHasBattery = DetectQuickBatteryPresence();
+            _tabBatteryBorder.Visibility = quickHasBattery ? Visibility.Visible : Visibility.Collapsed;
             _tabBatteryBorder.MouseLeftButtonDown += (s, e) => SwitchTab(PCAssistTab.Battery);
             tabsPanel.Children.Add(_tabBatteryBorder);
 
@@ -256,11 +319,13 @@ namespace OptiAssist.Addons.PCAssist
             Grid.SetRow(contentArea, 2);
 
             _pnlTabSummary = BuildSummaryTab();
+            _pnlTabSensors = BuildSensorsTab();
             _pnlTabDevices = BuildDevicesTab();
             _pnlTabBattery = BuildBatteryTab();
             _pnlTabBench = BuildBenchTab();
 
             contentArea.Children.Add(_pnlTabSummary);
+            contentArea.Children.Add(_pnlTabSensors);
             contentArea.Children.Add(_pnlTabDevices);
             contentArea.Children.Add(_pnlTabBattery);
             contentArea.Children.Add(_pnlTabBench);
@@ -268,9 +333,10 @@ namespace OptiAssist.Addons.PCAssist
             root.Children.Add(contentArea);
 
             LoadDeviceInventory();
+            UpdateBatteryReport();
             _monitorTimer.Start();
 
-            root.Loaded += (s, e) => { if (!_monitorTimer.IsEnabled) _monitorTimer.Start(); };
+            root.Loaded += (s, e) => { UpdateBatteryReport(); if (!_monitorTimer.IsEnabled) _monitorTimer.Start(); };
             root.Unloaded += (s, e) => { _monitorTimer.Stop(); };
 
             return root;
@@ -307,6 +373,10 @@ namespace OptiAssist.Addons.PCAssist
             _tabSummaryText.FontWeight = tab == PCAssistTab.Summary ? FontWeights.Bold : FontWeights.Normal;
             _tabSummaryText.Foreground = tab == PCAssistTab.Summary ? GetResourceBrush("BrushAccent", "#0EA5E9") : GetResourceBrush("BrushTextSecondary", "#475569");
 
+            _tabSensorsBorder.BorderThickness = new Thickness(0, 0, 0, tab == PCAssistTab.Sensors ? 3 : 0);
+            _tabSensorsText.FontWeight = tab == PCAssistTab.Sensors ? FontWeights.Bold : FontWeights.Normal;
+            _tabSensorsText.Foreground = tab == PCAssistTab.Sensors ? GetResourceBrush("BrushAccent", "#0EA5E9") : GetResourceBrush("BrushTextSecondary", "#475569");
+
             _tabDevicesBorder.BorderThickness = new Thickness(0, 0, 0, tab == PCAssistTab.Devices ? 3 : 0);
             _tabDevicesText.FontWeight = tab == PCAssistTab.Devices ? FontWeights.Bold : FontWeights.Normal;
             _tabDevicesText.Foreground = tab == PCAssistTab.Devices ? GetResourceBrush("BrushAccent", "#0EA5E9") : GetResourceBrush("BrushTextSecondary", "#475569");
@@ -320,11 +390,13 @@ namespace OptiAssist.Addons.PCAssist
             _tabBenchText.Foreground = tab == PCAssistTab.Bench ? GetResourceBrush("BrushAccent", "#0EA5E9") : GetResourceBrush("BrushTextSecondary", "#475569");
 
             _pnlTabSummary.Visibility = (tab == PCAssistTab.Summary) ? Visibility.Visible : Visibility.Collapsed;
+            _pnlTabSensors.Visibility = (tab == PCAssistTab.Sensors) ? Visibility.Visible : Visibility.Collapsed;
             _pnlTabDevices.Visibility = (tab == PCAssistTab.Devices) ? Visibility.Visible : Visibility.Collapsed;
             _pnlTabBattery.Visibility = (tab == PCAssistTab.Battery) ? Visibility.Visible : Visibility.Collapsed;
             _pnlTabBench.Visibility = (tab == PCAssistTab.Bench) ? Visibility.Visible : Visibility.Collapsed;
 
             if (tab == PCAssistTab.Battery) UpdateBatteryReport();
+            if (tab == PCAssistTab.Sensors && _lastLhmSnapshot != null) RenderSensorsTab(_lastLhmSnapshot);
         }
 
         #region TAB 1: System Summary (HWiNFO-style)
@@ -540,6 +612,7 @@ namespace OptiAssist.Addons.PCAssist
 
             _txtGpuVramSum = AddMiniParam(gpuPanel, "Memory:", "Detecting...");
             _txtGpuBusSum = AddMiniParam(gpuPanel, "Interface:", "PCIe x16");
+            _txtGpuLiveMetrics = AddMiniParam(gpuPanel, "Live Telemetry:", "Sampling...");
 
             gpuPanel.Children.Add(CreateSubDivider("ACTIVE DISPLAYS & MONITORS"));
             _pnlDisplaysSummary = new StackPanel { Margin = new Thickness(0, 6, 0, 2) };
@@ -982,62 +1055,385 @@ namespace OptiAssist.Addons.PCAssist
             return val;
         }
 
+        private bool DetectQuickBatteryPresence()
+        {
+            try
+            {
+                if (_host != null && _host.Platform != null && _host.Platform.HasBattery)
+                {
+                    return true;
+                }
+            }
+            catch { }
+
+            try
+            {
+                NativeMethods.SYSTEM_POWER_STATUS sps;
+                if (NativeMethods.GetSystemPowerStatus(out sps))
+                {
+                    if ((sps.BatteryFlag & 128) == 0 && sps.BatteryFlag != 255)
+                    {
+                        return true;
+                    }
+                    if (sps.BatteryLifePercent <= 100)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
         private void UpdateBatteryReport()
         {
             Task.Run(() =>
             {
-                var report = _batteryService.AnalyzeBattery();
-                Application.Current.Dispatcher.Invoke(() =>
+                try
                 {
-                    if (!report.HasBattery)
+                    var report = _batteryService.AnalyzeBattery();
+                    if (report == null) return;
+                    if (!report.HasBattery && DetectQuickBatteryPresence())
                     {
-                        if (_tabBatteryBorder != null) _tabBatteryBorder.Visibility = Visibility.Collapsed;
-                        if (_cardBatteryDesktop != null) _cardBatteryDesktop.Visibility = Visibility.Collapsed;
-                        if (_cardBatteryNotebook != null) _cardBatteryNotebook.Visibility = Visibility.Collapsed;
-                        if (_currentTab == PCAssistTab.Battery)
+                        report.HasBattery = true;
+                        if (string.IsNullOrEmpty(report.DiagnosticSummary) || report.DiagnosticSummary.IndexOf("Desktop", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
-                            SwitchTab(PCAssistTab.Summary);
+                            report.DiagnosticSummary = "Battery detected via Windows Power Status (limited EC telemetry).";
                         }
-                        return;
                     }
 
-                    if (_tabBatteryBorder != null) _tabBatteryBorder.Visibility = Visibility.Visible;
-                    _cardBatteryDesktop.Visibility = Visibility.Collapsed;
-                    _cardBatteryNotebook.Visibility = Visibility.Visible;
-
-                    _txtBatteryHealthBig.Text = string.Format("{0:F1}% {1}", report.HealthPercent, T("PCAssist_Battery_Health", "Battery Health"));
-                    _txtBatteryWearBadge.Text = string.Format("{0:F1}% {1}", report.WearPercent, T("PCAssist_Battery_Wear", "Wear"));
-                    _pbBatteryHealth.Value = report.HealthPercent;
-
-                    if (report.HealthPercent >= 85) _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushSuccess", "#10B981");
-                    else if (report.HealthPercent >= 70) _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushAccent", "#0EA5E9");
-                    else if (report.HealthPercent >= 50) _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushWarning", "#F59E0B");
-                    else _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushDanger", "#EF4444");
-
-                    _txtBatteryHealthSubtitle.Text = report.DiagnosticSummary;
-
-                    _txtBatteryDesignCap.Text = string.Format("{0:N0} mWh", report.DesignCapacityMwh);
-                    _txtBatteryFullCap.Text = string.Format("{0:N0} mWh", report.FullChargeCapacityMwh);
-                    _txtBatteryCurrentCap.Text = string.Format("{0}% ({1:N0} mWh)", report.ChargePercent, report.RemainingCapacityMwh);
-
-                    if (report.EstimatedRuntimeMinutes > 0)
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        int h = report.EstimatedRuntimeMinutes / 60;
-                        int m = report.EstimatedRuntimeMinutes % 60;
-                        _txtBatteryAutonomy.Text = string.Format("~ {0}h {1}min remaining ({2})", h, m, report.IsCharging ? "Charging" : (report.IsAcConnected ? "AC Plugged" : "On Battery"));
-                    }
-                    else
-                    {
-                        _txtBatteryAutonomy.Text = report.IsCharging ? "Charging..." : (report.IsAcConnected ? "AC Plugged In" : "Estimating runtime...");
-                    }
+                        try
+                        {
+                            if (!report.HasBattery)
+                            {
+                                if (_tabBatteryBorder != null) _tabBatteryBorder.Visibility = Visibility.Collapsed;
+                                if (_cardBatteryDesktop != null) _cardBatteryDesktop.Visibility = Visibility.Collapsed;
+                                if (_cardBatteryNotebook != null) _cardBatteryNotebook.Visibility = Visibility.Collapsed;
+                                if (_currentTab == PCAssistTab.Battery)
+                                {
+                                    SwitchTab(PCAssistTab.Summary);
+                                }
+                                return;
+                            }
 
-                    _txtBatteryVoltage.Text = string.Format("{0:F2} V", report.VoltageVolts);
-                    _txtBatteryRate.Text = string.Format("{0:F2} W ({1})", report.RateWatts, report.IsCharging ? "Charging" : "Discharging");
-                    _txtBatteryMaker.Text = string.Format("{0} {1}", report.Manufacturer, report.DeviceName).Trim();
-                    _txtBatteryChemistry.Text = string.IsNullOrEmpty(report.Chemistry) ? "Li-Ion / Polymer" : report.Chemistry;
-                    _txtBatteryCycles.Text = report.CycleCount.HasValue ? string.Format("{0} cycles", report.CycleCount.Value) : "Not reported by EC";
-                });
+                            if (_tabBatteryBorder != null) _tabBatteryBorder.Visibility = Visibility.Visible;
+                            if (_cardBatteryDesktop != null) _cardBatteryDesktop.Visibility = Visibility.Collapsed;
+                            if (_cardBatteryNotebook != null) _cardBatteryNotebook.Visibility = Visibility.Visible;
+
+                            double safeHealth = (double.IsNaN(report.HealthPercent) || double.IsInfinity(report.HealthPercent)) ? 0.0 : Math.Max(0.0, Math.Min(100.0, report.HealthPercent));
+                            double safeWear = (double.IsNaN(report.WearPercent) || double.IsInfinity(report.WearPercent)) ? 0.0 : Math.Max(0.0, Math.Min(100.0, report.WearPercent));
+
+                            _txtBatteryHealthBig.Text = safeHealth > 0
+                                ? string.Format("{0:F1}% {1}", safeHealth, T("PCAssist_Battery_Health", "Battery Health"))
+                                : string.Format("{0}% {1}", report.ChargePercent, T("PCAssist_Battery_Charge", "Charge"));
+                            _txtBatteryWearBadge.Text = string.Format("{0:F1}% {1}", safeWear, T("PCAssist_Battery_Wear", "Wear"));
+                            _pbBatteryHealth.Value = safeHealth > 0 ? safeHealth : report.ChargePercent;
+
+                            if (safeHealth >= 85 || safeHealth == 0) _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushSuccess", "#10B981");
+                            else if (safeHealth >= 70) _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushAccent", "#0EA5E9");
+                            else if (safeHealth >= 50) _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushWarning", "#F59E0B");
+                            else _txtBatteryHealthBig.Foreground = GetResourceBrush("BrushDanger", "#EF4444");
+
+                            _txtBatteryHealthSubtitle.Text = report.DiagnosticSummary ?? "";
+
+                            _txtBatteryDesignCap.Text = report.DesignCapacityMwh > 0 ? string.Format("{0:N0} mWh", report.DesignCapacityMwh) : "N/A";
+                            _txtBatteryFullCap.Text = report.FullChargeCapacityMwh > 0 ? string.Format("{0:N0} mWh", report.FullChargeCapacityMwh) : "N/A";
+                            _txtBatteryCurrentCap.Text = string.Format("{0}% ({1:N0} mWh)", report.ChargePercent, report.RemainingCapacityMwh);
+
+                            if (report.EstimatedRuntimeMinutes > 0)
+                            {
+                                int h = report.EstimatedRuntimeMinutes / 60;
+                                int m = report.EstimatedRuntimeMinutes % 60;
+                                _txtBatteryAutonomy.Text = string.Format("~ {0}h {1}min remaining ({2})", h, m, report.IsCharging ? "Charging" : (report.IsAcConnected ? "AC Plugged" : "On Battery"));
+                            }
+                            else
+                            {
+                                _txtBatteryAutonomy.Text = report.IsCharging ? "Charging..." : (report.IsAcConnected ? "AC Plugged In" : "Estimating runtime...");
+                            }
+
+                            _txtBatteryVoltage.Text = report.VoltageVolts > 0 ? string.Format("{0:F2} V", report.VoltageVolts) : "N/A";
+                            _txtBatteryRate.Text = string.Format("{0:F2} W ({1})", report.RateWatts, report.IsCharging ? "Charging" : "Discharging");
+                            string maker = string.Format("{0} {1}", report.Manufacturer, report.DeviceName).Trim();
+                            _txtBatteryMaker.Text = string.IsNullOrEmpty(maker) ? "Standard ACPI Battery" : maker;
+                            _txtBatteryChemistry.Text = string.IsNullOrEmpty(report.Chemistry) ? "Li-Ion / Polymer" : report.Chemistry;
+                            _txtBatteryCycles.Text = report.CycleCount.HasValue ? string.Format("{0} cycles", report.CycleCount.Value) : "Not reported by EC";
+                        }
+                        catch (Exception uiEx)
+                        {
+                            if (_host != null) _host.Log("[HardwareMonitor:Battery:UI] " + uiEx.Message);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    if (_host != null) _host.Log("[HardwareMonitor:Battery] " + ex.Message);
+                }
             });
+        }
+        #endregion
+
+        #region TAB 2: Live Sensors (LibreHardwareMonitor)
+        private ScrollViewer BuildSensorsTab()
+        {
+            ScrollViewer sv = CreateTabScrollViewer(Visibility.Collapsed);
+            StackPanel rootPanel = new StackPanel { Margin = new Thickness(4, 0, 4, 12) };
+
+            // PawnIO Optional Driver Status Banner
+            _bannerPawnIo = CreateCard();
+            _bannerPawnIo.Margin = new Thickness(0, 0, 0, 10);
+            Grid pawnGrid = new Grid();
+            pawnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            pawnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _txtPawnIoStatus = new TextBlock
+            {
+                FontSize = 11.5,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A")
+            };
+            Grid.SetColumn(_txtPawnIoStatus, 0);
+            pawnGrid.Children.Add(_txtPawnIoStatus);
+
+            _btnInstallPawnIo = CreateStyledButton(
+                "⬇️ " + T("PCAssist_Sensors_InstallPawnIO", "Install Sensor Driver (PawnIO)"),
+                GetResourceBrush("BrushAccent", "#0EA5E9"),
+                Brushes.White);
+            _btnInstallPawnIo.Margin = new Thickness(12, 0, 0, 0);
+            _btnInstallPawnIo.VerticalAlignment = VerticalAlignment.Center;
+            _btnInstallPawnIo.Click += (s, e) =>
+            {
+                bool isPt = _host != null && (_host.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+                string confirmMsg = isPt
+                    ? "O OptiAssist baixará o instalador oficial assinado do driver PawnIO diretamente do GitHub (namazso/PawnIO.Setup) e o executará para habilitar sensores de temperatura/clock da CPU e ventoinhas/tensões da placa-mãe.\n\nDeseja baixar e instalar agora?"
+                    : "OptiAssist will download the official signed PawnIO driver installer directly from GitHub (namazso/PawnIO.Setup) and launch it to unlock CPU temperatures/clocks and motherboard Super I/O fans/voltages.\n\nDownload and install now?";
+
+                if (OptiDialog.Show(confirmMsg, "OptiAssist - PawnIO", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                _btnInstallPawnIo.IsEnabled = false;
+                _btnInstallPawnIo.Content = "⏳ " + (isPt ? "Baixando..." : "Downloading...");
+                LibreHardwareEngine.DownloadAndInstallPawnIoAsync(
+                    msg => { if (_host != null) _host.Log(msg); },
+                    (ok, msg) =>
+                    {
+                        Application.Current.Dispatcher.Invoke(new Action(() =>
+                        {
+                            _btnInstallPawnIo.IsEnabled = true;
+                            _btnInstallPawnIo.Content = "⬇️ " + T("PCAssist_Sensors_InstallPawnIO", "Install Sensor Driver (PawnIO)");
+                            if (ok && _lhmEngine != null)
+                            {
+                                _lhmEngine.Reinitialize();
+                            }
+                            UpdatePawnIoBanner();
+                            OptiDialog.Show(msg, "OptiAssist - PawnIO", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                        }));
+                    });
+            };
+            Grid.SetColumn(_btnInstallPawnIo, 1);
+            pawnGrid.Children.Add(_btnInstallPawnIo);
+            _bannerPawnIo.Child = pawnGrid;
+            rootPanel.Children.Add(_bannerPawnIo);
+            UpdatePawnIoBanner();
+
+            // Toolbar: Search + Reset Min/Max + Export Report
+            Grid toolbar = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _txtSensorsSearch = new TextBox
+            {
+                Height = 28,
+                FontSize = 11.5,
+                Padding = new Thickness(8, 3, 8, 3),
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = T("PCAssist_Sensors_SearchTip", "Filter sensors by hardware or sensor name (e.g. Temp, Fan, GPU, NVMe)")
+            };
+            _txtSensorsSearch.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
+            _txtSensorsSearch.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
+            _txtSensorsSearch.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
+            _txtSensorsSearch.TextChanged += (s, e) =>
+            {
+                if (_lastLhmSnapshot != null) RenderSensorsTab(_lastLhmSnapshot);
+            };
+            Grid.SetColumn(_txtSensorsSearch, 0);
+            toolbar.Children.Add(_txtSensorsSearch);
+
+            Button btnReset = CreateStyledButton("🔄 " + T("PCAssist_Sensors_ResetMinMax", "Reset Min/Max"), GetResourceBrush("BrushBtnBg", "#E2E8F0"), GetResourceBrush("BrushTextPrimary", "#0F172A"));
+            btnReset.Margin = new Thickness(8, 0, 6, 0);
+            btnReset.Click += (s, e) =>
+            {
+                if (_lhmEngine != null) _lhmEngine.ResetMinMax();
+            };
+            Grid.SetColumn(btnReset, 1);
+            toolbar.Children.Add(btnReset);
+
+            Button btnExport = CreateStyledButton("📋 " + T("PCAssist_Sensors_Export", "Export Report"), GetResourceBrush("BrushBtnBg", "#E2E8F0"), GetResourceBrush("BrushTextPrimary", "#0F172A"));
+            btnExport.Click += (s, e) =>
+            {
+                if (_lhmEngine == null) return;
+                string report = _lhmEngine.ExportTextReport(_lastLhmSnapshot);
+                OptiDialog.ShowTextViewer("Hardware Monitor — Sensors Report", report, null, 780, 540);
+            };
+            Grid.SetColumn(btnExport, 2);
+            toolbar.Children.Add(btnExport);
+
+            rootPanel.Children.Add(toolbar);
+
+            _pnlSensorsContainer = new StackPanel();
+            TextBlock loadingTxt = new TextBlock
+            {
+                Text = T("PCAssist_Sensors_Loading", "Initializing LibreHardwareMonitor sensors..."),
+                FontSize = 12,
+                Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
+                Margin = new Thickness(4, 12, 4, 12)
+            };
+            _pnlSensorsContainer.Children.Add(loadingTxt);
+            rootPanel.Children.Add(_pnlSensorsContainer);
+
+            sv.Content = rootPanel;
+            return sv;
+        }
+
+        private void UpdatePawnIoBanner()
+        {
+            if (_txtPawnIoStatus == null || _btnInstallPawnIo == null) return;
+            bool isPt = _host != null && (_host.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+            bool installed = LibreHardwareEngine.IsPawnIoInstalled();
+            if (installed)
+            {
+                _txtPawnIoStatus.Text = isPt
+                    ? "✅ Driver de sensores PawnIO ativo — leitura completa de CPU, Placa-Mãe (Super I/O), GPU, SMART/NVMe e Bateria habilitada."
+                    : "✅ PawnIO sensor driver active — full CPU, Motherboard (Super I/O), GPU, SMART/NVMe, and Battery telemetry enabled.";
+                _btnInstallPawnIo.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                _txtPawnIoStatus.Text = isPt
+                    ? "ℹ️ GPU, Armazenamento (SMART), Memória, Rede e Bateria estão ativos. Para liberar temperaturas/clocks da CPU e ventoinhas/tensões da Placa-Mãe, instale opcionalmente o driver oficial assinado PawnIO."
+                    : "ℹ️ GPU, Storage (SMART), Memory, Network & Battery are active. To unlock CPU temperatures/clocks and Motherboard fans/voltages, optionally install the official signed PawnIO driver.";
+                _btnInstallPawnIo.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void RenderSensorsTab(LibreTelemetrySnapshot snap)
+        {
+            if (_pnlSensorsContainer == null) return;
+            _pnlSensorsContainer.Children.Clear();
+
+            if (snap == null || !snap.IsAvailable || snap.Groups == null || snap.Groups.Count == 0)
+            {
+                TextBlock empty = new TextBlock
+                {
+                    Text = (snap != null && !string.IsNullOrEmpty(snap.ErrorMessage))
+                        ? "LibreHardwareMonitor: " + snap.ErrorMessage
+                        : T("PCAssist_Sensors_Empty", "No hardware sensors detected yet."),
+                    FontSize = 12,
+                    Foreground = GetResourceBrush("BrushTextSecondary", "#475569"),
+                    Margin = new Thickness(4, 10, 4, 10)
+                };
+                _pnlSensorsContainer.Children.Add(empty);
+                return;
+            }
+
+            string filter = (_txtSensorsSearch != null) ? (_txtSensorsSearch.Text ?? "").Trim() : "";
+
+            for (int g = 0; g < snap.Groups.Count; g++)
+            {
+                LibreHardwareGroup grp = snap.Groups[g];
+                List<LibreSensorRow> matchedRows = new List<LibreSensorRow>();
+                bool groupMatches = string.IsNullOrEmpty(filter) ||
+                    (grp.HardwareName != null && grp.HardwareName.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (grp.HardwareType != null && grp.HardwareType.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                for (int i = 0; i < grp.Sensors.Count; i++)
+                {
+                    LibreSensorRow r = grp.Sensors[i];
+                    if (groupMatches ||
+                        (r.Name != null && r.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                        (r.Category != null && r.Category.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        matchedRows.Add(r);
+                    }
+                }
+
+                if (matchedRows.Count == 0) continue;
+
+                Border card = CreateCard();
+                card.Margin = new Thickness(0, 0, 0, 10);
+                StackPanel sp = new StackPanel();
+
+                // Group Header
+                TextBlock hdr = new TextBlock
+                {
+                    Text = string.Format("{0}  {1}  ({2})", grp.Icon, grp.HardwareName, grp.HardwareType),
+                    FontSize = 12.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = GetResourceBrush("BrushAccent", "#0EA5E9"),
+                    Margin = new Thickness(0, 0, 0, 6)
+                };
+                sp.Children.Add(hdr);
+
+                // Table Column Headers
+                Grid colHdr = new Grid { Margin = new Thickness(4, 0, 4, 4) };
+                colHdr.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2.4, GridUnitType.Star) });
+                colHdr.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                colHdr.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                colHdr.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                AddSensorCell(colHdr, 0, "Sensor", true, HorizontalAlignment.Left, "BrushTextSecondary");
+                AddSensorCell(colHdr, 1, T("PCAssist_Col_Current", "Current"), true, HorizontalAlignment.Right, "BrushTextSecondary");
+                AddSensorCell(colHdr, 2, T("PCAssist_Col_Min", "Min"), true, HorizontalAlignment.Right, "BrushTextSecondary");
+                AddSensorCell(colHdr, 3, T("PCAssist_Col_Max", "Max"), true, HorizontalAlignment.Right, "BrushTextSecondary");
+                sp.Children.Add(colHdr);
+
+                for (int i = 0; i < matchedRows.Count; i++)
+                {
+                    LibreSensorRow r = matchedRows[i];
+                    Border rowBorder = new Border
+                    {
+                        BorderThickness = new Thickness(0, 1, 0, 0),
+                        BorderBrush = GetResourceBrush("BrushBorderCard", "#CBD5E1"),
+                        Padding = new Thickness(4, 3, 4, 3)
+                    };
+                    Grid rowGrid = new Grid();
+                    rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2.4, GridUnitType.Star) });
+                    rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                    AddSensorCell(rowGrid, 0, string.Format("{0} ({1})", r.Name, r.Category), false, HorizontalAlignment.Left, "BrushTextPrimary");
+                    AddSensorCell(rowGrid, 1, r.FormattedValue, true, HorizontalAlignment.Right, "BrushAccent");
+                    AddSensorCell(rowGrid, 2, r.FormattedMin, false, HorizontalAlignment.Right, "BrushTextSecondary");
+                    AddSensorCell(rowGrid, 3, r.FormattedMax, false, HorizontalAlignment.Right, "BrushTextSecondary");
+
+                    rowBorder.Child = rowGrid;
+                    sp.Children.Add(rowBorder);
+                }
+
+                card.Child = sp;
+                _pnlSensorsContainer.Children.Add(card);
+            }
+        }
+
+        private void AddSensorCell(Grid grid, int col, string text, bool bold, HorizontalAlignment align, string brushKey)
+        {
+            TextBlock tb = new TextBlock
+            {
+                Text = text ?? "",
+                FontSize = 11,
+                FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal,
+                HorizontalAlignment = align,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            tb.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
+            Grid.SetColumn(tb, col);
+            grid.Children.Add(tb);
         }
         #endregion
 
@@ -1046,6 +1442,20 @@ namespace OptiAssist.Addons.PCAssist
         {
             ScrollViewer sv = CreateTabScrollViewer(Visibility.Collapsed);
             StackPanel rootPanel = new StackPanel { Margin = new Thickness(4, 0, 4, 12) };
+
+            // Live Thermal & Clock Monitoring Strip during Benchmarks
+            Border liveStrip = CreateCard();
+            liveStrip.Margin = new Thickness(0, 0, 0, 10);
+            _txtBenchLiveTelemetry = new TextBlock
+            {
+                Text = "🌡️ Live Telemetry: Waiting for sensors...",
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A"),
+                TextWrapping = TextWrapping.Wrap
+            };
+            liveStrip.Child = _txtBenchLiveTelemetry;
+            rootPanel.Children.Add(liveStrip);
 
             _btnCancelBench = CreateStyledButton(T("PCAssist_Bench_BtnCancel", "⏹️ Cancel Test"), GetResourceBrush("BrushDanger", "#EF4444"), Brushes.White);
             _btnCancelBench.Visibility = Visibility.Collapsed;
@@ -1357,8 +1767,8 @@ namespace OptiAssist.Addons.PCAssist
             // Column 3: GPU, Displays, Drives (Operating System section completely removed per request)
             string gpuName = _host != null && _host.Hardware != null && !string.IsNullOrEmpty(_host.Hardware.GpuName) ? _host.Hardware.GpuName : "Video Controller";
             _txtGpuNameSum.Text = gpuName;
-            _txtGpuVramSum.Text = !string.IsNullOrEmpty(inv.GpuVramDisplay) ? inv.GpuVramDisplay : "Não disponível";
-            _txtGpuBusSum.Text = !string.IsNullOrEmpty(inv.GpuPcieBus) ? inv.GpuPcieBus : "Não disponível";
+            _txtGpuVramSum.Text = !string.IsNullOrEmpty(inv.GpuVramDisplay) ? inv.GpuVramDisplay : T("Status_NotAvailable", "Not available");
+            _txtGpuBusSum.Text = !string.IsNullOrEmpty(inv.GpuPcieBus) ? inv.GpuPcieBus : T("Status_NotAvailable", "Not available");
 
             _pnlDisplaysSummary.Children.Clear();
             foreach (var d in inv.Displays)
@@ -1521,31 +1931,99 @@ namespace OptiAssist.Addons.PCAssist
 
         private void OnMonitorTick(object sender, EventArgs e)
         {
-            if (_isMonitoringPaused) return;
+            if (_isMonitoringPaused || _isSamplingLhm) return;
             _tickCount++;
+            _isSamplingLhm = true;
 
             Task.Run(() =>
             {
                 try
                 {
                     var snap = _monitorService.CaptureSnapshot();
+                    LibreTelemetrySnapshot lhm = (_lhmEngine != null) ? _lhmEngine.Sample() : null;
+                    _lastLhmSnapshot = lhm;
+
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        if (_txtCpuUsageTop != null) _txtCpuUsageTop.Text = string.Format("CPU Usage: {0:F1}%", snap.Cpu.UsagePercent);
-                        if (_pbCpuUsageTop != null) _pbCpuUsageTop.Value = snap.Cpu.UsagePercent;
+                        double cpuUsage = (lhm != null && lhm.CpuUsagePercent.HasValue) ? lhm.CpuUsagePercent.Value : snap.Cpu.UsagePercent;
+                        if (_txtCpuUsageTop != null)
+                        {
+                            string cpuTempTag = (lhm != null && lhm.CpuPackageTempC.HasValue)
+                                ? string.Format("  •  {0:F1} °C", lhm.CpuPackageTempC.Value)
+                                : "";
+                            _txtCpuUsageTop.Text = string.Format("CPU Usage: {0:F1}%{1}", cpuUsage, cpuTempTag);
+                        }
+                        if (_pbCpuUsageTop != null) _pbCpuUsageTop.Value = Math.Max(0, Math.Min(100, cpuUsage));
 
-                        double ramPct = snap.Ram.TotalGb > 0 ? Math.Round((snap.Ram.UsedGb / snap.Ram.TotalGb) * 100.0, 1) : 0;
-                        if (_txtRamUsageTop != null) _txtRamUsageTop.Text = string.Format("RAM Usage: {0:F1}% ({1:F1} / {2:F1} GB)", ramPct, snap.Ram.UsedGb, snap.Ram.TotalGb);
-                        if (_pbRamUsageTop != null) _pbRamUsageTop.Value = ramPct;
+                        double ramUsed = (lhm != null && lhm.RamUsedGb.HasValue) ? lhm.RamUsedGb.Value : snap.Ram.UsedGb;
+                        double ramTotal = (lhm != null && lhm.RamUsedGb.HasValue && lhm.RamAvailableGb.HasValue)
+                            ? (lhm.RamUsedGb.Value + lhm.RamAvailableGb.Value)
+                            : snap.Ram.TotalGb;
+                        double ramPct = (lhm != null && lhm.RamUsagePercent.HasValue)
+                            ? lhm.RamUsagePercent.Value
+                            : (ramTotal > 0 ? Math.Round((ramUsed / ramTotal) * 100.0, 1) : 0);
+                        if (_txtRamUsageTop != null) _txtRamUsageTop.Text = string.Format("RAM Usage: {0:F1}% ({1:F1} / {2:F1} GB)", ramPct, ramUsed, ramTotal);
+                        if (_pbRamUsageTop != null) _pbRamUsageTop.Value = Math.Max(0, Math.Min(100, ramPct));
 
                         if (_txtCpuClockLive != null)
                         {
-                            string clockStr = snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : T("PCAssist_Dynamic", "Dynamic");
-                            _txtCpuClockLive.Text = string.Format("Clock: {0}", clockStr);
+                            double clkMhz = (lhm != null && lhm.CpuClockMhz.HasValue && lhm.CpuClockMhz.Value > 100)
+                                ? lhm.CpuClockMhz.Value
+                                : snap.Cpu.ClockMhz;
+                            string clockStr = clkMhz > 0 ? string.Format("{0:N0} MHz", clkMhz) : T("PCAssist_Dynamic", "Dynamic");
+                            string extra = "";
+                            if (lhm != null && lhm.CpuPackageTempC.HasValue) extra += string.Format("  •  {0:F1} °C", lhm.CpuPackageTempC.Value);
+                            if (lhm != null && lhm.CpuPackagePowerW.HasValue) extra += string.Format("  •  {0:F1} W", lhm.CpuPackagePowerW.Value);
+                            _txtCpuClockLive.Text = string.Format("Clock: {0}{1}", clockStr, extra);
+                        }
+
+                        if (_txtGpuLiveMetrics != null && lhm != null)
+                        {
+                            List<string> gParts = new List<string>();
+                            if (lhm.GpuUsagePercent.HasValue) gParts.Add(string.Format("Load {0:F0}%", lhm.GpuUsagePercent.Value));
+                            if (lhm.GpuTempC.HasValue) gParts.Add(string.Format("{0:F0} °C", lhm.GpuTempC.Value));
+                            if (lhm.GpuVramUsedMb.HasValue) gParts.Add(string.Format("VRAM {0:F0} MB", lhm.GpuVramUsedMb.Value));
+                            if (lhm.GpuPowerW.HasValue) gParts.Add(string.Format("{0:F0} W", lhm.GpuPowerW.Value));
+                            if (lhm.GpuFanPercent.HasValue) gParts.Add(string.Format("Fan {0:F0}%", lhm.GpuFanPercent.Value));
+                            _txtGpuLiveMetrics.Text = gParts.Count > 0 ? string.Join("  •  ", gParts.ToArray()) : "Active";
+                        }
+
+                        if (lhm != null && lhm.HasBattery && _tabBatteryBorder != null && _tabBatteryBorder.Visibility != Visibility.Visible)
+                        {
+                            _tabBatteryBorder.Visibility = Visibility.Visible;
+                        }
+
+                        if (_currentTab == PCAssistTab.Sensors && lhm != null)
+                        {
+                            RenderSensorsTab(lhm);
+                        }
+
+                        if (_txtBenchLiveTelemetry != null && lhm != null)
+                        {
+                            string clk = lhm.CpuClockMhz.HasValue ? string.Format("{0:N0} MHz", lhm.CpuClockMhz.Value) : (snap.Cpu.ClockMhz > 0 ? string.Format("{0:N0} MHz", snap.Cpu.ClockMhz) : "—");
+                            string tmp = lhm.CpuPackageTempC.HasValue ? string.Format("{0:F1} °C", lhm.CpuPackageTempC.Value) : "N/A (PawnIO)";
+                            string pwr = lhm.CpuPackagePowerW.HasValue ? string.Format("{0:F1} W", lhm.CpuPackagePowerW.Value) : "—";
+                            bool throttling = lhm.CpuPackageTempC.HasValue && lhm.CpuPackageTempC.Value >= 90.0;
+                            _txtBenchLiveTelemetry.Text = string.Format(
+                                "🌡️ CPU: {0:F1}%  |  Clock: {1}  |  Temp: {2}  |  Power: {3}{4}",
+                                cpuUsage, clk, tmp, pwr,
+                                throttling ? "   ⚠️ THERMAL THROTTLING WARNING!" : "");
+                            if (throttling)
+                            {
+                                _txtBenchLiveTelemetry.Foreground = GetResourceBrush("BrushDanger", "#EF4444");
+                            }
+                            else
+                            {
+                                _txtBenchLiveTelemetry.Foreground = GetResourceBrush("BrushTextPrimary", "#0F172A");
+                            }
                         }
                     });
                 }
                 catch { }
+                finally
+                {
+                    _isSamplingLhm = false;
+                }
             });
         }
         #endregion
@@ -1660,6 +2138,7 @@ namespace OptiAssist.Addons.PCAssist
             if (_txtSubtitle != null) _txtSubtitle.Text = T("HardwareMonitor_Desc", "Hardware Monitor, Battery Health & Quick Bench Diagnostics");
 
             if (_tabSummaryText != null) _tabSummaryText.Text = "🖥️ " + T("PCAssist_Tab_Summary", "System Summary");
+            if (_tabSensorsText != null) _tabSensorsText.Text = "🌡️ " + T("PCAssist_Tab_Sensors", "Sensors");
             if (_tabDevicesText != null) _tabDevicesText.Text = "🔌 " + T("PCAssist_Tab_Devices", "Devices & Peripherals");
             if (_tabBatteryText != null) _tabBatteryText.Text = "🔋 " + T("PCAssist_Tab_Battery", "Battery & Power");
             if (_tabBenchText != null) _tabBenchText.Text = "🚀 " + T("PCAssist_Tab_Bench", "Benchmark & Stress Test");

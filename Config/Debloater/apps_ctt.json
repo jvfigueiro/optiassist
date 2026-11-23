@@ -1,0 +1,271 @@
+{
+  "version": "2.0.F3",
+  "category": "apps_ctt",
+  "tweaks": [
+    {
+      "id": "app-bloatware-appx",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_AppBloatAppx_Title",
+      "titleFallback": "Remove Pre-Installed Consumer AppX Bloatware (Preserves Store, Xbox & Codecs)",
+      "descKey": "Debloat_AppBloatAppx_Desc",
+      "descFallback": "Selectively uninstalls BingNews, BingWeather, Solitaire, Clipchamp, OfficeHub, Todos, PowerAutomate, FeedbackHub, and DevHome while keeping Microsoft Store, Xbox/Gaming Services, and media codecs intact.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "appx", "pattern": "*BingNews*", "allUsers": true },
+        { "type": "appx", "pattern": "*BingWeather*", "allUsers": true },
+        { "type": "appx", "pattern": "*MicrosoftSolitaireCollection*", "allUsers": true },
+        { "type": "appx", "pattern": "*Clipchamp*", "allUsers": true },
+        { "type": "appx", "pattern": "*MicrosoftOfficeHub*", "allUsers": true },
+        { "type": "appx", "pattern": "*Todos*", "allUsers": true },
+        { "type": "appx", "pattern": "*PowerAutomateDesktop*", "allUsers": true },
+        { "type": "appx", "pattern": "*WindowsFeedbackHub*", "allUsers": true },
+        { "type": "appx", "pattern": "*Getstarted*", "allUsers": true },
+        { "type": "appx", "pattern": "*People*", "allUsers": true },
+        { "type": "appx", "pattern": "*Microsoft.549981C3F5F10*", "allUsers": true }
+      ],
+      "revert": "manual",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-edge",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_Edge_Title",
+      "titleFallback": "Debloat Microsoft Edge (Telemetry, Sidebar, Shopping & Startup Boost)",
+      "descKey": "Debloat_Edge_Desc",
+      "descFallback": "Applies official Microsoft Edge GPO policies (only when Edge is installed). Shows 'Managed by your organization' in Edge settings.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "requiresInstalled": "edge"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "HubsSidebarEnabled", "equals": "0" },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "StartupBoostEnabled", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "HubsSidebarEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "EdgeShoppingAssistantEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "StartupBoostEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "BackgroundModeEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "DiagnosticData", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "PersonalizationReportingEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "ShowRecommendationsEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "NewTabPageContentEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge", "name": "ShowMicrosoftRewards", "kind": "DWord", "value": "0" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Microsoft Edge will display 'Managed by your organization' due to local Group Policy entries."
+      ],
+      "needsReboot": false
+    },
+    {
+      "id": "dll-debloat-brave",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_Brave_Title",
+      "titleFallback": "Debloat Brave Browser (Rewards, Wallet, Leo AI & VPN)",
+      "descKey": "Debloat_Brave_Desc",
+      "descFallback": "Applies official Brave GPO policies (only when Brave is installed) to disable Rewards, Wallet, Leo AI, and VPN prompts.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "requiresInstalled": "brave"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "BraveRewardsDisabled", "equals": "1" },
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "BraveWalletDisabled", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "BraveRewardsDisabled", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "BraveWalletDisabled", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "BraveVPNDisabled", "kind": "DWord", "value": "1" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "BraveAIChatEnabled", "kind": "DWord", "value": "0" },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave", "name": "TorDisabled", "kind": "DWord", "value": "1" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Brave Browser will display 'Managed by your organization' due to local Group Policy entries."
+      ],
+      "needsReboot": false
+    },
+    {
+      "id": "app-logitech-lda-block",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_AppLogiLda_Title",
+      "titleFallback": "Block Logitech Download Assistant (LogiLDA) Auto-Install",
+      "descKey": "Debloat_AppLogiLda_Desc",
+      "descFallback": "Removes LogiLDA startup injection when Logitech USB peripherals (VID_046D) are detected.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "logitech_hardware"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        { "type": "registry", "operation": "deleteValue", "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", "name": "Logitech Download Assistant" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "app-disable-new-outlook",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_AppDisableNewOutlook_Title",
+      "titleFallback": "Disable 'New Outlook' Forced Migration (UseNewOutlook = 0)",
+      "descKey": "Debloat_AppDisableNewOutlook_Desc",
+      "descFallback": "Sets UseNewOutlook=0 and HideNewOutlookToggle=1 across active and default users to prevent Classic Outlook from being replaced by the WebView2 app.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKU\\<SID>\\Software\\Microsoft\\Office\\16.0\\Outlook\\Preferences", "name": "UseNewOutlook", "equals": "0" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Office\\16.0\\Outlook\\Preferences", "name": "UseNewOutlook", "kind": "DWord", "value": "0", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKU\\<SID>\\Software\\Microsoft\\Office\\16.0\\Outlook\\Options\\General", "name": "HideNewOutlookToggle", "kind": "DWord", "value": "1", "includeDefaultUser": true },
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Microsoft\\WindowsUpdate\\Orchestrator\\UScheduler_Oobe\\OutlookUpdate", "name": "BlockedOim", "kind": "DWord", "value": "1" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "app-onedrive-safe-remove",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_AppOneDriveSafe_Title",
+      "titleFallback": "Remove Microsoft OneDrive (Protected by 3-Point Safety Check)",
+      "descKey": "Debloat_AppOneDriveSafe_Desc",
+      "descFallback": "Uninstalls OneDrive only when objective safety criteria pass: Windows InstallDate < 14 days, 0 configured OneDrive accounts, and empty %UserProfile%\\OneDrive folder.",
+      "risk": "medium",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "onedrive_safe_removal"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "ask",
+        "hybrid": "on",
+        "conventional": "ask",
+        "laptop": "ask",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        { "type": "registry", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\OneDrive", "name": "DisableFileSyncNGSC", "equals": "1" }
+      ],
+      "apply": [
+        { "type": "registry", "operation": "set", "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\OneDrive", "name": "DisableFileSyncNGSC", "kind": "DWord", "value": "1" },
+        { "type": "command", "shell": "powershell", "command": "Get-Process OneDrive -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; $s64 = \"$env:SystemRoot\\SysWOW64\\OneDriveSetup.exe\"; $s32 = \"$env:SystemRoot\\System32\\OneDriveSetup.exe\"; if (Test-Path $s64) { Start-Process $s64 '/uninstall' -Wait -WindowStyle Hidden } elseif (Test-Path $s32) { Start-Process $s32 '/uninstall' -Wait -WindowStyle Hidden }" }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "Verify the user has no personal files stored in OneDrive before uninstalling."
+      ],
+      "needsReboot": false
+    },
+    {
+      "id": "app-safe-temp-cleanup",
+      "category": "apps_ctt",
+      "titleKey": "Debloat_AppSafeTempCleanup_Title",
+      "titleFallback": "Safe Temporary Files Cleanup (System Cleaner Engine with Quarantine Backup)",
+      "descKey": "Debloat_AppSafeTempCleanup_Desc",
+      "descFallback": "Safely cleans User/Windows Temp folders via OptiAssist's native backup-backed cleaner engine (quarantined in Config\\Addons\\SystemCleaner\\backups) without using cleanmgr.exe.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [],
+      "apply": [
+        {
+          "type": "systemCleaner",
+          "operation": "safe_temp_cleanup"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-﻿{
+{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
   "Language": "en-US",
@@ -12,7 +12,7 @@
   "OpenExternalLogsByDefault": false,
   "AlwaysOnTop": false,
   "CustomLogoPath": "",
-  "freshstart": "false",
+  "freshstart": "true",
   "DisabledAddons": "maintenance-report",
-  "ModuleOrder": ""
+  "ModuleOrder": "toolbox,app-manager,system-cleaner,startup-manager,hardware-monitor,maintenance-report"
 }

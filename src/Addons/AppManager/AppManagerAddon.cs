@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,16 +31,19 @@ namespace OptiAssist.Addons.AppManager
         private string _wingetCurrentAppName = "";
 
         // Tabs Controls
-        private enum AppManagerTab { Updates, Install }
-        private AppManagerTab _activeTab = AppManagerTab.Updates;
+        private enum AppManagerTab { Install, Updates, Manage }
+        private AppManagerTab _activeTab = AppManagerTab.Install;
 
-        private Border _tabUpdatesBorder;
-        private TextBlock _tabUpdatesText;
         private Border _tabInstallBorder;
         private TextBlock _tabInstallText;
+        private Border _tabUpdatesBorder;
+        private TextBlock _tabUpdatesText;
+        private Border _tabManageBorder;
+        private TextBlock _tabManageText;
 
-        private StackPanel _pnlTabUpdates;
-        private StackPanel _pnlTabInstall;
+        private Grid _pnlTabInstall;
+        private Grid _pnlTabUpdates;
+        private Grid _pnlTabManage;
 
         // Main Header controls
         private TextBlock _txtPostInstallTitle;
@@ -65,6 +69,7 @@ namespace OptiAssist.Addons.AppManager
         // Section 1B: Installed Apps (Winget List + Size + Uninstall)
         private Border _cardInstalledApps;
         private TextBox _txtInstalledSearch;
+        private TextBlock _txtInstalledSearchWatermark;
         private Button _btnRefreshInstalledApps;
         private ProgressBar _pbInstalledScan;
         private TextBlock _lblInstalledStatus;
@@ -116,7 +121,7 @@ namespace OptiAssist.Addons.AppManager
         public string Id { get { return "app-manager"; } }
         public string Name { get { return T("Nav_AppManager", "App Manager"); } }
         public string Description { get { return T("PostInstall_Subtitle", "Automated installation of essential software and update of installed applications"); } }
-        public string Version { get { return "1.2.S4"; } }
+        public string Version { get { return "1.2.S7"; } }
         public string Author { get { return "João Figueiró"; } }
         public string Icon { get { return "📦"; } }
 
@@ -200,16 +205,21 @@ namespace OptiAssist.Addons.AppManager
         private void SwitchTab(AppManagerTab tab)
         {
             _activeTab = tab;
-            HighlightTab(_tabUpdatesBorder, _tabUpdatesText, tab == AppManagerTab.Updates);
             HighlightTab(_tabInstallBorder, _tabInstallText, tab == AppManagerTab.Install);
+            HighlightTab(_tabUpdatesBorder, _tabUpdatesText, tab == AppManagerTab.Updates);
+            HighlightTab(_tabManageBorder, _tabManageText, tab == AppManagerTab.Manage);
 
+            if (_pnlTabInstall != null)
+            {
+                _pnlTabInstall.Visibility = (tab == AppManagerTab.Install) ? Visibility.Visible : Visibility.Collapsed;
+            }
             if (_pnlTabUpdates != null)
             {
                 _pnlTabUpdates.Visibility = (tab == AppManagerTab.Updates) ? Visibility.Visible : Visibility.Collapsed;
             }
-            if (_pnlTabInstall != null)
+            if (_pnlTabManage != null)
             {
-                _pnlTabInstall.Visibility = (tab == AppManagerTab.Install) ? Visibility.Visible : Visibility.Collapsed;
+                _pnlTabManage.Visibility = (tab == AppManagerTab.Manage) ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 
@@ -220,7 +230,10 @@ namespace OptiAssist.Addons.AppManager
                 return _rootView;
             }
 
-            StackPanel root = new StackPanel() { Margin = new Thickness(0) };
+            Grid root = new Grid() { Margin = new Thickness(0) };
+            root.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
 
             // =========================================================
             // MAIN HEADER (Harmonized layout across all OptiAssist modules)
@@ -252,6 +265,7 @@ namespace OptiAssist.Addons.AppManager
             titlePanel.Children.Add(_txtPostInstallSubtitle);
             Grid.SetColumn(titlePanel, 0);
             headerGrid.Children.Add(titlePanel);
+            Grid.SetRow(headerGrid, 0);
             root.Children.Add(headerGrid);
 
             // =========================================================
@@ -260,25 +274,37 @@ namespace OptiAssist.Addons.AppManager
             Border tabStrip = new Border
             {
                 BorderThickness = new Thickness(0, 0, 0, 1),
-                Margin = new Thickness(0, 0, 0, 14)
+                Margin = new Thickness(0, 0, 0, 10)
             };
             tabStrip.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
             StackPanel spTabs = new StackPanel { Orientation = Orientation.Horizontal };
-            _tabUpdatesBorder = CreateTabButton("🔄 " + T("AppManager_Tab_Main", "App Manager"), () => SwitchTab(AppManagerTab.Updates), out _tabUpdatesText);
-            _tabInstallBorder = CreateTabButton("📦 " + T("AppManager_Tab_Install", "Automated Application Installation"), () => SwitchTab(AppManagerTab.Install), out _tabInstallText);
-            if (IsRunningFromInstalledLocation())
+            _tabInstallBorder = CreateTabButton("📦 " + T("AppManager_Tab_BatchInstaller", "Batch Installer"), () => SwitchTab(AppManagerTab.Install), out _tabInstallText);
+            _tabUpdatesBorder = CreateTabButton("🔄 " + T("AppManager_Tab_AppUpdates", "App Updates"), () => SwitchTab(AppManagerTab.Updates), out _tabUpdatesText);
+            _tabManageBorder = CreateTabButton("📋 " + T("AppManager_Tab_ManageApps", "Manage Apps"), () => SwitchTab(AppManagerTab.Manage), out _tabManageText);
+
+            bool isPortableMode = (_host != null) ? _host.IsPortableMode : !IsRunningFromInstalledLocation();
+            if (!isPortableMode)
             {
                 _tabInstallBorder.Visibility = Visibility.Collapsed;
             }
 
-            spTabs.Children.Add(_tabUpdatesBorder);
             spTabs.Children.Add(_tabInstallBorder);
+            spTabs.Children.Add(_tabUpdatesBorder);
+            spTabs.Children.Add(_tabManageBorder);
             tabStrip.Child = spTabs;
+            Grid.SetRow(tabStrip, 1);
             root.Children.Add(tabStrip);
 
-            _pnlTabUpdates = new StackPanel();
-            _pnlTabInstall = new StackPanel();
+            _pnlTabInstall = new Grid();
+            _pnlTabInstall.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            _pnlTabInstall.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
+
+            _pnlTabUpdates = new Grid();
+            _pnlTabUpdates.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
+
+            _pnlTabManage = new Grid();
+            _pnlTabManage.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
 
             // =========================================================
             // SECTION 1: APPLICATION UPDATES (Always Visible)
@@ -294,7 +320,12 @@ namespace OptiAssist.Addons.AppManager
             _cardWingetUpgrades.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             _cardWingetUpgrades.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            StackPanel upgStack = new StackPanel();
+            Grid upgStack = new Grid();
+            upgStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            upgStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            upgStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            upgStack.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
+            upgStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
 
             Grid upgHeaderGrid = new Grid() { Margin = new Thickness(0, 0, 0, 8) };
             upgHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
@@ -303,7 +334,7 @@ namespace OptiAssist.Addons.AppManager
             StackPanel upgTitleStack = new StackPanel() { VerticalAlignment = VerticalAlignment.Center };
             _txtWingetCardTitle = new TextBlock()
             {
-                Text = T("Upgrade_Card_Title", "🔄 Application Updates"),
+                Text = T("Upgrade_Card_Title_Short", "🔄 App Updates"),
                 FontWeight = FontWeights.Bold,
                 FontSize = 13
             };
@@ -322,16 +353,35 @@ namespace OptiAssist.Addons.AppManager
             Grid.SetColumn(upgTitleStack, 0);
             upgHeaderGrid.Children.Add(upgTitleStack);
 
+            StackPanel upgHeaderBtns = new StackPanel() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
             _btnCheckWingetUpgrades = new Button()
             {
                 Content = T("Btn_CheckUpdates", "🔄 Check for Updates"),
-                Padding = new Thickness(10, 3, 10, 3)
+                Padding = new Thickness(10, 3, 10, 3),
+                Margin = new Thickness(0, 0, 6, 0)
             };
             _btnCheckWingetUpgrades.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnCheckWingetUpgrades.Click += BtnCheckWingetUpgrades_Click;
-            Grid.SetColumn(_btnCheckWingetUpgrades, 1);
-            upgHeaderGrid.Children.Add(_btnCheckWingetUpgrades);
 
+            Button btnHeaderMsStore = new Button()
+            {
+                Content = "🏪 " + T("Btn_OpenMsStore", "Microsoft Store"),
+                Padding = new Thickness(10, 3, 10, 3),
+                ToolTip = T("Tooltip_OpenMsStore", "Open Microsoft Store Downloads & Updates")
+            };
+            btnHeaderMsStore.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnHeaderMsStore.Click += (s, e) =>
+            {
+                try { Process.Start("ms-windows-store://downloadsandupdates"); } catch { }
+            };
+
+            upgHeaderBtns.Children.Add(_btnCheckWingetUpgrades);
+            upgHeaderBtns.Children.Add(btnHeaderMsStore);
+            Grid.SetColumn(upgHeaderBtns, 1);
+            upgHeaderGrid.Children.Add(upgHeaderBtns);
+
+            Grid.SetRow(upgHeaderGrid, 0);
             upgStack.Children.Add(upgHeaderGrid);
 
             _pbWingetScan = new ProgressBar()
@@ -345,6 +395,7 @@ namespace OptiAssist.Addons.AppManager
             };
             _pbWingetScan.SetResourceReference(ProgressBar.ForegroundProperty, "BrushAccent");
             _pbWingetScan.SetResourceReference(ProgressBar.BackgroundProperty, "BrushBgPrimary");
+            Grid.SetRow(_pbWingetScan, 1);
             upgStack.Children.Add(_pbWingetScan);
 
             _pnlWingetLogsAction = new StackPanel()
@@ -366,6 +417,7 @@ namespace OptiAssist.Addons.AppManager
                 if (_host != null) _host.OpenLogWindow();
             };
             _pnlWingetLogsAction.Children.Add(_btnViewLogsFromUpgrade);
+            Grid.SetRow(_pnlWingetLogsAction, 2);
             upgStack.Children.Add(_pnlWingetLogsAction);
 
             _borderUpgradesList = new Border()
@@ -373,7 +425,6 @@ namespace OptiAssist.Addons.AppManager
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(5),
                 Padding = new Thickness(4),
-                MaxHeight = 220,
                 Margin = new Thickness(0, 0, 0, 8),
                 Visibility = (_wingetUpgrades != null && _wingetUpgrades.Count > 0) ? Visibility.Visible : Visibility.Collapsed
             };
@@ -389,6 +440,7 @@ namespace OptiAssist.Addons.AppManager
             }
             svUpgrades.Content = _icWingetUpgradesList;
             _borderUpgradesList.Child = svUpgrades;
+            Grid.SetRow(_borderUpgradesList, 3);
             upgStack.Children.Add(_borderUpgradesList);
 
             _gridUpgradeActions = new Grid()
@@ -425,9 +477,22 @@ namespace OptiAssist.Addons.AppManager
             _btnRecheckWingetUpgrades.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnRecheckWingetUpgrades.Click += BtnCheckWingetUpgrades_Click;
 
+            Button btnOpenMsStore = new Button()
+            {
+                Content = "🏪 " + T("Btn_OpenMsStore", "Microsoft Store"),
+                Margin = new Thickness(0, 0, 6, 0),
+                ToolTip = T("Tooltip_OpenMsStore", "Open Microsoft Store Downloads & Updates")
+            };
+            btnOpenMsStore.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnOpenMsStore.Click += (s, e) =>
+            {
+                try { Process.Start("ms-windows-store://downloadsandupdates"); } catch { }
+            };
+
             upgLeftBtns.Children.Add(_btnSelectAllUpgrades);
             upgLeftBtns.Children.Add(_btnDeselectAllUpgrades);
             upgLeftBtns.Children.Add(_btnRecheckWingetUpgrades);
+            upgLeftBtns.Children.Add(btnOpenMsStore);
             Grid.SetColumn(upgLeftBtns, 0);
             _gridUpgradeActions.Children.Add(upgLeftBtns);
 
@@ -452,17 +517,19 @@ namespace OptiAssist.Addons.AppManager
             Grid.SetColumn(upgRightBtns, 2);
             _gridUpgradeActions.Children.Add(upgRightBtns);
 
+            Grid.SetRow(_gridUpgradeActions, 4);
             upgStack.Children.Add(_gridUpgradeActions);
             _cardWingetUpgrades.Child = upgStack;
+            Grid.SetRow(_cardWingetUpgrades, 0);
             _pnlTabUpdates.Children.Add(_cardWingetUpgrades);
 
             UpdateWingetStatusText();
 
             // =========================================================
-            // SECTION 1B: INSTALLED APPS (Winget List + Size + Uninstall)
+            // SECTION 1B: MANAGE APPS (Installed Apps + Metadata + Update/Uninstall)
             // =========================================================
             _cardInstalledApps = BuildInstalledAppsCard();
-            _pnlTabUpdates.Children.Add(_cardInstalledApps);
+            _pnlTabManage.Children.Add(_cardInstalledApps);
             LoadInstalledAppsAsync();
 
             // =========================================================
@@ -775,26 +842,33 @@ namespace OptiAssist.Addons.AppManager
 
             custStack.Children.Add(editorFooterGrid);
             _cardCustomizePostInstall.Child = custStack;
+            Grid.SetRow(_cardCustomizePostInstall, 0);
             _pnlTabInstall.Children.Add(_cardCustomizePostInstall);
 
             // =========================================================
-            // SECTION 3: AUTOMATED APPLICATION INSTALLATION LIST
+            // SECTION 3: BATCH INSTALLER LIST
             // =========================================================
             Border cardAppsInstall = new Border()
             {
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
                 Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 10),
+                Margin = new Thickness(0, 0, 0, 4),
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
             cardAppsInstall.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             cardAppsInstall.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            StackPanel installStack = new StackPanel();
+            Grid installStack = new Grid();
+            installStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            installStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            installStack.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
+            installStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            installStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+
             _txtAppsInstallCardTitle = new TextBlock()
             {
-                Text = T("Install_Card_Title", "📦 Automated Application Installation"),
+                Text = T("AppManager_Tab_BatchInstaller", "📦 Batch Installer"),
                 FontWeight = FontWeights.Bold,
                 FontSize = 13,
                 Margin = new Thickness(0, 0, 0, 2)
@@ -809,6 +883,8 @@ namespace OptiAssist.Addons.AppManager
             };
             _txtAppsInstallCardSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
 
+            Grid.SetRow(_txtAppsInstallCardTitle, 0);
+            Grid.SetRow(_txtAppsInstallCardSub, 1);
             installStack.Children.Add(_txtAppsInstallCardTitle);
             installStack.Children.Add(_txtAppsInstallCardSub);
 
@@ -817,7 +893,6 @@ namespace OptiAssist.Addons.AppManager
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(5),
                 Padding = new Thickness(4),
-                MaxHeight = 260,
                 Margin = new Thickness(0, 0, 0, 10)
             };
             borderAppsList.SetResourceReference(Border.BackgroundProperty, "BrushBgPrimary");
@@ -829,6 +904,7 @@ namespace OptiAssist.Addons.AppManager
             _icAppsList.ItemsSource = _apps;
             svAppsList.Content = _icAppsList;
             borderAppsList.Child = svAppsList;
+            Grid.SetRow(borderAppsList, 2);
             installStack.Children.Add(borderAppsList);
 
             _pbInstallProgress = new ProgressBar()
@@ -840,6 +916,7 @@ namespace OptiAssist.Addons.AppManager
             };
             _pbInstallProgress.SetResourceReference(ProgressBar.ForegroundProperty, "BrushAccent");
             _pbInstallProgress.SetResourceReference(ProgressBar.BackgroundProperty, "BrushBgPrimary");
+            Grid.SetRow(_pbInstallProgress, 3);
             installStack.Children.Add(_pbInstallProgress);
 
             Grid installActionsGrid = new Grid();
@@ -874,7 +951,8 @@ namespace OptiAssist.Addons.AppManager
 
             _btnOpenPostInstallFolder = new Button()
             {
-                Content = T("Btn_OpenPostInstallFolder", "📂 Installers Folder")
+                Content = T("Btn_OpenPostInstallFolder", "📂 Installers Folder"),
+                Visibility = ((_host != null) ? _host.IsPortableMode : !IsRunningFromInstalledLocation()) ? Visibility.Visible : Visibility.Collapsed
             };
             _btnOpenPostInstallFolder.SetResourceReference(Button.StyleProperty, "BtnDefault");
             _btnOpenPostInstallFolder.Click += (s, e) => InstallerHelper.OpenPostInstallFolder();
@@ -900,14 +978,20 @@ namespace OptiAssist.Addons.AppManager
             Grid.SetColumn(installRightBtns, 2);
             installActionsGrid.Children.Add(installRightBtns);
 
+            Grid.SetRow(installActionsGrid, 4);
             installStack.Children.Add(installActionsGrid);
             cardAppsInstall.Child = installStack;
+            Grid.SetRow(cardAppsInstall, 1);
             _pnlTabInstall.Children.Add(cardAppsInstall);
 
-            root.Children.Add(_pnlTabUpdates);
+            Grid.SetRow(_pnlTabInstall, 2);
+            Grid.SetRow(_pnlTabUpdates, 2);
+            Grid.SetRow(_pnlTabManage, 2);
             root.Children.Add(_pnlTabInstall);
+            root.Children.Add(_pnlTabUpdates);
+            root.Children.Add(_pnlTabManage);
 
-            SwitchTab(AppManagerTab.Updates);
+            SwitchTab(isPortableMode ? AppManagerTab.Install : AppManagerTab.Updates);
 
             _rootView = root;
             return _rootView;
@@ -1232,7 +1316,7 @@ namespace OptiAssist.Addons.AppManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(T("Msg_SelectInstallerError", "Error selecting file: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(string.Format(T("Msg_SelectInstallerError", "Error selecting file: {0}"), ex.Message), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1241,7 +1325,7 @@ namespace OptiAssist.Addons.AppManager
             string name = _txtNewAppName.Text != null ? _txtNewAppName.Text.Trim() : "";
             if (string.IsNullOrEmpty(name))
             {
-                MessageBox.Show(T("Msg_EnterAppName", "Please enter the program name."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
+                OptiDialog.Show(T("Msg_EnterAppName", "Please enter the program name."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Warning);
                 _txtNewAppName.Focus();
                 return;
             }
@@ -1376,19 +1460,19 @@ namespace OptiAssist.Addons.AppManager
             if (_customEditorApps == null) return;
             InstallerHelper.SaveApps(_customEditorApps);
             LoadPostInstallApps();
-            MessageBox.Show(T("Msg_CustomAppsSaved", "Application list successfully saved in Config\\Addons\\AppManager\\autoinstall.json!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+            OptiDialog.Show(T("Msg_CustomAppsSaved", "Application list successfully saved in Config\\Addons\\AppManager\\autoinstall.json!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BtnResetDefaultApps_Click(object sender, RoutedEventArgs e)
         {
-            var res = MessageBox.Show(T("Msg_ResetDefaultAppsConfirm", "Do you want to restore the default program list in autoinstall.json?"), "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var res = OptiDialog.Show(T("Msg_ResetDefaultAppsConfirm", "Do you want to restore the default program list in autoinstall.json?"), "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res == MessageBoxResult.Yes)
             {
                 var defaults = InstallerHelper.GetDefaultApps();
                 InstallerHelper.SaveApps(defaults);
                 PopulateCustomAppsEditor();
                 LoadPostInstallApps();
-                MessageBox.Show(T("Msg_ResetDefaultAppsDone", "Default program list successfully restored!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(T("Msg_ResetDefaultAppsDone", "Default program list successfully restored!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -1405,7 +1489,7 @@ namespace OptiAssist.Addons.AppManager
 
             if (selected.Count == 0)
             {
-                MessageBox.Show(T("Msg_NoAppsSelected", "No application was selected."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(T("Msg_NoAppsSelected", "No application was selected."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1453,7 +1537,7 @@ namespace OptiAssist.Addons.AppManager
                     Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
                         if (_btnRunInstallSelected != null) _btnRunInstallSelected.IsEnabled = true;
-                        MessageBox.Show(T("Msg_InstallCompleted", "Installation of selected programs completed!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                        OptiDialog.Show(T("Msg_InstallCompleted", "Installation of selected programs completed!"), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                     }));
                 }
             });
@@ -1542,6 +1626,7 @@ namespace OptiAssist.Addons.AppManager
                             if (_icWingetUpgradesList != null) _icWingetUpgradesList.ItemsSource = _wingetUpgrades;
                             if (_borderUpgradesList != null) _borderUpgradesList.Visibility = Visibility.Visible;
                             if (_gridUpgradeActions != null) _gridUpgradeActions.Visibility = Visibility.Visible;
+                            RenderInstalledAppsList();
                         }
                     }));
                 }
@@ -1577,7 +1662,7 @@ namespace OptiAssist.Addons.AppManager
 
             if (selected.Count == 0)
             {
-                MessageBox.Show(T("Msg_NoAppsSelected", "No application was selected for update."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
+                OptiDialog.Show(T("Msg_NoAppsSelected", "No application was selected for update."), "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1634,7 +1719,7 @@ namespace OptiAssist.Addons.AppManager
                         if (_btnUpgradeAll != null) _btnUpgradeAll.IsEnabled = true;
                         if (_pbWingetScan != null) _pbWingetScan.Visibility = Visibility.Collapsed;
                         if (_pnlWingetLogsAction != null) _pnlWingetLogsAction.Visibility = Visibility.Collapsed;
-                        MessageBox.Show(string.Format(T("Msg_UpgradeCompleted", "Application update completed!\n{0} of {1} successfully updated."), successes, selected.Count),
+                        OptiDialog.Show(string.Format(T("Msg_UpgradeCompleted", "Application update completed!\n{0} of {1} successfully updated."), successes, selected.Count),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
 
                         CheckWingetUpgradesAsync();
@@ -1645,7 +1730,7 @@ namespace OptiAssist.Addons.AppManager
 
         private void BtnUpgradeAll_Click(object sender, RoutedEventArgs e)
         {
-            var res = MessageBox.Show(T("Msg_UpgradeAllConfirm", "Do you want to update all system programs now via 'winget upgrade --all'?"),
+            var res = OptiDialog.Show(T("Msg_UpgradeAllConfirm", "Do you want to update all system programs now via 'winget upgrade --all'?"),
                 "OptiAssist", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (res != MessageBoxResult.Yes) return;
@@ -1724,7 +1809,7 @@ namespace OptiAssist.Addons.AppManager
                         if (_btnUpgradeAll != null) _btnUpgradeAll.IsEnabled = true;
                         if (_pbWingetScan != null) _pbWingetScan.Visibility = Visibility.Collapsed;
                         if (_pnlWingetLogsAction != null) _pnlWingetLogsAction.Visibility = Visibility.Collapsed;
-                        MessageBox.Show(T("Msg_UpgradeAllFinished", "Bulk update command finished! Check details in Logs tab."),
+                        OptiDialog.Show(T("Msg_UpgradeAllFinished", "Bulk update command finished! Check details in Logs tab."),
                             "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
 
                         CheckWingetUpgradesAsync();
@@ -1765,12 +1850,16 @@ namespace OptiAssist.Addons.AppManager
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(14),
-                Margin = new Thickness(0, 12, 0, 10)
+                Margin = new Thickness(0, 0, 0, 4)
             };
             card.SetResourceReference(Border.BackgroundProperty, "BrushBgCard");
             card.SetResourceReference(Border.BorderBrushProperty, "BrushBorderCard");
 
-            StackPanel rootStack = new StackPanel();
+            Grid rootStack = new Grid();
+            rootStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            rootStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            rootStack.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+            rootStack.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Star) });
 
             Grid headerGrid = new Grid() { Margin = new Thickness(0, 0, 0, 8) };
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
@@ -1797,19 +1886,51 @@ namespace OptiAssist.Addons.AppManager
             Grid.SetColumn(titleStack, 0);
             headerGrid.Children.Add(titleStack);
 
+            Grid searchInputGrid = new Grid()
+            {
+                Width = 220,
+                Height = 28,
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
             _txtInstalledSearch = new TextBox()
             {
-                Width = 190,
                 Height = 28,
                 FontSize = 11,
                 Padding = new Thickness(8, 2, 8, 2),
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0),
                 ToolTip = T("InstalledApps_SearchTip", "Filter installed apps by name or ID")
             };
-            _txtInstalledSearch.TextChanged += (s, e) => RenderInstalledAppsList();
-            Grid.SetColumn(_txtInstalledSearch, 1);
-            headerGrid.Children.Add(_txtInstalledSearch);
+            _txtInstalledSearch.SetResourceReference(TextBox.BackgroundProperty, "BrushBgInput");
+            _txtInstalledSearch.SetResourceReference(TextBox.ForegroundProperty, "BrushTextPrimary");
+            _txtInstalledSearch.SetResourceReference(TextBox.BorderBrushProperty, "BrushBorderInput");
+
+            _txtInstalledSearchWatermark = new TextBlock()
+            {
+                Text = "🔍 " + T("InstalledApps_SearchPlaceholder", "Search installed apps..."),
+                FontSize = 11,
+                Margin = new Thickness(10, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                IsHitTestVisible = false
+            };
+            _txtInstalledSearchWatermark.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+
+            _txtInstalledSearch.TextChanged += (s, e) =>
+            {
+                if (_txtInstalledSearchWatermark != null)
+                {
+                    _txtInstalledSearchWatermark.Visibility = string.IsNullOrEmpty(_txtInstalledSearch.Text)
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+                }
+                RenderInstalledAppsList();
+            };
+
+            searchInputGrid.Children.Add(_txtInstalledSearch);
+            searchInputGrid.Children.Add(_txtInstalledSearchWatermark);
+            Grid.SetColumn(searchInputGrid, 1);
+            headerGrid.Children.Add(searchInputGrid);
 
             _btnRefreshInstalledApps = new Button()
             {
@@ -1824,7 +1945,49 @@ namespace OptiAssist.Addons.AppManager
             Grid.SetColumn(_btnRefreshInstalledApps, 2);
             headerGrid.Children.Add(_btnRefreshInstalledApps);
 
+            Grid.SetRow(headerGrid, 0);
             rootStack.Children.Add(headerGrid);
+
+            // Windows native Installed Apps & Legacy Programs and Features shortcuts
+            StackPanel nativeToolsRow = new StackPanel()
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            Button btnWinInstalledApps = new Button()
+            {
+                Content = "⚙️ " + T("Btn_WinInstalledApps", "Windows Installed Apps"),
+                Height = 26,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 8, 0),
+                ToolTip = T("Tooltip_WinInstalledApps", "Open Installed Apps in Windows Settings")
+            };
+            btnWinInstalledApps.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnWinInstalledApps.Click += (s, e) =>
+            {
+                try { Process.Start("ms-settings:appsfeatures"); } catch { }
+            };
+
+            Button btnControlPanelApps = new Button()
+            {
+                Content = "🧰 " + T("Btn_ControlPanelApps", "Programs and Features"),
+                Height = 26,
+                Padding = new Thickness(10, 0, 10, 0),
+                FontSize = 11,
+                ToolTip = T("Tooltip_ControlPanelApps", "Open classic Programs and Features (appwiz.cpl)")
+            };
+            btnControlPanelApps.SetResourceReference(Button.StyleProperty, "BtnDefault");
+            btnControlPanelApps.Click += (s, e) =>
+            {
+                try { Process.Start("appwiz.cpl"); } catch { }
+            };
+
+            nativeToolsRow.Children.Add(btnWinInstalledApps);
+            nativeToolsRow.Children.Add(btnControlPanelApps);
+            Grid.SetRow(nativeToolsRow, 1);
+            rootStack.Children.Add(nativeToolsRow);
 
             _pbInstalledScan = new ProgressBar()
             {
@@ -1835,6 +1998,7 @@ namespace OptiAssist.Addons.AppManager
             };
             _pbInstalledScan.SetResourceReference(ProgressBar.ForegroundProperty, "BrushAccent");
             _pbInstalledScan.SetResourceReference(ProgressBar.BackgroundProperty, "BrushBgPrimary");
+            Grid.SetRow(_pbInstalledScan, 2);
             rootStack.Children.Add(_pbInstalledScan);
 
             Border listFrame = new Border()
@@ -1848,12 +2012,12 @@ namespace OptiAssist.Addons.AppManager
 
             ScrollViewer sv = new ScrollViewer()
             {
-                MaxHeight = 340,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto
             };
             _pnlInstalledAppsList = new StackPanel();
             sv.Content = _pnlInstalledAppsList;
             listFrame.Child = sv;
+            Grid.SetRow(listFrame, 3);
             rootStack.Children.Add(listFrame);
 
             card.Child = rootStack;
@@ -1908,18 +2072,93 @@ namespace OptiAssist.Addons.AppManager
                 row.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
                 row.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
 
+                // Check if winget upgrade is available (from winget list Available column or _wingetUpgrades cache)
+                string availableVer = item.AvailableVersion;
+                if (string.IsNullOrWhiteSpace(availableVer) && _wingetUpgrades != null)
+                {
+                    for (int u = 0; u < _wingetUpgrades.Count; u++)
+                    {
+                        WingetUpgradeItem upg = _wingetUpgrades[u];
+                        if (upg != null &&
+                            ((!string.IsNullOrEmpty(item.Id) && string.Equals(upg.Id, item.Id, StringComparison.OrdinalIgnoreCase)) ||
+                             string.Equals(upg.Name, item.Name, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            availableVer = upg.AvailableVersion;
+                            break;
+                        }
+                    }
+                }
+                bool hasUpdate = !string.IsNullOrWhiteSpace(availableVer);
+
                 StackPanel infoStack = new StackPanel() { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) };
-                TextBlock txtName = new TextBlock() { Text = item.Name, FontSize = 12, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+
+                // Line 1: Name + Version (+ Update badge if available)
+                WrapPanel line1 = new WrapPanel() { Orientation = Orientation.Horizontal };
+                TextBlock txtName = new TextBlock()
+                {
+                    Text = item.Name,
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    Margin = new Thickness(0, 0, 6, 0)
+                };
                 txtName.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextPrimary");
+                line1.Children.Add(txtName);
+
+                TextBlock txtVer = new TextBlock()
+                {
+                    Text = "v" + (string.IsNullOrEmpty(item.Version) ? "?" : item.Version),
+                    FontSize = 10.5,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 6, 0)
+                };
+                txtVer.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
+                line1.Children.Add(txtVer);
+
+                if (hasUpdate)
+                {
+                    TextBlock txtAvail = new TextBlock()
+                    {
+                        Text = "→ v" + availableVer,
+                        FontSize = 10.5,
+                        FontWeight = FontWeights.Bold,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    txtAvail.SetResourceReference(TextBlock.ForegroundProperty, "BrushAccent");
+                    line1.Children.Add(txtAvail);
+                }
+                infoStack.Children.Add(line1);
+
+                // Line 2: Publisher • Install Date
+                List<string> metaParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(item.Publisher)) metaParts.Add("🏢 " + item.Publisher);
+                if (!string.IsNullOrWhiteSpace(item.InstallDate)) metaParts.Add("📅 " + item.InstallDate);
+                if (!string.IsNullOrWhiteSpace(item.Id)) metaParts.Add(item.Id);
                 TextBlock txtSub = new TextBlock()
                 {
-                    Text = string.Format("{0}  •  v{1}", string.IsNullOrEmpty(item.Id) ? "Local" : item.Id, string.IsNullOrEmpty(item.Version) ? "?" : item.Version),
+                    Text = string.Join("  •  ", metaParts.ToArray()),
                     FontSize = 10.5,
+                    Margin = new Thickness(0, 1, 0, 0),
                     TextTrimming = TextTrimming.CharacterEllipsis
                 };
                 txtSub.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextSecondary");
-                infoStack.Children.Add(txtName);
                 infoStack.Children.Add(txtSub);
+
+                // Line 3: Install Location (if available)
+                if (!string.IsNullOrWhiteSpace(item.InstallLocation))
+                {
+                    TextBlock txtDir = new TextBlock()
+                    {
+                        Text = "📁 " + item.InstallLocation,
+                        FontSize = 10,
+                        Margin = new Thickness(0, 1, 0, 0),
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        ToolTip = item.InstallLocation
+                    };
+                    txtDir.SetResourceReference(TextBlock.ForegroundProperty, "BrushTextMuted");
+                    infoStack.Children.Add(txtDir);
+                }
+
                 Grid.SetColumn(infoStack, 0);
                 row.Children.Add(infoStack);
 
@@ -1937,6 +2176,53 @@ namespace OptiAssist.Addons.AppManager
                 Grid.SetColumn(txtSize, 1);
                 row.Children.Add(txtSize);
 
+                StackPanel actionBtns = new StackPanel()
+                {
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                WingetInstalledAppItem captured = item;
+                if (hasUpdate)
+                {
+                    Button btnUpdate = new Button()
+                    {
+                        Content = "🔄 " + T("Btn_Update", "Update"),
+                        Height = 26,
+                        Padding = new Thickness(10, 0, 10, 0),
+                        FontSize = 10.5,
+                        Margin = new Thickness(0, 0, 6, 0),
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    btnUpdate.SetResourceReference(Button.StyleProperty, "BtnAccent");
+                    btnUpdate.Click += (s, e) =>
+                    {
+                        btnUpdate.IsEnabled = false;
+                        btnUpdate.Content = "⏳...";
+                        if (_pbInstalledScan != null) _pbInstalledScan.Visibility = Visibility.Visible;
+                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            bool ok = WingetInstalledHelper.UpgradePackage(captured.Id, captured.Name, Log);
+                            Application.Current.Dispatcher.Invoke(new Action(() =>
+                            {
+                                if (_pbInstalledScan != null) _pbInstalledScan.Visibility = Visibility.Collapsed;
+                                if (ok)
+                                {
+                                    LoadInstalledAppsAsync();
+                                    CheckWingetUpgradesAsync();
+                                }
+                                else
+                                {
+                                    btnUpdate.IsEnabled = true;
+                                    btnUpdate.Content = "🔄 " + T("Btn_Update", "Update");
+                                    OptiDialog.Show(string.Format(T("Msg_UpgradeFailed", "Could not update '{0}' silently. Check Terminal for details."), captured.Name), "OptiAssist - App Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                }
+                            }));
+                        });
+                    };
+                    actionBtns.Children.Add(btnUpdate);
+                }
+
                 Button btnUninstall = new Button()
                 {
                     Content = "🗑️ " + T("Btn_Uninstall", "Uninstall"),
@@ -1946,10 +2232,9 @@ namespace OptiAssist.Addons.AppManager
                     VerticalAlignment = VerticalAlignment.Center
                 };
                 btnUninstall.SetResourceReference(Button.StyleProperty, "BtnDanger");
-                WingetInstalledAppItem captured = item;
                 btnUninstall.Click += (s, e) =>
                 {
-                    var res = MessageBox.Show(
+                    var res = OptiDialog.Show(
                         string.Format(T("Msg_ConfirmUninstallApp", "Uninstall '{0}' via winget?"), captured.Name),
                         "OptiAssist - App Manager",
                         MessageBoxButton.YesNo,
@@ -1973,13 +2258,14 @@ namespace OptiAssist.Addons.AppManager
                             {
                                 btnUninstall.IsEnabled = true;
                                 btnUninstall.Content = "🗑️ " + T("Btn_Uninstall", "Uninstall");
-                                MessageBox.Show(string.Format(T("Msg_UninstallFailed", "Could not uninstall '{0}' silently. Check Logs for details."), captured.Name), "OptiAssist - App Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                OptiDialog.Show(string.Format(T("Msg_UninstallFailed", "Could not uninstall '{0}' silently. Check Terminal for details."), captured.Name), "OptiAssist - App Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
                             }
                         }));
                     });
                 };
-                Grid.SetColumn(btnUninstall, 2);
-                row.Children.Add(btnUninstall);
+                actionBtns.Children.Add(btnUninstall);
+                Grid.SetColumn(actionBtns, 2);
+                row.Children.Add(actionBtns);
 
                 rowBorder.Child = row;
                 _pnlInstalledAppsList.Children.Add(rowBorder);
@@ -1998,9 +2284,10 @@ namespace OptiAssist.Addons.AppManager
         {
             if (_txtPostInstallTitle != null) _txtPostInstallTitle.Text = string.Format("{0}  {1}", Icon, Name);
             if (_txtPostInstallSubtitle != null) _txtPostInstallSubtitle.Text = T("PostInstall_Subtitle", "Automated installation of essential software and update of installed applications");
-            if (_tabUpdatesText != null) _tabUpdatesText.Text = "🔄 " + T("AppManager_Tab_Main", "App Manager");
-            if (_tabInstallText != null) _tabInstallText.Text = "📦 " + T("AppManager_Tab_Install", "Automated Application Installation");
-            if (_txtWingetCardTitle != null) _txtWingetCardTitle.Text = T("Upgrade_Card_Title", "🔄 Application Updates");
+            if (_tabInstallText != null) _tabInstallText.Text = "📦 " + T("AppManager_Tab_BatchInstaller", "Batch Installer");
+            if (_tabUpdatesText != null) _tabUpdatesText.Text = "🔄 " + T("AppManager_Tab_AppUpdates", "App Updates");
+            if (_tabManageText != null) _tabManageText.Text = "📋 " + T("AppManager_Tab_ManageApps", "Manage Apps");
+            if (_txtWingetCardTitle != null) _txtWingetCardTitle.Text = T("Upgrade_Card_Title_Short", "🔄 App Updates");
             UpdateWingetStatusText();
             if (_btnCheckWingetUpgrades != null) _btnCheckWingetUpgrades.Content = T("Btn_CheckUpdates", "🔄 Check for Updates");
             if (_btnViewLogsFromUpgrade != null)
@@ -2059,6 +2346,15 @@ namespace OptiAssist.Addons.AppManager
             if (_btnSelectEssentials != null) _btnSelectEssentials.Content = T("Btn_SelectEssentials", "Select Essentials");
             if (_btnDeselectAll != null) _btnDeselectAll.Content = T("Btn_DeselectAll", "Deselect All");
             if (_btnToggleCustomizePostInstall != null) _btnToggleCustomizePostInstall.Content = T("Btn_CustomizeAutomated", "⚙️ Customize Automated Installation");
+            if (_txtInstalledSearchWatermark != null)
+            {
+                _txtInstalledSearchWatermark.Text = "🔍 " + T("InstalledApps_SearchPlaceholder", "Search installed apps...");
+            }
+            if (_txtInstalledSearch != null)
+            {
+                _txtInstalledSearch.ToolTip = T("InstalledApps_SearchTip", "Filter installed apps by name or ID");
+            }
+            if (_btnRefreshInstalledApps != null) _btnRefreshInstalledApps.Content = T("Btn_Refresh", "🔄 Refresh");
             if (_btnOpenPostInstallFolder != null) _btnOpenPostInstallFolder.Content = T("Btn_OpenPostInstallFolder", "📂 Installers Folder");
             if (_btnRunInstallSelected != null) _btnRunInstallSelected.Content = T("Btn_RunInstallSelected", "🚀 Install Selected");
         }

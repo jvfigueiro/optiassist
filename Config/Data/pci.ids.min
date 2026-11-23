@@ -1,0 +1,212 @@
+# Curated PCI ID Database for OptiAssist
+# Derived from the PCI ID Project (https://pci-ids.ucw.cz/)
+# Maintained under dual license: 3-clause BSD / GPL v2 or later.
+# Copyright (c) Martin Mares, Albert Pool, and contributors.
+
+1002  Advanced Micro Devices, Inc. [AMD/ATI]
+	6718  Cayman XT [Radeon HD 6970]
+	6719  Cayman PRO [Radeon HD 6950]
+	6738  Barts XT [Radeon HD 6870]
+	6739  Barts PRO [Radeon HD 6850]
+	6758  Turks XT [Radeon HD 6670/7670]
+	6759  Turks PRO [Radeon HD 6570]
+	6779  Caicos [Radeon HD 6450/7450/8450]
+	6889  Cypress XT [Radeon HD 5970 Hemlock]
+	6898  Cypress XT [Radeon HD 5870]
+	6899  Cypress PRO [Radeon HD 5850]
+	68b8  Juniper XT [Radeon HD 5770]
+	68b9  Juniper PRO [Radeon HD 5750]
+	68d8  Redwood XT [Radeon HD 5670]
+	68d9  Redwood PRO [Radeon HD 5570]
+	68f9  Cedar [Radeon HD 5450]
+	6798  Tahiti XT [Radeon HD 7970]
+	679a  Tahiti PRO [Radeon HD 7950]
+	6818  Pitcairn XT [Radeon HD 7870]
+	6819  Pitcairn PRO [Radeon HD 7850]
+	683d  Cape Verde XT [Radeon HD 7770]
+	6610  Oland XT [Radeon HD 8670 / R7 250]
+	6611  Oland PRO [Radeon R7 240]
+	67c0  Ellesmere [Radeon RX 470/480/570/580/590]
+	67df  Ellesmere [Radeon RX 480/580]
+	67ff  Baffin [Radeon RX 460/560]
+	687f  Vega 10 [Radeon RX Vega 56/64]
+	6900  Topaz XT [Radeon R7 M440]
+	731f  Navi 10 [Radeon RX 5700 / 5700 XT]
+	7340  Navi 14 [Radeon RX 5500 / 5500 XT]
+	7360  Navi 12 [Radeon Pro 5600M]
+	73bf  Navi 21 [Radeon RX 6800 / 6800 XT / 6900 XT]
+	73df  Navi 22 [Radeon RX 6700 XT]
+	73ff  Navi 23 [Radeon RX 6600 / 6600 XT]
+	743f  Navi 24 [Radeon RX 6400 / 6500 XT]
+	744c  Navi 31 [Radeon RX 7900 XT / 7900 XTX]
+	7460  Navi 32 [Radeon RX 7700 XT / 7800 XT]
+	7480  Navi 33 [Radeon RX 7600 / 7600 XT]
+	74a0  Navi 48 [Radeon RX 8000 Series]
+	6880  FirePro V8800 [Cypress]
+	6888  FirePro V7800 [Cypress]
+	678a  FirePro W9000 [Tahiti]
+	67a0  FirePro W8000 [Tahiti]
+	73a1  Radeon Pro W6800 [Navi 21]
+	7448  Radeon Pro W7900 [Navi 31]
+
+1022  Advanced Micro Devices, Inc. [AMD]
+	1450  Family 17h (Models 00h-0fh) Root Complex
+	1480  Starship/Matisse Root Complex
+	1576  Carrizo Audio Controller
+	1578  Carrizo Root Complex
+	15d0  Renoir Root Complex
+	1630  Cezanne Root Complex
+	14d8  Raphael / Phoenix Root Complex
+
+1039  Silicon Integrated Systems [SiS]
+	0671  671MX / 672 GUI Accelerator
+	6330  630/730 GUI Accelerator
+	6351  650/651/652 GUI Accelerator
+	6326  5598/6326 GUI Accelerator
+	0180  SiS964 RAID Controller
+	0190  SiS965 Gigabit Ethernet
+
+10de  NVIDIA Corporation
+	0140  NV43 [GeForce 6600 GT]
+	0391  G73 [GeForce 7600 GT]
+	0402  G84 [GeForce 8600 GT]
+	0614  G92 [GeForce 9800 GT]
+	06e0  G98 [GeForce G100]
+	0a65  GT218 [GeForce 210]
+	104a  GF119 [GeForce GT 610]
+	0fc6  GK107 [GeForce GTX 650]
+	1180  GK104 [GeForce GTX 680]
+	1184  GK104 [GeForce GTX 770]
+	1283  GK208 [GeForce GT 710]
+	1380  GM107 [GeForce GTX 750 Ti]
+	13c2  GM204 [GeForce GTX 970]
+	13c0  GM204 [GeForce GTX 980]
+	1401  GM206 [GeForce GTX 960]
+	1b81  GP104 [GeForce GTX 1070]
+	1b80  GP104 [GeForce GTX 1080]
+	1c02  GP106 [GeForce GTX 1060 3GB]
+	1c03  GP106 [GeForce GTX 1060 6GB]
+	1c82  GP107 [GeForce GTX 1050 Ti]
+	1d01  GP108 [GeForce GT 1030]
+	2182  TU116 [GeForce GTX 1660 Ti]
+	2184  TU116 [GeForce GTX 1660]
+	2187  TU116 [GeForce GTX 1650 SUPER]
+	1f07  TU106 [GeForce RTX 2070]
+	1f08  TU106 [GeForce RTX 2060]
+	1e84  TU104 [GeForce RTX 2070 SUPER]
+	1e82  TU104 [GeForce RTX 2080]
+	1e04  TU102 [GeForce RTX 2080 Ti]
+	2204  GA102 [GeForce RTX 3090]
+	2206  GA102 [GeForce RTX 3080]
+	2482  GA104 [GeForce RTX 3070 Ti]
+	2484  GA104 [GeForce RTX 3070]
+	2503  GA106 [GeForce RTX 3060]
+	2507  GA106 [GeForce RTX 3050]
+	2684  AD102 [GeForce RTX 4090]
+	2704  AD103 [GeForce RTX 4080]
+	2782  AD104 [GeForce RTX 4070 Ti]
+	2786  AD104 [GeForce RTX 4070]
+	2882  AD106 [GeForce RTX 4060 Ti]
+	2884  AD107 [GeForce RTX 4060]
+	2900  GB202 [GeForce RTX 5090]
+	2902  GB203 [GeForce RTX 5080]
+	0ff2  GK107GL [Quadro K600]
+	11ba  GK104GL [Quadro K5000]
+	1bb0  GP104GL [Quadro P5000]
+	1e30  TU104GL [Quadro RTX 5000]
+	2230  GA102GL [RTX A6000]
+	2231  GA102GL [RTX A5000]
+	2232  GA104GL [RTX A4000]
+	26b5  AD102GL [RTX 6000 Ada Generation]
+	0369  C55 [nForce 430 MCP]
+	03f0  MCP61 [nForce 430 Ethernet]
+	0aa3  MCP79 [nForce 730i]
+
+10ec  Realtek Semiconductor Co., Ltd.
+	8168  RTL8111/8168/8411 PCI Express Gigabit Ethernet Controller
+	8125  RTL8125 2.5GbE Controller
+	8821  RTL8821CE 802.11ac PCIe Wireless Network Adapter
+	8822  RTL8822CE 802.11ac PCIe Wireless Network Adapter
+	8852  RTL8852AE 802.11ax PCIe Wireless Network Adapter
+
+1106  VIA Technologies, Inc.
+	3157  CX700/VX700 UniChrome Pro II Graphics
+	3230  CN700/VN800/P4M800CE/P4M800Pro UniChrome Pro Graphics
+	3344  K8M890CE/K8N890CE [Chrome9]
+	3371  VX800/VX820 Chrome9 HC3 Integrated Graphics
+	3065  VT6102/VT6103 [Rhine-II PCI Fast Ethernet Controller]
+
+111d  Integrated Device Technology, Inc. [IDT]
+	7603  92HD75B2X5 4-Channel High Definition Audio CODEC
+	7608  92HD75B1X5 4-Channel High Definition Audio CODEC
+	7675  92HD73E1X5 4-Channel High Definition Audio CODEC
+	7676  92HD73C1X5 4-Channel High Definition Audio CODEC
+	7695  92HD81B1X5 2-Channel High Definition Audio CODEC
+	76e5  92HD87B1/3 4-Channel High Definition Audio CODEC
+
+14c3  MEDIATEK Corp.
+	0608  MT7921 802.11ax Wireless Network Adapter
+	0616  MT7922 802.11ax Wireless Network Adapter
+	7902  MT7902 PCIe Wi-Fi / Bluetooth Adapter
+
+14e4  Broadcom Inc. and subsidiaries
+	4311  BCM4311 802.11b/g Wireless LAN Controller
+	4312  BCM4312 802.11a/b/g Wireless LAN Controller
+	4313  BCM4313 802.11bgn Wireless Network Adapter
+	4315  BCM4312 802.11b/g LP-PHY
+	4328  BCM4321 802.11a/b/g/n Wireless LAN Controller
+	4365  BCM43142 802.11b/g/n Wireless Network Adapter
+	43a0  BCM4360 802.11ac Wireless Network Adapter
+	4727  BCM4313 802.11bgn Wireless Network Adapter
+
+1814  Ralink corp.
+	3290  RT3290 Wireless 802.11n 1T/1R PCIe
+	3298  RT3290 Bluetooth PCIe
+	5390  RT5390 802.11bgn Wireless Network Adapter
+	5392  RT5392 802.11b/g/n 2T2R Wireless Network Adapter
+
+1969  Qualcomm Atheros
+	1063  AR8131 Gigabit Ethernet
+	1083  AR8151 v2.0 Gigabit Ethernet
+	e091  Killer E2200 Gigabit Ethernet Controller
+	e0a1  Killer E2400 Gigabit Ethernet Controller
+	e0b1  Killer E2500 Gigabit Ethernet Controller
+
+8086  Intel Corporation
+	2772  82945G/GZ Integrated Graphics Controller [GMA 950]
+	27a2  Mobile 945GM/GMS Express Graphics [GMA 950]
+	29c2  82G33/G31 Express Integrated Graphics [GMA 3100]
+	2a02  Mobile GM965/GL960 Integrated Graphics [GMA X3100]
+	2e12  4 Series Chipset Integrated Graphics [GMA 4500]
+	2e22  4 Series Chipset Integrated Graphics [GMA X4500HD]
+	8108  System Controller Hub (SCHPoulsbo) Graphics [GMA 500]
+	0be1  Atom Processor D2000/N2000 Graphics [GMA 3600]
+	0102  2nd Generation Core Processor Family Integrated Graphics [HD Graphics 2000]
+	0112  2nd Generation Core Processor Family Integrated Graphics [HD Graphics 3000]
+	0122  2nd Generation Core Processor Family Integrated Graphics [HD Graphics 3000]
+	0152  3rd Generation Core processor Graphics Controller [HD Graphics 2500]
+	0162  3rd Generation Core processor Graphics Controller [HD Graphics 4000]
+	0166  3rd Generation Core processor Graphics Controller [HD Graphics 4000 Mobile]
+	0412  4th Generation Core Processor Family Integrated Graphics [HD Graphics 4600]
+	0416  4th Generation Core Processor Family Integrated Graphics [HD Graphics 4600 Mobile]
+	0a16  Haswell-ULT Integrated Graphics Controller [HD Graphics 4400 Mobile]
+	1616  Broadwell-U Integrated Graphics [HD Graphics 5500]
+	1912  HD Graphics 530 [Skylake Desktop]
+	191b  HD Graphics 530 [Skylake Mobile]
+	5912  HD Graphics 630 [Kaby Lake Desktop]
+	5917  UHD Graphics 620 [Kaby Lake-R]
+	3e92  UHD Graphics 630 [Coffee Lake Desktop]
+	9bc5  UHD Graphics 630 [Comet Lake Desktop]
+	8a56  Iris Plus Graphics G4 [Ice Lake]
+	9a49  Iris Xe Graphics [Tiger Lake Mobile]
+	4680  UHD Graphics 770 [Alder Lake Desktop]
+	4690  UHD Graphics 770 [Raptor Lake Desktop]
+	5690  Arc A770 Graphics [Alchemist]
+	56a0  Arc A750 Graphics [Alchemist]
+	56a5  Arc A380 Graphics [Alchemist]
+	08b1  Wireless 7260
+	08b2  Wireless 7260
+	095a  Dual Band Wireless-AC 7265
+	095b  Dual Band Wireless-AC 7265
+	3165  Dual Band Wireless AC 3165
+	3166  Dual Band Wireless AC 3165

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 João Figueiró (OptiAssist).
+-->
+<cleaner id="spotify" os="windows">
+  <label>Spotify</label>
+  <description>Music streaming client cache and local storage</description>
+  <running type="exe" os="windows">Spotify.exe</running>
+  <var name="local">
+    <value os="windows">%LocalAppData%\Spotify</value>
+  </var>
+  <var name="roaming">
+    <value os="windows">%AppData%\Spotify</value>
+  </var>
+  <option id="cache">
+    <label>Cache</label>
+    <description>Delete Spotify offline streaming and song cache</description>
+    <action command="delete" search="walk.all" path="$$local$$\Data"/>
+    <action command="delete" search="walk.all" path="$$local$$\Storage"/>
+    <action command="delete" search="walk.all" path="$$local$$\Browser\Cache"/>
+    <action command="delete" search="walk.all" path="$$local$$\Browser\Code Cache"/>
+    <action command="delete" search="walk.all" path="$$local$$\Browser\GPUCache"/>
+  </option>
+  <option id="logs">
+    <label>Logs</label>
+    <description>Delete Spotify application logs and crash dumps</description>
+    <action command="delete" search="walk.files" path="$$local$$\Logs"/>
+    <action command="delete" search="glob" path="$$local$$\*.log"/>
+    <action command="delete" search="glob" path="$$roaming$$\*.log"/>
+  </option>
+</cleaner>

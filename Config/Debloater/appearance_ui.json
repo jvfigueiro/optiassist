@@ -1,0 +1,643 @@
+{
+  "version": "2.0.F3",
+  "category": "appearance_ui",
+  "tweaks": [
+    {
+      "id": "ui-taskbar-end-task",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiTaskbarEndTask_Title",
+      "titleFallback": "Enable 'End Task' in Taskbar Right-Click Menu (Win11 23H2+)",
+      "descKey": "Debloat_UiTaskbarEndTask_Desc",
+      "descFallback": "Sets TaskbarEndTask=1 under TaskbarDeveloperSettings so frozen apps can be killed directly from the taskbar context menu.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 22631,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings",
+          "name": "TaskbarEndTask",
+          "equals": "1"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings",
+          "name": "TaskbarEndTask",
+          "kind": "DWord",
+          "value": "1",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-desktop-icons",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiDesktopIcons_Title",
+      "titleFallback": "Show Classic Desktop Icons (This PC, User Files, Network, Recycle Bin, Control Panel)",
+      "descKey": "Debloat_UiDesktopIcons_Desc",
+      "descFallback": "Enables standard desktop icons under HideDesktopIcons\\NewStartPanel for active and default users.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{20D04FE0-3AEA-1069-A2D8-08002B30309D}",
+          "equals": "0"
+        },
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{5399E694-6CE5-4D6C-8FCE-1D8870FDCBA0}",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{20D04FE0-3AEA-1069-A2D8-08002B30309D}",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{59031a47-3f72-44a7-89c5-5595fe6b30ee}",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{645FF040-5081-101B-9F08-00AA002F954E}",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{5399E694-6CE5-4D6C-8FCE-1D8870FDCBA0}",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-lockscreen-clean",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiLockScreenClean_Title",
+      "titleFallback": "Disable Lock Screen Tips, Fun Facts & Widgets",
+      "descKey": "Debloat_UiLockScreenClean_Desc",
+      "descFallback": "Blocks Spotlight tips/overlays and sets DisableWidgetsOnLockScreen=1 (NewsAndInterests.admx).",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh",
+          "name": "DisableWidgetsOnLockScreen",
+          "equals": "1"
+        },
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "RotatingLockScreenOverlayEnabled",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh",
+          "name": "DisableWidgetsOnLockScreen",
+          "kind": "DWord",
+          "value": "1"
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "RotatingLockScreenOverlayEnabled",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338387Enabled",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-dynamic-lighting-off",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiDynamicLightingOff_Title",
+      "titleFallback": "Disable Windows Dynamic Lighting (RGB Control)",
+      "descKey": "Debloat_UiDynamicLightingOff_Desc",
+      "descFallback": "Turns off Windows Dynamic Lighting background polling (AmbientLightingEnabled=0). Opt-in on Gaming Laptops.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 22621,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "ask",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Lighting",
+          "name": "AmbientLightingEnabled",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Lighting",
+          "name": "AmbientLightingEnabled",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-remote-assistance-off",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiRemoteAssistOff_Title",
+      "titleFallback": "Disable Windows Remote Assistance",
+      "descKey": "Debloat_UiRemoteAssistOff_Desc",
+      "descFallback": "Sets fAllowToGetHelp=0 (RemoteAssistance.admx) to disable unsolicited remote assistance connections.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance",
+          "name": "fAllowToGetHelp",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance",
+          "name": "fAllowToGetHelp",
+          "kind": "DWord",
+          "value": "0"
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services",
+          "name": "fAllowToGetHelp",
+          "kind": "DWord",
+          "value": "0"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-visual-effects-perf",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiVisualEffects_Title",
+      "titleFallback": "Optimize 8 sysdm.cpl Visual Effects (SPI + Taskbar/Peek)",
+      "descKey": "Debloat_UiVisualEffects_Desc",
+      "descFallback": "Disables non-essential animations via SystemParametersInfo (Menu, ComboBox, ListBox, SelectionFade, Tooltip, MenuFade, CursorShadow, DropShadow), TaskbarAnimations=0 and EnableAeroPeek=0.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "ask",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAnimations",
+          "equals": "0"
+        },
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\DWM",
+          "name": "EnableAeroPeek",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        { "type": "spi", "spiAction": "SPI_SETMENUANIMATION", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETCOMBOBOXANIMATION", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETLISTBOXSMOOTHSCROLLING", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETSELECTIONFADE", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETTOOLTIPANIMATION", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETMENUFADE", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETCURSORSHADOW", "pvParamBool": false },
+        { "type": "spi", "spiAction": "SPI_SETDROPSHADOW", "pvParamBool": false },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAnimations",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\DWM",
+          "name": "EnableAeroPeek",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Control Panel\\Desktop\\WindowMetrics",
+          "name": "MinAnimate",
+          "kind": "String",
+          "value": "0",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-transparency-conditional",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiTransparency_Title",
+      "titleFallback": "Disable Transparency Effects (Hardware < 2019 / Legacy iGPU / Ultraportable)",
+      "descKey": "Debloat_UiTransparency_Desc",
+      "descFallback": "Sets EnableTransparency=0 automatically when CPU/BIOS year < 2019, problematic iGPU (HD 2000/2500/3000, GMA, nForce) is detected, or Ultraportable profile is active. Kept On above 2019.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "transparency_auto"
+      },
+      "profiles": {
+        "gaming": "on",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "on",
+        "laptop": "on",
+        "laptopGaming": "on",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "EnableTransparency",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKU\\<SID>\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "EnableTransparency",
+          "kind": "DWord",
+          "value": "0",
+          "includeDefaultUser": true
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-scheduler-bg-services",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiSchedulerBg_Title",
+      "titleFallback": "Scheduler: Background Services Priority (Win32PrioritySeparation = 0x18)",
+      "descKey": "Debloat_UiSchedulerBg_Desc",
+      "descFallback": "Applies fixed equal quantum (0x18) for Workstation and Hybrid profiles (opt-in in Gaming). Gaming, Laptop, Ultraportable, and Conventional Desktop keep Windows default (Programs).",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "ask",
+        "workstation": "on",
+        "hybrid": "on",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "off"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
+          "name": "Win32PrioritySeparation",
+          "equals": "24"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
+          "name": "Win32PrioritySeparation",
+          "kind": "DWord",
+          "value": "24"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-win7-photo-viewer",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiWin7PhotoViewer_Title",
+      "titleFallback": "Restore Classic Windows 7 Photo Viewer Associations (Ultraportable)",
+      "descKey": "Debloat_UiWin7PhotoViewer_Desc",
+      "descFallback": "Registers PhotoViewer.FileAssoc.Tiff for .jpg, .jpeg, .png, .bmp, and .gif to replace the heavy UWP Photos app on low-RAM ultraportables.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "off",
+        "workstation": "off",
+        "hybrid": "off",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations",
+          "name": ".jpg",
+          "equals": "PhotoViewer.FileAssoc.Tiff"
+        }
+      ],
+      "apply": [
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations",
+          "name": ".jpg",
+          "kind": "String",
+          "value": "PhotoViewer.FileAssoc.Tiff"
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations",
+          "name": ".jpeg",
+          "kind": "String",
+          "value": "PhotoViewer.FileAssoc.Tiff"
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations",
+          "name": ".png",
+          "kind": "String",
+          "value": "PhotoViewer.FileAssoc.Tiff"
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations",
+          "name": ".bmp",
+          "kind": "String",
+          "value": "PhotoViewer.FileAssoc.Tiff"
+        },
+        {
+          "type": "registry",
+          "operation": "set",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations",
+          "name": ".gif",
+          "kind": "String",
+          "value": "PhotoViewer.FileAssoc.Tiff"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-reserved-storage-off",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiReservedStorageOff_Title",
+      "titleFallback": "Disable Windows Reserved Storage (Reclaim ~7 GB)",
+      "descKey": "Debloat_UiReservedStorageOff_Desc",
+      "descFallback": "Runs DISM /Online /Set-ReservedStorageState /State:Disabled (Build >= 18362) to reclaim space on constrained eMMC/SSD drives.",
+      "risk": "low",
+      "appliesTo": {
+        "minBuild": 18362,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"]
+      },
+      "profiles": {
+        "gaming": "off",
+        "workstation": "off",
+        "hybrid": "off",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "on"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ReserveManager",
+          "name": "ShippedWithReserves",
+          "equals": "0"
+        }
+      ],
+      "apply": [
+        {
+          "type": "command",
+          "shell": "cmd",
+          "command": "dism.exe /Online /Set-ReservedStorageState /State:Disabled"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [],
+      "needsReboot": false
+    },
+    {
+      "id": "ui-compact-os",
+      "category": "appearance_ui",
+      "titleKey": "Debloat_UiCompactOs_Title",
+      "titleFallback": "Enable CompactOS Compression (SSE4.2 & Free Space < 15 GB)",
+      "descKey": "Debloat_UiCompactOs_Desc",
+      "descFallback": "Runs compact.exe /CompactOS:always to reclaim ~2-4 GB on small drives. Requires SSE4.2, < 15 GB free space, and explicit confirmation.",
+      "risk": "medium",
+      "doubleConfirm": true,
+      "appliesTo": {
+        "minBuild": 17763,
+        "maxBuild": 0,
+        "editions": ["*"],
+        "formFactors": ["desktop", "laptop", "ultraportable"],
+        "condition": "compact_os_eligible"
+      },
+      "profiles": {
+        "gaming": "off",
+        "workstation": "off",
+        "hybrid": "off",
+        "conventional": "off",
+        "laptop": "off",
+        "laptopGaming": "off",
+        "ultraportable": "ask"
+      },
+      "detect": [
+        {
+          "type": "registry",
+          "path": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Wof",
+          "name": "CompactOS",
+          "equals": "1"
+        }
+      ],
+      "apply": [
+        {
+          "type": "command",
+          "shell": "cmd",
+          "command": "compact.exe /CompactOS:always"
+        }
+      ],
+      "revert": "from-snapshot",
+      "warnings": [
+        "CompactOS compresses Windows binaries and can take several minutes. Only recommended on drives with < 15 GB free and SSE4.2 CPU."
+      ],
+      "needsReboot": false
+    }
+  ]
+}

@@ -217,14 +217,14 @@ namespace OptiAssist
                 if (sfd.ShowDialog(this) == true)
                 {
                     File.WriteAllText(sfd.FileName, _txtConsole.Text, Encoding.UTF8);
-                    MessageBox.Show(this,
+                    OptiDialog.Show(this,
                         string.Format(LocalizationHelper.Get("Msg_LogSaved", "Log successfully saved to:\n{0}"), sfd.FileName),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this,
+                OptiDialog.Show(this,
                     string.Format(LocalizationHelper.Get("Msg_LogSaveError", "Failed to save log: {0}"), ex.Message),
                     "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -237,13 +237,13 @@ namespace OptiAssist
                 if (!string.IsNullOrEmpty(_txtConsole.Text))
                 {
                     Clipboard.SetText(_txtConsole.Text);
-                    MessageBox.Show(this,
+                    OptiDialog.Show(this,
                         LocalizationHelper.Get("Msg_LogCopied", "Console log copied to clipboard!"),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    MessageBox.Show(this,
+                    OptiDialog.Show(this,
                         LocalizationHelper.Get("Msg_LogEmpty", "The terminal log is currently empty."),
                         "OptiAssist", MessageBoxButton.OK, MessageBoxImage.Information);
                 }

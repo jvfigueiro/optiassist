@@ -422,8 +422,8 @@ namespace OptiAssist.Addons.PCAssist.Core
 
         private void ScanGpuDetails(DeviceInventory inv)
         {
-            inv.GpuPcieBus = "Não disponível";
-            inv.GpuVramDisplay = "Não disponível";
+            inv.GpuPcieBus = "Not available";
+            inv.GpuVramDisplay = "Not available";
             inv.GpuMemoryType = "";
             inv.GpuBusWidthBits = 0;
 
@@ -437,7 +437,7 @@ namespace OptiAssist.Addons.PCAssist.Core
                         if (string.IsNullOrEmpty(name)) continue;
 
                         // Skip remote/virtual display adapters if not the primary
-                        if (name.IndexOf("Remote", StringComparison.OrdinalIgnoreCase) >= 0 && inv.GpuPcieBus != "Não disponível")
+                        if (name.IndexOf("Remote", StringComparison.OrdinalIgnoreCase) >= 0 && inv.GpuPcieBus != "Not available")
                         {
                             continue;
                         }
