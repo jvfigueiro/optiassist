@@ -1,7 +1,7 @@
 ﻿{
   "CustomerName": "OptiAssist",
   "ContactInfo": "https://github.com/jvfigueiro/optiassist",
-  "Language": "pt-BR",
+  "Language": "en-US",
   "ReportSavePath": "C:\\MaintenanceReport.txt",
   "AutoRefreshHardware": true,
   "EnableWingetFallback": true,
@@ -12,7 +12,7 @@
   "OpenExternalLogsByDefault": false,
   "AlwaysOnTop": false,
   "CustomLogoPath": "",
-  "freshstart": "false",
+  "freshstart": "true",
   "DisabledAddons": "maintenance-report",
   "ModuleOrder": "toolbox,app-manager,system-cleaner,startup-manager,hardware-monitor,maintenance-report"
 }
