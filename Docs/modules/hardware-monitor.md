@@ -1,94 +1,36 @@
-# Module: Hardware Monitor (Telemetry, Battery Health & Bench Diagnostics)
+# Hardware Monitor (`hardware-monitor` / `PCAssist`) (`v1.2.S7`)
 
-## 1. Overview and Problem Solved
-During computer maintenance, repair, and hardware upgrades, technicians frequently need to:
-- Monitor live hardware behavior (CPU utilization, clocks, temperatures, RAM consumption, and storage transfer rates).
-- Diagnose notebook battery degradation, design vs. current maximum capacity, cell wear percentage, and estimated autonomy.
-- Run quick, reproducible bench benchmarks (CPU compute throughput, RAM memory bandwidth, and sequential storage I/O) before and after procedures (such as dual-channel memory installations, SSD swaps, or thermal paste replacements).
+## 1. Overview & Problem Solved
+Field technicians need live thermal/voltage/clock sensors, accurate physical storage bus identification, full PnP device inventory, notebook battery wear diagnostics, and quick CPU/RAM/Disk stress/bench checks without carrying multiple third-party executables.
 
-Traditionally, technicians had to download and run multiple disparate external utilities (HWiNFO, CPU-Z, CrystalDiskMark, BatteryInfoView). **Hardware Monitor** consolidates all of these capabilities into a single, zero-external-dependency, native WPF module seamlessly integrated into the OptiAssist microkernel.
+## 2. How to Use (Step-by-Step)
+1. Click **Hardware Monitor** in the sidebar.
+2. **System Summary tab:** inspect motherboard, CPU, RAM DIMMs, GPU, physical disks (NVMe/SATA/USB, SSD vs. HDD), and network adapters.
+3. **Sensors (Beta) tab:** monitor live Current / Min / Max temperatures, voltages, clocks, fans, and power draw; filter by keyword, click **Reset Min/Max**, **Export Report**, or **Install PawnIO Driver** if low-level sensors require the kernel driver.
+4. **Device Inventory tab:** browse the categorized PnP hardware tree and error codes.
+5. **Battery Health tab** *(shown on notebooks only)*: inspect design vs. full-charge capacity, wear level %, cycle count, and generate `powercfg /batteryreport`.
+6. **Bench & Stress tab:** run quick CPU, memory bandwidth, or disk I/O benchmarks.
 
----
+## 3. How It Works Internally
+1. `PCAssistAddon`'s static constructor and `AddonHelper.PreloadSiblingDependencies` preload `LibreHardwareMonitorLib.dll` (`0.9.6.0`, `MPL-2.0`) and its 8 co-located dependency DLLs from `Config\Addons\PCAssist\` via `Assembly.Load(byte[])`.
+2. `LibreHardwareEngine` wraps `LibreHardwareMonitor.Hardware.Computer` with a `HasVirtualizedStorageDisk()` guard (disabling `IsStorageEnabled` on VirtIO/QEMU/VMware virtual SCSI disks to avoid `DiskInfoToolkit` stack overflows) and optional on-demand **PawnIO** download (`https://github.com/namazso/PawnIO.Setup/releases/latest/download/PawnIO_setup.exe`).
+3. `HardwareMonitorService`, `DeviceInventoryService`, `DisplayInfoService`, `BatteryDiagnosticService`, and `BenchEngineService` collect WMI/CIM, PnP, EDID, ACPI battery, and benchmark metrics.
 
-## 2. Technician Usage Guide
+## 4. Inputs, Outputs & Configuration
+- **Inputs:** `LibreHardwareMonitorLib` hardware probes, WMI/CIM (`MSFT_PhysicalDisk`, `Win32_PnPEntity`, `BatteryStaticData`), optional PawnIO driver.
+- **Outputs:** Real-time UI telemetry, exported sensor `.txt` reports, optional HTML battery report.
 
-### Step 1: Navigating the Module
-Select **Hardware Monitor** from the OptiAssist sidebar. The interface displays four specialized views:
-1. **🖥️ System Summary**: High-density 3-column command center (inspired by HWiNFO64) showing processor details, instruction feature matrix, motherboard, chipset, memory channels and modules, GPU, displays, drives, and platform security badges.
-2. **🔌 Devices & Peripherals**: Deep inventory of chipset LPC/eSPI controllers, audio codecs, network adapters (Ethernet & Wi-Fi), displays with EDID details, and physical storage.
-3. **🔋 Battery & Power**: Mobile device battery wear, voltage, charging rates, and official Windows battery reports.
-4. **🚀 Bench Diagnostics**: Quick benchmarks for CPU, RAM, disk drive, and thermal stress testing.
+## 5. Requirements
+- **Admin:** Required (`requireAdministrator`) for MSR/SMBus/ACPI/SMART queries and PawnIO installation.
+- **Windows Version:** Windows 10 (1809+) or Windows 11.
+- **External Dependencies:** `LibreHardwareMonitorLib.dll` (`MPL-2.0`) + 8 dependency DLLs in `Config\Addons\PCAssist\`.
 
-### Step 2: HWiNFO-Style System Summary
-- **CPU Column**: Displays CPU model, socket, stepping, core topology (P-cores / E-cores), L1/L2/L3 caches, an illuminated neon green/gray instruction matrix (`MMX`, `SSE`, `SSE2`, `SSE3`, `SSSE3`, `SSE4.1`, `SSE4.2`, `AVX`, `AVX2`, `AVX-512`, `AES-NI`, `VMX/SVM`, `SHA`, `64-bit`, `Turbo`), and live operational clocks.
-- **Motherboard & Memory Column**: Motherboard model, chipset PCH controller, BIOS version, release date, UEFI status, total RAM capacity, dual-channel operating mode, installed module specs per slot, and network link status.
-- **Graphics & System Column**: GPU model, PCIe link interface, VRAM size, active monitors (resolution, refresh rate, connection type), audio codecs, physical storage media, and Windows security badges (`UEFI Boot`, `Secure Boot`, `TPM 2.0`, `BitLocker`).
+## 6. Risks & Side Effects
+- Read-only monitoring; PawnIO installation (optional, user-triggered) installs a signed kernel driver (`PawnIO.sys`).
 
-### Step 3: Battery Health Inspection (Notebooks)
-- When running on a notebook, Hardware Monitor queries the embedded controller via ACPI WMI tables (`root\wmi`).
-- Inspect the **Battery Health** percentage ($(\text{FullChargeCapacity} / \text{DesignCapacity}) \times 100$) and **Wear Level**.
-- Check the estimated runtime autonomy, instantaneous voltage, and wattage discharge rate.
-- Click **📄 Generate Official Report (HTML)** to automatically trigger Windows `powercfg /batteryreport` and launch the official Microsoft diagnostic in your browser.
-- On desktop computers, Hardware Monitor automatically detects the absence of battery hardware and displays a clean direct-mains AC notice.
+## 7. Logs & Error Handling
+- Logs `[LHM]` initialization state (`PawnIO`, `Storage`), `[PAWNIO]` download/install progress, and probe exceptions to `IOptiAssistHost.Log`.
 
-### Step 4: Quick Benchmarks & Thermal Testing
-- **CPU Multithread Benchmark**: Click **▶️ Start Benchmark** to run a 5-second multithreaded integer and cryptographic computation, generating a benchmark score with market tier comparisons.
-- **RAM Bandwidth Benchmark**: Click **▶️ Start Benchmark** to allocate a sequential 128 MB buffer and measure read/write throughput in GB/s (ideal to demonstrate single-channel vs. dual-channel gains).
-- **Sequential Disk Speed**: Tests sequential unbuffered read and write throughput directly on drive C: to distinguish between mechanical HDDs, SATA SSDs, and high-performance NVMe drives.
-- **Thermal Stress Test (30s)**: Exercises all CPU cores at 100% compute load for 30 seconds to validate cooling system assembly, fan ramp-up, and ensure thermal throttling or shutdowns do not occur.
-
----
-
-## 3. Internal Architecture & Technical Flow
-
-```mermaid
-sequenceDiagram
-    participant UI as PCAssistView
-    participant Mon as HardwareMonitorService
-    participant Bat as BatteryDiagnosticService
-    participant Bench as BenchEngineService
-    participant Win as Windows Subsystems (Win32/WMI/Counters)
-
-    UI->>Mon: CaptureSnapshot() (1s timer)
-    Mon->>Win: GlobalMemoryStatusEx() & PerformanceCounter
-    Mon-->>UI: SystemSnapshot (CPU, RAM, GPU, Disks)
-
-    UI->>Bat: AnalyzeBattery()
-    Bat->>Win: GetSystemPowerStatus() & root\wmi BatteryStaticData
-    Bat-->>UI: BatteryReport (Health %, Design/Full mWh, Rates)
-
-    UI->>Bench: RunCpuBenchAsync() / RunDiskBenchAsync()
-    Bench->>Win: Multithreaded SHA-256 / FileStream(WriteThrough)
-    Bench-->>UI: BenchResult (Score, GB/s or MB/s, Classification)
-```
-
-### Windows APIs and Query Mechanisms
-1. **Memory Load**: Win32 `kernel32.dll` `GlobalMemoryStatusEx` query for instantaneous sub-millisecond memory allocation telemetry.
-2. **Processor & Disk Counters**: `PerformanceCounter("Processor", "% Processor Time", "_Total")` and `PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec", "_Total")`.
-3. **ACPI Thermal Zones**: WMI `root\wmi` -> `MSAcpi_ThermalZoneTemperature` (Kelvin tenths converted to Celsius: $(K - 2732) / 10$).
-4. **Notebook Battery ACPI**: WMI `root\wmi` tables:
-   - `BatteryStaticData`: Designed capacity, chemistry, device name, and manufacturer.
-   - `BatteryFullChargedCapacity`: Maximum attainable capacity under current cell wear.
-   - `BatteryStatus`: Instantaneous voltage (mV), discharge rate (mW), and remaining capacity.
-   - Win32 `GetSystemPowerStatus` for AC line status and quick desktop detection.
-5. **Storage Benchmark**: Sequential file I/O using `FileOptions.WriteThrough` to bypass Windows filesystem cache and measure real physical storage media performance.
-
----
-
-## 4. Requirements & Permissions
-- **Administrator Privileges**: Recommended for low-level ACPI WMI queries and raw performance counters.
-- **Platform**: Windows 10 and Windows 11 (64-bit and 32-bit).
-- **External Dependencies**: Zero. Built purely with native .NET 4.8 and Win32/WMI APIs.
-
----
-
-## 5. Related Source Files
-- Related Source Files:
-  - Add-on Core: [`src/Addons/PCAssist/PCAssistAddon.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/PCAssistAddon.cs)
-  - Native Win32 API & P/Invoke: [`src/Addons/PCAssist/Core/NativeMethods.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/NativeMethods.cs)
-  - Hardware Monitor Engine: [`src/Addons/PCAssist/Core/HardwareMonitorService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/HardwareMonitorService.cs)
-  - Display & EDID Parser: [`src/Addons/PCAssist/Core/DisplayInfoService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/DisplayInfoService.cs)
-  - Device Inventory Service: [`src/Addons/PCAssist/Core/DeviceInventoryService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/DeviceInventoryService.cs)
-  - Battery Analysis Service: [`src/Addons/PCAssist/Core/BatteryDiagnosticService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/BatteryDiagnosticService.cs)
-  - Benchmark Engine: [`src/Addons/PCAssist/Core/BenchEngineService.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/Core/BenchEngineService.cs)
-  - Project Configuration: [`src/Addons/PCAssist/PCAssist.csproj`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/Addons/PCAssist/PCAssist.csproj)
+## 8. Related Source Files
+- `src/Addons/PCAssist/PCAssistAddon.cs`, `PCAssist.csproj`
+- `src/Addons/PCAssist/Core/*.cs` (`LibreHardwareEngine.cs`, `HardwareMonitorService.cs`, `DeviceInventoryService.cs`, `BatteryDiagnosticService.cs`, `BenchEngineService.cs`, `DisplayInfoService.cs`, `NativeMethods.cs`)

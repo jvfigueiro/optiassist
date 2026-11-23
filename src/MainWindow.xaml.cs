@@ -1094,21 +1094,49 @@ namespace OptiAssist
                 if (score < 20) score = 20;
                 if (score > 100) score = 100;
 
-                // Update Hero Ring & Texts
-                string ringHex = score >= 85 ? "#22C55E" : (score >= 65 ? "#F59E0B" : "#EF4444");
-                if (pathHealthArc != null)
-                {
-                    pathHealthArc.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(ringHex));
-                    pathHealthArc.Data = BuildHealthArcGeometry(score, 44.0, 44.0, 38.5);
-                }
-                if (txtHealthScore != null) txtHealthScore.Text = score.ToString() + "%";
-
                 int activeRecCount = 0;
                 for (int i = 0; i < heroItems.Count; i++)
                 {
                     if (heroItems[i] == null) continue;
                     string dk = (heroItems[i].ActionTag ?? "") + "|" + (heroItems[i].Title ?? "");
                     if (!_dismissedRecommendations.Contains(dk)) activeRecCount++;
+                }
+
+                // Update Hero Status Icon based on active recommendation count:
+                // 0 = Green Checkmark | 1..2 = Yellow/Amber Warning Triangle | 3+ = Red Exclamation
+                string iconPathData;
+                Color statusColor;
+                if (activeRecCount == 0)
+                {
+                    iconPathData = FluentIcons.PathCheckmarkCircle;
+                    statusColor = Color.FromRgb(34, 197, 94); // #22C55E Green
+                }
+                else if (activeRecCount <= 2)
+                {
+                    iconPathData = FluentIcons.PathWarning;
+                    statusColor = Color.FromRgb(245, 158, 11); // #F59E0B Amber
+                }
+                else
+                {
+                    iconPathData = FluentIcons.PathExclamationCircle;
+                    statusColor = Color.FromRgb(239, 68, 68); // #EF4444 Red
+                }
+
+                if (pathHealthIcon != null)
+                {
+                    try
+                    {
+                        Geometry gIcon = Geometry.Parse(iconPathData);
+                        if (gIcon.CanFreeze) gIcon.Freeze();
+                        pathHealthIcon.Data = gIcon;
+                    }
+                    catch { }
+                    pathHealthIcon.Fill = new SolidColorBrush(statusColor);
+                }
+                if (borderHealthIconBg != null)
+                {
+                    borderHealthIconBg.Background = new SolidColorBrush(Color.FromArgb(26, statusColor.R, statusColor.G, statusColor.B));
+                    borderHealthIconBg.BorderBrush = new SolidColorBrush(Color.FromArgb(72, statusColor.R, statusColor.G, statusColor.B));
                 }
 
                 if (txtHealthHeadline != null)

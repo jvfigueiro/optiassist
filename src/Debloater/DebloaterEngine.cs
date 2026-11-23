@@ -445,6 +445,7 @@ namespace OptiAssist.Debloater
             blockReason = "";
             string cond = (condition ?? "").Trim().ToLowerInvariant();
             PlatformInfo platform = GetCachedPlatformInfo();
+            bool isPt = (LocalizationHelper.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
 
             if (cond == "ssd_only")
             {
@@ -453,14 +454,18 @@ namespace OptiAssist.Debloater
                 bool isSsd = string.Equals(media, "SSD", StringComparison.OrdinalIgnoreCase) && !isEmmc;
                 if (!isSsd)
                 {
-                    string diskLabel = isEmmc ? "eMMC/SD" : (string.IsNullOrEmpty(media) ? "HDD/Unknown" : media);
-                    tweak.HardwareConditionBadge = "Preserved (" + diskLabel + ")";
-                    tweak.HardwareConditionReason = "SysMain kept active because the system drive is " + diskLabel + " (disabled only on SSD/NVMe).";
+                    string diskLabel = isEmmc ? "eMMC/SD" : (string.IsNullOrEmpty(media) ? (isPt ? "HDD/Desconhecido" : "HDD/Unknown") : media);
+                    tweak.HardwareConditionBadge = (isPt ? "Preservado (" : "Preserved (") + diskLabel + ")";
+                    tweak.HardwareConditionReason = isPt
+                        ? ("SysMain mantido ativo pois a unidade do sistema é " + diskLabel + " (desativado apenas em SSD/NVMe).")
+                        : ("SysMain kept active because the system drive is " + diskLabel + " (disabled only on SSD/NVMe).");
                     blockReason = tweak.HardwareConditionReason;
                     return false;
                 }
                 tweak.HardwareConditionBadge = "SSD/NVMe";
-                tweak.HardwareConditionReason = "System drive identified as SSD/NVMe — safe to disable SysMain.";
+                tweak.HardwareConditionReason = isPt
+                    ? "Unidade do sistema identificada como SSD/NVMe — seguro desativar o SysMain."
+                    : "System drive identified as SSD/NVMe — safe to disable SysMain.";
                 return true;
             }
 
@@ -474,28 +479,34 @@ namespace OptiAssist.Debloater
 
                 if (isUltra)
                 {
-                    tweak.HardwareConditionBadge = "Auto (Ultraportable)";
-                    tweak.HardwareConditionReason = "Ultraportable profile: transparency automatically disabled to reduce GPU/battery usage.";
+                    tweak.HardwareConditionBadge = isPt ? "Auto (Ultraportátil)" : "Auto (Ultraportable)";
+                    tweak.HardwareConditionReason = isPt
+                        ? "Perfil Ultraportátil: transparência desativada automaticamente para reduzir uso de GPU/bateria."
+                        : "Ultraportable profile: transparency automatically disabled to reduce GPU/battery usage.";
                     return true;
                 }
                 if (legacyGpu)
                 {
-                    tweak.HardwareConditionBadge = "Auto (Legacy iGPU)";
-                    tweak.HardwareConditionReason = "Legacy/problematic iGPU detected (HD 2000/2500/3000, GMA, or nForce): transparency automatically disabled.";
+                    tweak.HardwareConditionBadge = isPt ? "Auto (iGPU Legada)" : "Auto (Legacy iGPU)";
+                    tweak.HardwareConditionReason = isPt
+                        ? "iGPU legada/problemática detectada (HD 2000/2500/3000, GMA ou nForce): transparência desativada automaticamente."
+                        : "Legacy/problematic iGPU detected (HD 2000/2500/3000, GMA, or nForce): transparency automatically disabled.";
                     return true;
                 }
                 if (effectiveYear > 0 && effectiveYear < 2019)
                 {
                     tweak.HardwareConditionBadge = "Auto (< 2019)";
-                    tweak.HardwareConditionReason = string.Format("Pre-2019 hardware (base year: {0}): transparency automatically disabled.", effectiveYear);
+                    tweak.HardwareConditionReason = string.Format(
+                        isPt ? "Hardware anterior a 2019 (ano base: {0}): transparência desativada automaticamente." : "Pre-2019 hardware (base year: {0}): transparency automatically disabled.",
+                        effectiveYear);
                     return true;
                 }
 
                 tweak.ForceUncheckedByCondition = true;
-                tweak.HardwareConditionBadge = "Kept On (>= 2019)";
+                tweak.HardwareConditionBadge = isPt ? "Mantida (>= 2019)" : "Kept On (>= 2019)";
                 tweak.HardwareConditionReason = effectiveYear > 0
-                    ? string.Format("CPU/BIOS from {0} (>= 2019) with no problematic iGPU: transparency kept enabled by default (manual opt-in).", effectiveYear)
-                    : "Modern hardware (>= 2019): transparency kept enabled by default (manual opt-in).";
+                    ? string.Format(isPt ? "CPU/BIOS de {0} (>= 2019) sem iGPU problemática: transparência mantida ativa por padrão (opcional)." : "CPU/BIOS from {0} (>= 2019) with no problematic iGPU: transparency kept enabled by default (manual opt-in).", effectiveYear)
+                    : (isPt ? "Hardware moderno (>= 2019): transparência mantida ativa por padrão (opcional)." : "Modern hardware (>= 2019): transparency kept enabled by default (manual opt-in).");
                 return true;
             }
 
@@ -504,8 +515,10 @@ namespace OptiAssist.Debloater
                 bool hasSse42 = (platform == null || platform.Cpu == null) ? true : platform.Cpu.HasSse42;
                 if (!hasSse42)
                 {
-                    blockReason = "CPU lacks SSE4.2 instruction set — CompactOS blocked to prevent severe CPU overhead.";
-                    tweak.HardwareConditionBadge = "No SSE4.2";
+                    blockReason = isPt
+                        ? "CPU sem conjunto de instruções SSE4.2 — CompactOS bloqueado para evitar sobrecarga severa de CPU."
+                        : "CPU lacks SSE4.2 instruction set — CompactOS blocked to prevent severe CPU overhead.";
+                    tweak.HardwareConditionBadge = isPt ? "Sem SSE4.2" : "No SSE4.2";
                     tweak.HardwareConditionReason = blockReason;
                     return false;
                 }
@@ -514,13 +527,17 @@ namespace OptiAssist.Debloater
                 if (freeGb >= 15.0)
                 {
                     tweak.ForceUncheckedByCondition = true;
-                    tweak.HardwareConditionBadge = string.Format("Free: {0:F1} GB (>=15 GB)", freeGb);
-                    tweak.HardwareConditionReason = string.Format("CompactOS recommended only when < 15 GB free space with SSE4.2 (current: {0:F1} GB free). Manual opt-in with confirmation.", freeGb);
+                    tweak.HardwareConditionBadge = string.Format(isPt ? "Livre: {0:F1} GB (>=15 GB)" : "Free: {0:F1} GB (>=15 GB)", freeGb);
+                    tweak.HardwareConditionReason = string.Format(
+                        isPt ? "CompactOS recomendado apenas com < 15 GB livres e SSE4.2 (atual: {0:F1} GB livres). Opcional com confirmação." : "CompactOS recommended only when < 15 GB free space with SSE4.2 (current: {0:F1} GB free). Manual opt-in with confirmation.",
+                        freeGb);
                     return true;
                 }
 
-                tweak.HardwareConditionBadge = string.Format("Eligible ({0:F1} GB free)", freeGb);
-                tweak.HardwareConditionReason = string.Format("CPU has SSE4.2 and only {0:F1} GB free on system drive (< 15 GB). Requires confirmation.", freeGb);
+                tweak.HardwareConditionBadge = string.Format(isPt ? "Elegível ({0:F1} GB livres)" : "Eligible ({0:F1} GB free)", freeGb);
+                tweak.HardwareConditionReason = string.Format(
+                    isPt ? "CPU possui SSE4.2 e apenas {0:F1} GB livres na unidade do sistema (< 15 GB). Requer confirmação." : "CPU has SSE4.2 and only {0:F1} GB free on system drive (< 15 GB). Requires confirmation.",
+                    freeGb);
                 return true;
             }
 
@@ -530,12 +547,16 @@ namespace OptiAssist.Debloater
                 if (hasIr)
                 {
                     tweak.ForceUncheckedByCondition = true;
-                    tweak.HardwareConditionBadge = "IR Camera Detected";
-                    tweak.HardwareConditionReason = "Infrared camera (Windows Hello) detected — kept unchecked by default (manual opt-in).";
+                    tweak.HardwareConditionBadge = isPt ? "Câmera IR Detectada" : "IR Camera Detected";
+                    tweak.HardwareConditionReason = isPt
+                        ? "Câmera infravermelha (Windows Hello) detectada — mantido desmarcado por padrão (opcional)."
+                        : "Infrared camera (Windows Hello) detected — kept unchecked by default (manual opt-in).";
                     return true;
                 }
-                tweak.HardwareConditionBadge = "No IR Camera";
-                tweak.HardwareConditionReason = "No IR camera detected — safe to remove Windows Hello Face capability.";
+                tweak.HardwareConditionBadge = isPt ? "Sem Câmera IR" : "No IR Camera";
+                tweak.HardwareConditionReason = isPt
+                    ? "Nenhuma câmera IR detectada — seguro remover a capacidade Windows Hello Face."
+                    : "No IR camera detected — safe to remove Windows Hello Face capability.";
                 return true;
             }
 
@@ -543,11 +564,15 @@ namespace OptiAssist.Debloater
             {
                 if (!HasLogitechHardware(platform))
                 {
-                    blockReason = "No Logitech peripheral (VID_046D) detected on this computer.";
+                    blockReason = isPt
+                        ? "Nenhum periférico Logitech (VID_046D) detectado neste computador."
+                        : "No Logitech peripheral (VID_046D) detected on this computer.";
                     return false;
                 }
-                tweak.HardwareConditionBadge = "Logitech Hardware";
-                tweak.HardwareConditionReason = "Logitech device detected — blocking Logitech Download Assistant enabled.";
+                tweak.HardwareConditionBadge = isPt ? "Hardware Logitech" : "Logitech Hardware";
+                tweak.HardwareConditionReason = isPt
+                    ? "Dispositivo Logitech detectado — bloqueio do Logitech Download Assistant habilitado."
+                    : "Logitech device detected — blocking Logitech Download Assistant enabled.";
                 return true;
             }
 
@@ -558,12 +583,12 @@ namespace OptiAssist.Debloater
                 if (!safe)
                 {
                     tweak.ForceUncheckedByCondition = true;
-                    tweak.HardwareConditionBadge = "OneDrive Protected";
-                    tweak.HardwareConditionReason = "Automatic removal blocked for safety: " + odDetails;
+                    tweak.HardwareConditionBadge = isPt ? "OneDrive Protegido" : "OneDrive Protected";
+                    tweak.HardwareConditionReason = (isPt ? "Remoção automática bloqueada por segurança: " : "Automatic removal blocked for safety: ") + odDetails;
                     return true;
                 }
-                tweak.HardwareConditionBadge = "OneDrive Eligible";
-                tweak.HardwareConditionReason = "Safety criteria met: " + odDetails;
+                tweak.HardwareConditionBadge = isPt ? "OneDrive Elegível" : "OneDrive Eligible";
+                tweak.HardwareConditionReason = (isPt ? "Critérios de segurança atendidos: " : "Safety criteria met: ") + odDetails;
                 return true;
             }
 
@@ -572,15 +597,19 @@ namespace OptiAssist.Debloater
                 bool tamper = (platform != null && platform.OsFirmware != null && platform.OsFirmware.IsTamperProtectionActive);
                 if (tamper)
                 {
-                    tweak.HardwareConditionBadge = "Tamper Protection Active";
-                    tweak.HardwareConditionReason = "Best-effort mode: CPU/scan policies (AvgCPULoadFactor=5, LowCpuPriority=1, catch-up) will be applied; cloud/sample settings require manual action in Windows Security.";
+                    tweak.HardwareConditionBadge = isPt ? "Proteção contra Adulteração Ativa" : "Tamper Protection Active";
+                    tweak.HardwareConditionReason = isPt
+                        ? "Modo melhor esforço: políticas de CPU/varredura (AvgCPULoadFactor=5, LowCpuPriority=1) serão aplicadas; configurações de nuvem exigem ação manual na Segurança do Windows."
+                        : "Best-effort mode: CPU/scan policies (AvgCPULoadFactor=5, LowCpuPriority=1, catch-up) will be applied; cloud/sample settings require manual action in Windows Security.";
                     tweak.QuickActionUri = "windowsdefender://threatsettings/";
-                    tweak.QuickActionLabel = "🛡️ Open Defender";
+                    tweak.QuickActionLabel = isPt ? "🛡️ Abrir Defender" : "🛡️ Open Defender";
                 }
                 else
                 {
-                    tweak.HardwareConditionBadge = "Tamper Protection Off";
-                    tweak.HardwareConditionReason = "Tamper Protection inactive: all Windows Defender policies can be applied directly.";
+                    tweak.HardwareConditionBadge = isPt ? "Proteção contra Adulteração Inativa" : "Tamper Protection Off";
+                    tweak.HardwareConditionReason = isPt
+                        ? "Proteção contra Adulteração inativa: todas as políticas do Windows Defender podem ser aplicadas diretamente."
+                        : "Tamper Protection inactive: all Windows Defender policies can be applied directly.";
                 }
                 return true;
             }

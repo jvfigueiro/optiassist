@@ -1,164 +1,42 @@
-# Dashboard & Hardware Telemetry
+# Dashboard (`v1.2.S7`)
 
-**Module Identifier:** `dashboard`  
-**Module Type:** Host Native View (`MainWindow`)  
-**Documentation Path:** `docs/modules/dashboard.md`  
+## 1. Overview & Problem Solved
+Technicians servicing unfamiliar Windows machines need an immediate, trustworthy snapshot of system health, hardware specifications, OS activation/build, security posture, and quick-launch utilities without opening multiple Windows consoles. The **Dashboard** consolidates these into a single landing view.
 
-![Dashboard Interface](../images/dashboard.png)
+## 2. How to Use (Step-by-Step)
+1. Launch `OptiAssist.exe` (accept UAC elevation).
+2. Inspect the **Health Hero Card**: review the circular percentage score (`--%` -> `100%`), headline summary, and any integrated diagnostic recommendation strips (click the action button to jump/fix, or `✕` to dismiss for the session).
+3. Use the top-right hero controls to toggle **Light / Dark Mode** or click **Install on PC** (visible in Portable Mode).
+4. Review the **Hardware Info**, **Operating System**, and **Storage** cards (click **Copy** next to Serial Number to copy it to the clipboard).
+5. Launch frequent workflows from **Common Tasks**, or click **Personalize Common Tasks...** to add, edit, reorder, or reset shortcuts.
+6. Check the bottom status bar for **Firmware (UEFI/Legacy)**, **Secure Boot**, **TPM** (clickable -> `tpm.msc`), and **BitLocker** (clickable -> Device Encryption settings).
 
----
+## 3. How It Works Internally
+1. `MainWindow_Loaded` triggers `RefreshHardwareAsync()` (when `AutoRefreshHardware` is `true`) on a `ThreadPool` worker, guarded by a 30-second `DispatcherTimer` timeout.
+2. `SystemInfoHelper.GetSystemInfo()` queries WMI/CIM (`Win32_Processor`, `Win32_BaseBoard`, `Win32_BIOS`, `Win32_PhysicalMemory`, `Win32_VideoController`, `Win32_DiskDrive`, `Win32_OperatingSystem`, `Win32_PnPEntity`, `SoftwareLicensingProduct`) and Registry keys (TPM, Secure Boot, Defender real-time protection, pending reboot).
+3. `PlatformDiagnosticService.Instance.GetSnapshot(...)` evaluates hardware/driver findings and merges recommendations into `UpdateDashboardHealthHero(...)`, computing the 0–100% score and rendering `pathHealthArc`.
+4. `RenderCommonTasks()` reads `Config\custom_shortcuts.json` via `CustomShortcutsHelper.Load()` and renders the 3-column `UniformGrid`.
 
-## 1. Overview and Problem Solved
-
-When initiating a diagnostics session, maintenance procedure, or post-installation review on a customer's machine, IT technicians must quickly gather key system telemetry: CPU model, core and thread count, total and usable physical RAM, motherboard manufacturer and model, BIOS version and date, serial number / service tag, exact Windows version with update revision, installation date, activation status, and the system's security posture (BitLocker drive encryption, TPM 2.0 module availability, and Secure Boot state).
-
-Manually gathering these metrics on Windows requires running multiple disjointed utilities (`msinfo32`, `dxdiag`, `winver`, `tpm.msc`, `diskmgmt.msc`, and PowerShell commands), wasting valuable technician bench time.
-
-The **Dashboard** solves this problem by executing an asynchronous, non-blocking telemetry audit across native Windows subsystems (WMI, CIM, and the Windows Registry) directly upon application launch. It also provides a customizable **Common Tasks** command center where technicians can instantly launch maintenance utilities, switch UI themes, trigger full post-installation deployments, inspect technician storage directories, or trigger a direct firmware reboot to UEFI.
-
----
-
-## 2. Step-by-Step Usage Guide
-
-1. **Launch OptiAssist as Administrator**:
-   - The application automatically opens to the **Dashboard** view.
-2. **Review Diagnostic Cards**:
-   - **Operating System Card**: Inspect the Windows edition name (e.g., `Microsoft Windows 11 Pro`), exact build with UBR revision (`10.0.26300.9818 64-bit`), original installation date, and genuine activation status (`Activated`).
-   - **Hardware Information Card**: Review processor model (cores and threads), total physical RAM capacity, graphics adapter (GPU), motherboard board model, BIOS release date/version, and machine serial number.
-   - **Copy Serial Number**: Click the **Copy** button alongside the Serial Number to instantly place the hardware service tag into the Windows clipboard.
-   - **Security Status Indicators**: Look at the bottom status bar for BitLocker (`Active` / `Inactive`), TPM status (`Available (2.0)` / `Not Available`), and Secure Boot (`Active` / `Inactive`).
-3. **Refresh Telemetry Manually**:
-   - Click the **Dashboard** button on the left sidebar at any time to re-trigger an asynchronous hardware re-scan in the background.
-4. **Execute Quick Actions (Common Tasks)**:
-   - Click any button in the Common Tasks grid to execute predefined actions:
-     - **Toolbox**: Switch directly to the repair and script hub.
-     - **App Manager**: Switch directly to unattended software deployment.
-     - **Run Post-Install**: Launch automated batch installation of software packages.
-     - **Maintenance Folder**: Open the local `Maintenance/` portable utilities directory.
-     - **Installers Folder**: Open the local `Installers/` offline repository.
-     - **Chris Titus WinUtil**: Launch the Chris Titus open-source utility in the background with stdout streaming to the logs terminal.
-     - **Memory Diagnostic**: Launch Windows Memory Diagnostic (`mdsched.exe`).
-     - **Device Manager**: Launch native Device Manager (`devmgmt.msc`).
-     - **System Properties**: Launch Classic System Properties (`sysdm.cpl`).
-     - **Reboot to UEFI**: Safely reboot the system directly into UEFI firmware after confirmation.
-     - **Install OptiAssist on PC**: Present if OptiAssist detects it is running from external or portable storage.
-5. **Customize the Common Tasks Grid**:
-   - Click the **Customize** button in the upper-right corner of the Common Tasks card.
-   - Add new custom shortcuts, edit titles/icons, adjust order, or restore defaults.
-
----
-
-## 3. Internal Architecture and Technical Execution Flow
-
-```
-+-----------------------------------------------------------------------------------------+
-|                                    MainWindow Startup                                   |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-                      +---------------------------------------------+
-                      | Is AutoRefreshHardware enabled in settings? |
-                      +---------------------------------------------+
-                                             |
-                                             v
-                      +---------------------------------------------+
-                      | SystemInfoHelper.GetHardwareSummaryAsync()  |
-                      | (Dispatched on background ThreadPool thread)|
-                      +---------------------------------------------+
-                                             |
-        +------------------------------------+------------------------------------+
-        |                                    |                                    |
-        v                                    v                                    v
-+-----------------------+          +-----------------------+          +-----------------------+
-|   WMI / CIM Queries   |          |    Windows Registry   |          | Command Line Fallback |
-| root\cimv2:           |          | HKLM\SOFTWARE\        |          | manage-bde.exe status |
-| - Win32_OperatingSys  |          | Microsoft\Windows NT\ |          | winsat.exe (WinSPR)   |
-| - Win32_Processor     |          | CurrentVersion        |          +-----------------------+
-| - Win32_BaseBoard     |          | (DisplayVersion, UBR, |
-| - Win32_BIOS          |          |  InstallDate)         |
-| - Win32_PhysicalMemory|          | HKLM\SYSTEM\...       |
-| - Win32_VideoControl  |          | Control\SecureBoot    |
-| - SoftwareLicensing   |          +-----------------------+
-| root\...\MicrosoftTpm |
-| - Win32_Tpm           |
-| root\...\Encryption   |
-| - Win32_EncryptVolume |
-+-----------------------+
-        |                                    |                                    |
-        +------------------------------------+------------------------------------+
-                                             |
-                                             v
-                      +---------------------------------------------+
-                      | HardwareSummary Model Built and Sanitized   |
-                      +---------------------------------------------+
-                                             |
-                                             v
-                      +---------------------------------------------+
-                      | Dispatcher.BeginInvoke() -> Updates UI Cards|
-                      +---------------------------------------------+
-```
-
-### Order of Operations:
-1. `MainWindow.MainWindow_Loaded` invokes `RefreshHardwareBackground()`.
-2. A background task calls `SystemInfoHelper.GetHardwareSummaryAsync()`.
-3. `SystemInfoHelper` queries the following WMI classes sequentially:
-   - `SELECT Caption, Version, OSArchitecture, FreePhysicalMemory, InstallDate FROM Win32_OperatingSystem`
-   - `SELECT SerialNumber, Manufacturer, SMBIOSBIOSVersion, ReleaseDate FROM Win32_BIOS`
-   - `SELECT Manufacturer, Product FROM Win32_BaseBoard`
-   - `SELECT Name, NumberOfCores, NumberOfLogicalProcessors FROM Win32_Processor`
-   - `SELECT TotalPhysicalMemory FROM Win32_ComputerSystem`
-   - `SELECT Name, AdapterRAM FROM Win32_VideoController`
-   - `SELECT LicenseStatus FROM SoftwareLicensingProduct WHERE ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f' AND LicenseStatus = 1`
-   - `SELECT IsActivated_InitialValue, IsEnabled_InitialValue, SpecVersion FROM Win32_Tpm` (in namespace `root\cimv2\Security\MicrosoftTpm`) with fallback to `Win32_PnPEntity WHERE PNPClass = 'SecurityDevices'`
-   - `SELECT DeviceID, DriveLetter, ProtectionStatus, ConversionStatus, EncryptionMethod, VolumeType FROM Win32_EncryptableVolume` (in namespace `root\cimv2\Security\MicrosoftVolumeEncryption`) with fallback to `manage-bde.exe -status C:`
-4. Registry keys are read:
-   - `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`: reads `DisplayVersion`, `UBR`, and fallback Unix timestamp `InstallDate`.
-   - `HKLM\SYSTEM\CurrentControlSet\Control\SecureBoot\State`: reads DWORD `UEFISecureBootEnabled` (1 = Active).
-5. All retrieved values are packaged into the `HardwareSummary` model and pushed to UI elements via `Dispatcher.BeginInvoke`.
-6. Common tasks shortcuts are parsed from `Config/custom_shortcuts.json` via `CustomShortcutsHelper.Load()` and rendered dynamically in `UniformGrid ugCommonTasks`.
-
----
-
-## 4. Inputs, Outputs, and Configurations
-
-* **Inputs**:
-  * `Config/custom_shortcuts.json`: Configured shortcuts array (`Id`, `Title`, `Icon`, `TargetType`, `TargetValue`, `Arguments`, `ButtonVariant`).
-  * Live Windows WMI/CIM tables and registry hives.
-* **Outputs**:
-  * Real-time hardware telemetry displayed on `panelDashboard`.
-  * Status badges in the main window footer (`BitLocker`, `TPM`, `Secure Boot`).
-  * Machine serial number copied to Windows clipboard on user click.
-* **Configurations in `Config/settings.json`**:
-  * `"AutoRefreshHardware": true`: Controls whether the hardware audit executes automatically on launch and when switching back to the Dashboard tab.
-
----
+## 4. Inputs, Outputs & Configuration
+- **Inputs:** Live WMI/CIM telemetry, Registry security/OS state, `PlatformDiagnosticSnapshot`, `Config\custom_shortcuts.json`.
+- **Outputs:** Visual Bento cards, clipboard serial number copy, launched target sections/commands.
+- **Configuration:** `AutoRefreshHardware` in `Config\settings.json`; shortcuts in `Config\custom_shortcuts.json`.
 
 ## 5. Requirements
+- **Admin:** Recommended/required (`requireAdministrator` manifest) for full WMI/Defender/BitLocker/TPM queries.
+- **Windows Version:** Windows 10 (1809+) or Windows 11.
+- **External Dependencies:** `Config\Data\pci.ids.min` and `microarch.json` for platform diagnostics.
 
-* **Administrative Privileges**: Required. WMI access to `SoftwareLicensingProduct`, `MicrosoftTpm`, `MicrosoftVolumeEncryption`, and `HKLM` keys fails without elevation.
-* **Windows Version**: Windows 10 (version 1809+) and Windows 11 (64-bit recommended).
-* **External Dependencies**: Zero. Relies strictly on `System.Management.dll`, `Microsoft.Win32`, and native Windows binaries.
+## 6. Risks & Side Effects
+- **Read-only telemetry** on load (non-destructive).
+- Clicking a recommendation quick-fix (e.g., `ApplyPlatformQuickFix`) modifies specific Registry keys with automatic rollback snapshots recorded by `PlatformDiagnosticService`.
 
----
-
-## 6. Risks and Side Effects
-
-* **Hardware Telemetry Queries**: 100% read-only and safe. Does not modify hardware configuration or write to the registry.
-* **Common Tasks - Reboot to UEFI**: Calls `shutdown.exe /r /fw /t 0`. Prompts the user with an explicit confirmation dialog before rebooting.
-* **Common Tasks - External Scripts**: Shortcuts pointing to external tools (e.g. Chris Titus WinUtil) run independently; actions executed inside external tools modify system configurations.
-
----
-
-## 7. Logging and Error Handling
-
-* All WMI queries are wrapped in individual `try-catch` blocks. If a query fails (e.g. BitLocker WMI unavailable on Windows Home edition), the system gracefully sets the status to "Not Available" or executes the command-line fallback without throwing an unhandled exception.
-* Background execution of Common Tasks routes `stdout` and `stderr` directly into `MainWindow.Log(message)` for live terminal tracking.
-
----
+## 7. Logs & Error Handling
+- Logs `[INFO] Hardware updated...`, `[SHORTCUTS]`, and `[CLIPBOARD]` entries to `MainWindow.Log`.
+- WMI timeouts fall back to `"Unknown"` via `ApplyHardwareDetectionUnknownFallback()`.
 
 ## 8. Related Source Files
-
-* [`src/MainWindow.xaml`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml): Dashboard layout, telemetry cards, and Common Tasks grid.
-* [`src/MainWindow.xaml.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/MainWindow.xaml.cs): Telemetry dispatcher and shortcut execution coordinator.
-* [`src/SystemInfoHelper.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/SystemInfoHelper.cs): Core WMI/CIM engine and `HardwareSummary` data models.
-* [`src/SettingsHelper.cs`](file:///D:/Users/jvfigueiro/Desktop/OptiAssist/src/SettingsHelper.cs): `CustomShortcutsHelper` parser and shortcut serializer.
+- `src/MainWindow.xaml`, `src/MainWindow.xaml.cs`
+- `src/SystemInfoHelper.cs`
+- `src/Platform/PlatformDiagnosticService.cs`
+- `src/FluentIcons.cs`, `src/OptiDialog.cs`

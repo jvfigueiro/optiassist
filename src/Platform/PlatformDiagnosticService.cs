@@ -138,6 +138,8 @@ namespace OptiAssist.Platform
             List<DiagnosticRecommendationItem> list = snapshot.Recommendations;
             list.Clear();
 
+            bool isPt = (OptiAssist.LocalizationHelper.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
+
             // 1. OptiBoost Profile Recommendation — only surfaced on Dashboard for constrained storage (<= 32 GB) or low-power/legacy entry CPUs
             if (snapshot.ProfileRecommendation != null && IsConstrainedLegacyEntryHardware(snapshot.Platform))
             {
@@ -149,7 +151,7 @@ namespace OptiAssist.Platform
 
                 string reasonsStr = string.Join(" ", snapshot.ProfileRecommendation.Reasons.ToArray());
                 profItem.Description = reasonsStr;
-                profItem.ActionLabel = "Open OptiBoost";
+                profItem.ActionLabel = isPt ? "Abrir OptiBoost" : "Open OptiBoost";
                 profItem.ActionTag = "open_debloater";
                 profItem.TargetProfileId = snapshot.ProfileRecommendation.ProfileCode;
                 list.Add(profItem);
@@ -167,14 +169,14 @@ namespace OptiAssist.Platform
                 string desc = snapshot.Win11Compat.LifecycleSummary;
                 if (snapshot.Win11Compat.Warnings.Count > 0)
                 {
-                    desc = desc + " Warning: " + string.Join(" ", snapshot.Win11Compat.Warnings.ToArray());
+                    desc = desc + (isPt ? " Aviso: " : " Warning: ") + string.Join(" ", snapshot.Win11Compat.Warnings.ToArray());
                 }
                 if (snapshot.Win11Compat.HardGateFailures.Count > 0)
                 {
-                    desc = desc + " Blocked by: " + string.Join(" ", snapshot.Win11Compat.HardGateFailures.ToArray());
+                    desc = desc + (isPt ? " Bloqueado por: " : " Blocked by: ") + string.Join(" ", snapshot.Win11Compat.HardGateFailures.ToArray());
                 }
                 w11Item.Description = desc;
-                w11Item.ActionLabel = "Compatibility Checker";
+                w11Item.ActionLabel = isPt ? "Verificador de Compatibilidade" : "Compatibility Checker";
                 w11Item.ActionTag = "open_compat_checker";
                 w11Item.Notes = snapshot.Win11Compat.RecommendedOsEdition;
                 list.Add(w11Item);

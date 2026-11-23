@@ -1166,12 +1166,18 @@ namespace OptiAssist.Debloater
             btnSupportLifecycle.SetResourceReference(Button.StyleProperty, "BtnDefault");
             btnSupportLifecycle.Click += (s, e) =>
             {
+                bool isPtLoc = (LocalizationHelper.CurrentLanguage ?? "").StartsWith("pt", StringComparison.OrdinalIgnoreCase);
                 string lifeText = (compat != null)
-                    ? string.Format("Recommended Edition: {0}\n\n{1}\n\nReference Support Dates (End of Servicing):\n• Windows 10 Home / Pro (22H2): October 14, 2025\n• Windows 10 Enterprise LTSC 2021: January 12, 2027\n• Windows 10 IoT Enterprise LTSC 2021: January 13, 2032\n• Windows 11 Home / Pro (23H2): November 11, 2025\n• Windows 11 Home / Pro (24H2): October 13, 2026\n• Windows 11 Enterprise LTSC 2024: October 9, 2029\n• Windows 11 IoT Enterprise LTSC 2024: October 10, 2034",
+                    ? string.Format(
+                        isPtLoc
+                            ? "Edição Recomendada: {0}\n\n{1}\n\nDatas de Referência de Suporte (Fim de Serviço):\n• Windows 10 Home / Pro (22H2): 14 de outubro de 2025\n• Windows 10 Enterprise LTSC 2021: 12 de janeiro de 2027\n• Windows 10 IoT Enterprise LTSC 2021: 13 de janeiro de 2032\n• Windows 11 Home / Pro (23H2): 11 de novembro de 2025\n• Windows 11 Home / Pro (24H2): 13 de outubro de 2026\n• Windows 11 Enterprise LTSC 2024: 9 de outubro de 2029\n• Windows 11 IoT Enterprise LTSC 2024: 10 de outubro de 2034"
+                            : "Recommended Edition: {0}\n\n{1}\n\nReference Support Dates (End of Servicing):\n• Windows 10 Home / Pro (22H2): October 14, 2025\n• Windows 10 Enterprise LTSC 2021: January 12, 2027\n• Windows 10 IoT Enterprise LTSC 2021: January 13, 2032\n• Windows 11 Home / Pro (23H2): November 11, 2025\n• Windows 11 Home / Pro (24H2): October 13, 2026\n• Windows 11 Enterprise LTSC 2024: October 9, 2029\n• Windows 11 IoT Enterprise LTSC 2024: October 10, 2034",
                         compat.RecommendedOsEdition,
                         compat.LifecycleSummary)
-                    : "Reference Support Dates (End of Servicing):\n• Windows 10 Home / Pro (22H2): October 14, 2025\n• Windows 10 IoT Enterprise LTSC 2021: January 13, 2032\n• Windows 11 Home / Pro (24H2): October 13, 2026\n• Windows 11 IoT Enterprise LTSC 2024: October 10, 2034";
-                OptiDialog.Show(lifeText, "OptiAssist - Windows Support Lifecycle", MessageBoxButton.OK, MessageBoxImage.Information);
+                    : (isPtLoc
+                        ? "Datas de Referência de Suporte (Fim de Serviço):\n• Windows 10 Home / Pro (22H2): 14 de outubro de 2025\n• Windows 10 IoT Enterprise LTSC 2021: 13 de janeiro de 2032\n• Windows 11 Home / Pro (24H2): 13 de outubro de 2026\n• Windows 11 IoT Enterprise LTSC 2024: 10 de outubro de 2034"
+                        : "Reference Support Dates (End of Servicing):\n• Windows 10 Home / Pro (22H2): October 14, 2025\n• Windows 10 IoT Enterprise LTSC 2021: January 13, 2032\n• Windows 11 Home / Pro (24H2): October 13, 2026\n• Windows 11 IoT Enterprise LTSC 2024: October 10, 2034");
+                OptiDialog.Show(lifeText, isPtLoc ? "OptiAssist - Ciclo de Vida de Suporte do Windows" : "OptiAssist - Windows Support Lifecycle", MessageBoxButton.OK, MessageBoxImage.Information);
             };
             specsActions.Children.Add(btnSupportLifecycle);
 

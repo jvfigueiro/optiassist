@@ -344,28 +344,26 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Circular Score Ring (Percentage) -->
-                                <Grid Grid.Column="0" Width="88" Height="88" Margin="0,0,20,0" VerticalAlignment="Center">
-                                    <Ellipse Width="84" Height="84"
-                                             Stroke="{DynamicResource BrushBorderCard}"
-                                             StrokeThickness="7"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Center"/>
-                                    <Canvas Width="88" Height="88">
-                                        <Path x:Name="pathHealthArc"
-                                              Stroke="#22C55E"
-                                              StrokeThickness="7"
-                                              StrokeStartLineCap="Round"
-                                              StrokeEndLineCap="Round"/>
-                                    </Canvas>
-                                    <TextBlock x:Name="txtHealthScore"
-                                               Text="--%"
-                                               FontSize="20"
-                                               FontWeight="Bold"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource BrushTextPrimary}"/>
-                                </Grid>
+                                <!-- Dynamic Health Status Icon (0 = Green Check, 1-2 = Amber Warning, 3+ = Red Exclamation) -->
+                                <Border x:Name="borderHealthIconBg"
+                                        Grid.Column="0"
+                                        Width="72"
+                                        Height="72"
+                                        CornerRadius="36"
+                                        Background="#1A22C55E"
+                                        BorderBrush="#4422C55E"
+                                        BorderThickness="1.5"
+                                        Margin="0,0,20,0"
+                                        VerticalAlignment="Center">
+                                    <Path x:Name="pathHealthIcon"
+                                          Width="38"
+                                          Height="38"
+                                          Stretch="Uniform"
+                                          Fill="#22C55E"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 1.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Zm4.28 5.72a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 0 1-1.06 0L7.72 13.28a.75.75 0 0 1 1.06-1.06l1.72 1.72 4.72-4.72a.75.75 0 0 1 1.06 0Z"/>
+                                </Border>
 
                                 <!-- Right Column next to Circular Ring: Top Row (Headline + Buttons) & Recommendations below -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">

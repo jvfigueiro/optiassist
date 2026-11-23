@@ -77,6 +77,7 @@ namespace OptiAssist
         public const string PathWarning = "M10.03 3.66a2.25 2.25 0 0 1 3.94 0l7.75 14A2.25 2.25 0 0 1 19.75 21H4.25a2.25 2.25 0 0 1-1.97-3.34l7.75-14Zm2.63.73a.75.75 0 0 0-1.32 0l-7.75 14a.75.75 0 0 0 .66 1.11h15.5a.75.75 0 0 0 .66-1.11l-7.75-14ZM12 8.75a.75.75 0 0 1 .75.75v4.25a.75.75 0 0 1-1.5 0V9.5a.75.75 0 0 1 .75-.75Zm0 7.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z";
         public const string PathErrorCircle = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 1.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Zm-3.28 5.22a.75.75 0 0 0-1.06 1.06L10.94 12l-3.28 3.22a.75.75 0 1 0 1.06 1.06L12 13.06l3.22 3.22a.75.75 0 1 0 1.06-1.06L13.06 12l3.22-3.22a.75.75 0 0 0-1.06-1.06L12 10.94 8.72 7.72Z";
         public const string PathQuestionCircle = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 1.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Zm0 3.75a3 3 0 0 0-2.97 2.6.75.75 0 1 0 1.49.2A1.5 1.5 0 1 1 12 11.75a.75.75 0 0 0-.75.75v1.25a.75.75 0 0 0 1.5 0v-.6A3 3 0 0 0 12 7.25Zm0 8.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z";
+        public const string PathExclamationCircle = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 1.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Zm0 3.25a.9.9 0 0 1 .9.9v5.2a.9.9 0 0 1-1.8 0v-5.2a.9.9 0 0 1 .9-.9Zm0 8.5a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2Z";
         public const string PathCheckmarkCircle = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 1.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Zm4.28 5.72a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 0 1-1.06 0L7.72 13.28a.75.75 0 0 1 1.06-1.06l1.72 1.72 4.72-4.72a.75.75 0 0 1 1.06 0Z";
         public const string PathArrowUndo = "M8.03 4.22a.75.75 0 0 1 0 1.06L4.81 8.5H14.5a6.5 6.5 0 1 1 0 13H9.75a.75.75 0 0 1 0-1.5h4.75a5 5 0 0 0 0-10H4.81l3.22 3.22a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 0 1 1.06 0Z";
         public const string PathStar = "M11.12 2.66a.98.98 0 0 1 1.76 0l2.43 4.92 5.44.79a.98.98 0 0 1 .54 1.67l-3.93 3.84.93 5.41a.98.98 0 0 1-1.42 1.03L12 17.77l-4.87 2.55a.98.98 0 0 1-1.42-1.03l.93-5.41-3.93-3.84a.98.98 0 0 1 .54-1.67l5.44-.79 2.43-4.92Z";
@@ -205,6 +206,7 @@ namespace OptiAssist
                 Register("⛔", PathErrorCircle);
                 Register("🚫", PathErrorCircle);
                 Register("❓", PathQuestionCircle);
+                Register("❗", PathExclamationCircle);
                 Register("✔️", PathCheckmarkCircle);
                 Register("✔", PathCheckmarkCircle);
                 Register("✅", PathCheckmarkCircle);
